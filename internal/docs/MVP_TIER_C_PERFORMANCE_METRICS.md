@@ -1,7 +1,7 @@
 # MVP Tier C — Performance Metrics Specification
 
-**Status:** DRAFT for owner review, 2026-09-22. **No implementation is
-authorised until the owner decisions in §9 are answered.**
+**Status:** Approved 2026-09-22 — owner accepted all proposed defaults D1–D7.
+Implementation of C1 is authorised.
 **Track:** MVP Fast Track, tier C of `internal/references/DASHBOARD_UX_RESEARCH.md`.
 **Depends on:** M2 verified close events (`trade_analysis.close_event_summary`),
 M3 source-clock rules (`time_risk.py`), and the verified balance curve
