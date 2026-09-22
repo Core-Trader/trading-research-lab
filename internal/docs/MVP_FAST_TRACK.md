@@ -30,10 +30,12 @@ financial results.
 - **DEFERRED — POST-MVP:** automatic parameter selection, scores, and `.set`
   generation;
 - **DEFERRED — POST-MVP:** position sizing and money-management research;
-- **DEFERRED — POST-MVP:** multi-account portfolios, conversion, allocation,
-  correlation, and exposure;
-- **DEFERRED — POST-MVP:** prop-firm rules, broker compliance, intratrade
-  equity, MAE/MFE, margin, and liquidation claims;
+- **DEFERRED — POST-MVP:** multi-account portfolios, currency conversion,
+  weights/allocation and lot rescaling (single-account concurrent combination
+  **as reported** is now in scope as MVP-P, decision PL-001);
+- **DEFERRED — POST-MVP:** broker compliance, MAE/MFE, margin, and liquidation
+  claims. Prop-firm rule checks follow MVP-P and require an equity evidence
+  source first (decision PL-006);
 - **DEFERRED — POST-MVP:** dashboard drag/drop, resize, saved layouts, and a
   custom widget marketplace; and
 - **DEFERRED — POST-MVP:** cloud, accounts, telemetry, payments, and product
@@ -55,6 +57,16 @@ financial results.
 Dashboard tiers A and B are implemented (2026-09-22). Tier C performance
 metrics are specified in `MVP_TIER_C_PERFORMANCE_METRICS.md` (draft, awaiting
 owner decisions D1–D7; no implementation authorised yet).
+
+## MVP-P — Portfolio Lab (owner-approved 2026-09-22)
+
+The primary multi-import workflow: import several EA backtests as strategy
+tracks, chain consecutive reports of one EA into a track (reusing the M5
+preflight), compare tracks side by side, and compare user-selected or
+explored combinations on one account over each track's active period by
+return versus drawdown. Specification: `PORTFOLIO_LAB_SPEC.md`. Decisions:
+PL-001 to PL-006 in `DECISION_LOG.md`. A prop-firm rules module follows,
+built on the combination engine and an equity evidence source.
 
 M6 advanced-research features remain available as separately qualified tools,
 but do not block this sequence.

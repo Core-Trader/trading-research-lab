@@ -25,6 +25,12 @@
 | M3-ACC-001 | M3 implementation and manual Obsidian review accepted; Milestone 3 closed | Closed |
 | M4-POL-001 | M4 creates only explicit strategy/experiment/report documents with UUIDv7 identities and explicit relationships; it does not scan or infer unrelated vault content | Approved for M4 |
 | M4-POL-002 | Report regeneration is change-aware: unchanged managed content makes no write/revision and returns `NO_CHANGES_DETECTED`; changed content requires confirmation and increments the revision manifest | Approved for M4 |
+| PL-001 | Portfolio Lab (concurrent single-account combination of EA backtests) is the primary multi-import workflow and part of the MVP; M5 sequential preflight becomes the step that chains one EA's consecutive reports into a track | Approved 2026-09-22 |
+| PL-002 | Each track contributes only during its own active period (union window), with an "active tracks" band and an optional common-window view | Approved 2026-09-22 |
+| PL-003 | The combination explorer may enumerate and plot all subsets (bounded) with an optional Pareto overlay; descriptive only, no "best" label. This relaxes no-selection for portfolio membership only, not for EA parameters | Approved 2026-09-22 |
+| PL-004 | Combined starting capital is declared by the user per combination (`USER_SUPPLIED`) | Approved 2026-09-22 |
+| PL-005 | v1 combines trades as reported: no weights, lot rescaling, or margin simulation | Approved 2026-09-22 |
+| PL-006 | An equity evidence source (MQL5 tester logger + adapter) precedes the prop-firm module; any realised-balance-only prop check is labelled an optimistic preview | Approved 2026-09-22 |
 
 Historical decisions in `journal/` remain evidence but do not override this
 reset. Valid domain decisions—such as decimal precision, broker-time provenance,

@@ -1,6 +1,6 @@
 # Concurrent Portfolio Combination (FXOptimize-inspired) — Draft Specification
 
-**Status:** DRAFT, 2026-09-22. **Scope decision required:** portfolio
+**Status:** SUPERSEDED by `PORTFOLIO_LAB_SPEC.md` (2026-09-22). Historical draft:
 aggregation is classified **DEFERRED — POST-MVP** in `MVP_FAST_TRACK.md`.
 Implementation needs the owner to pull it forward (decision P0) and answer
 P1–P8.

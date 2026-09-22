@@ -220,7 +220,12 @@ Research**. Its bounded What-If, Monte Carlo, single-grid optimisation evidence,
 and paired-forward evidence slices are accepted. Automatic selection,
 money-management research, and broader portfolio metrics remain out of scope
 until separately approved. The approved MVP dashboard track is specified in
-`MVP_FAST_TRACK.md` and is not blocked by deferred M6 work.
+`MVP_FAST_TRACK.md` and is not blocked by deferred M6 work. On 2026-09-22 the
+owner approved **MVP-P Portfolio Lab** (concurrent single-account combination
+of EA backtests, "as reported"; `PORTFOLIO_LAB_SPEC.md`, decisions PL-001 to
+PL-006). Weights/rescaling, money management, and multi-account portfolios
+remain out of scope. Prop-firm rule checks follow Portfolio Lab and require an
+equity evidence source.
 
 ## Required roadmap maintenance
 
