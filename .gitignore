@@ -1,0 +1,66 @@
+# Local application state and secrets (when implementation begins)
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+node_modules/
+dist/
+coverage/
+diagnostics/
+*.log
+.DS_Store
+Thumbs.db
+
+# Reset architecture: local worker, plugin, and Obsidian development artifacts
+dev-vault/
+research-core/.venv/
+research-core/.pytest_cache/
+research-core/**/__pycache__/
+plugin/node_modules/
+plugin/dist/
+plugin/main.js
+plugin/manifest.dev.json
+plugin/.obsidian/
+plugin/data.json
+worker-data/
+worker-cache/
+plugin/.cache/
+research-core/.mypy_cache/
+research-core/.ruff_cache/
+research-core/.coverage
+research-core/build/
+research-core/**/*.egg-info/
+
+# Obsidian state is local to a disposable vault and never repository source.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+
+# Future local packaging output; release inputs must be explicitly allowlisted.
+artifacts/
+release/
+packages/
+
+# Imported reports and generated exports can contain proprietary trading data
+data/raw/
+data/derived/
+exports/
+data/raw/forensic/
+
+# Local assistant configuration
+CLAUDE.local.md
+
+# Research Core worker workspaces (managed raw snapshots of real MT5 reports,
+# canonical Parquet, registries). Proprietary trading data; never committed.
+.trl-preflight-inspection/
+.trl-data/
+.trl-*/
+
+# Local Claude Code settings
+.claude/settings.local.json

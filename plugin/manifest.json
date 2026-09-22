@@ -1,0 +1,9 @@
+{
+  "id": "trading-research-lab",
+  "name": "Trading Research Lab",
+  "version": "0.0.1",
+  "minAppVersion": "1.8.0",
+  "description": "Run local, deterministic trading research from MT5 report evidence.",
+  "author": "Trading Research Lab",
+  "isDesktopOnly": true
+}

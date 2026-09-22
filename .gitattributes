@@ -1,0 +1,6 @@
+# Normalise text to LF in the repository; binary formats are never diffed.
+* text=auto eol=lf
+*.xlsx binary
+*.parquet binary
+*.png binary
+*.jpg binary

@@ -1,0 +1,64 @@
+# Trading Research Lab — MVP Fast Track
+
+**Status:** Approved implementation direction, 2026-09-22.  
+**Purpose:** deliver a small, clean, extensible local-first MVP quickly while
+preserving the locked Obsidian + Python Research Core architecture.
+
+## MVP outcome
+
+A researcher can select an MT5 Strategy Tester `.xlsx` report, preserve and
+verify its source evidence, view basic verified analysis in Obsidian, and link
+that work to a Strategy, Experiment, and Report. The dashboard is the visible
+starting point for this workflow; the Python Core remains the authority for all
+financial results.
+
+## Included
+
+- MT5 `.xlsx` intake, immutable snapshot, canonical Parquet/JSON evidence, and
+  source verification;
+- verified balance curve, basic statistics, close-event analysis, and
+  source-clock realised-balance daily drawdown;
+- local NDJSON worker integration and clear unavailable/error states;
+- a fixed, responsive Obsidian dashboard with dataset, balance, trade, daily
+  risk, research-document, and balance-curve cards;
+- explicit Strategy → Experiment → Report relationships and safe generated
+  Markdown; and
+- bounded sequential same-account batch status where useful.
+
+## Deliberately excluded from the MVP critical path
+
+- **DEFERRED — POST-MVP:** automatic parameter selection, scores, and `.set`
+  generation;
+- **DEFERRED — POST-MVP:** position sizing and money-management research;
+- **DEFERRED — POST-MVP:** multi-account portfolios, conversion, allocation,
+  correlation, and exposure;
+- **DEFERRED — POST-MVP:** prop-firm rules, broker compliance, intratrade
+  equity, MAE/MFE, margin, and liquidation claims;
+- **DEFERRED — POST-MVP:** dashboard drag/drop, resize, saved layouts, and a
+  custom widget marketplace; and
+- **DEFERRED — POST-MVP:** cloud, accounts, telemetry, payments, and product
+  entitlement enforcement.
+
+## Implementation sequence
+
+1. **MVP-A — UI foundation:** split presentation responsibilities from the
+   original research view, add a fixed dashboard, and retain a lightweight
+   worker-facing application boundary. Dashboard work begins here.
+2. **MVP-B — primary workflow:** make import → dashboard → Strategy →
+   Experiment → Report clear, with empty, loading, error, and recovery states.
+3. **MVP-C — usability and hardening:** owner visual review, narrow-width
+   behaviour, clear unsupported-data messaging, component tests, and concise
+   product-facing setup help.
+4. **MVP-D — release readiness:** release allowlists, internal-material
+   exclusion, dependency/licence review, and local installation smoke checks.
+
+M6 advanced-research features remain available as separately qualified tools,
+but do not block this sequence.
+
+## External-reference position
+
+No external code is reused for MVP-A. Journalit's component/view patterns and
+Strategy Factory's domain separation remain reference material only. Any later
+direct or substantial reuse must be technically justified and immediately
+entered in `internal/references/EXTERNAL_CODE_USAGE_REGISTER.md` with the
+pinned source, exact destination, changes, validation, and product scope.
