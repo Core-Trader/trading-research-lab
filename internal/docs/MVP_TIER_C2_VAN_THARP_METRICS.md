@@ -1,7 +1,7 @@
 # MVP Tier C2 — Van K. Tharp Concepts (R-multiples, Expectancy, SQN)
 
-**Status:** DRAFT for owner review, 2026-09-22. No implementation is authorised
-until decisions T1–T7 (§8) are answered.
+**Status:** Approved 2026-09-22 — owner accepted defaults T1–T7. Implementation
+is authorised.
 **Depends on:** `MVP_TIER_C_PERFORMANCE_METRICS.md` (C1): the same close-event
 basis, precision rule (8 dp `ROUND_HALF_EVEN`), and presentation rules.
 **External code:** none. The concepts come from Van K. Tharp's published work

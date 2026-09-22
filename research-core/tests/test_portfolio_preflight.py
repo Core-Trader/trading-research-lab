@@ -74,3 +74,45 @@ def test_combined_daily_drawdown_stays_realised_balance_only(monkeypatch: pytest
     result = portfolio_preflight.combined_daily_drawdown(tmp_path, ["one.xlsx", "two.xlsx"])
     assert result["analysis_basis"] == "REALISED_BALANCE_ONLY"
     assert "GAP_UNDETERMINED" in result["warnings"][-1]
+
+
+def _preflight(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, spans: list[tuple[str, str, str, str]]) -> dict[str, object]:
+    intakes = [_intake(index + 1) for index in range(len(spans))]
+    datasets = {str(intake["dataset_ref"]): _dataset(opening=opening, final=final, first=first, last=last, deal=str(index)) for index, (intake, (first, last, opening, final)) in enumerate(zip(intakes, spans))}
+    queue = list(intakes)
+    monkeypatch.setattr(portfolio_preflight, "intake_mt5_excel", lambda _root, _path: queue.pop(0))
+    monkeypatch.setattr(portfolio_preflight, "read_dataset", lambda _root, ref: datasets[ref])
+    return portfolio_preflight.preflight_mt5_excel_batch(tmp_path, [f"{index}.xlsx" for index in range(len(spans))])
+
+
+def test_every_overlapping_pair_is_reported_with_member_names(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    result = _preflight(monkeypatch, tmp_path, [
+        ("2024-01-01T00:00:00", "2026-09-18T00:00:00", "100", "150"),
+        ("2025-01-01T00:00:00", "2026-01-29T00:00:00", "100", "120"),
+        ("2026-05-02T00:00:00", "2026-09-18T00:00:00", "120", "130"),
+    ])
+    overlaps = [finding for finding in result["findings"] if finding["code"] == "COVERAGE_OVERLAP"]
+    assert result["status"] == "BLOCKED"
+    assert [[member["filename"] for member in finding["members"]] for finding in overlaps] == [["report-1.xlsx", "report-2.xlsx"], ["report-1.xlsx", "report-3.xlsx"]]
+    assert "'report-1.xlsx' (2024-01-01T00:00:00" in overlaps[0]["message"]
+
+
+def test_balance_discontinuity_names_both_reports(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    result = _preflight(monkeypatch, tmp_path, [
+        ("2026-01-01T00:00:00", "2026-01-02T00:00:00", "100", "110"),
+        ("2026-01-03T00:00:00", "2026-01-04T00:00:00", "105", "120"),
+    ])
+    finding = next(item for item in result["findings"] if item["code"] == "BALANCE_DISCONTINUITY")
+    assert [member["filename"] for member in finding["members"]] == ["report-1.xlsx", "report-2.xlsx"]
+    assert "ends at balance 110" in finding["message"] and "opens at 105" in finding["message"]
+
+
+def test_deal_id_reuse_is_one_consolidated_warning(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    intakes = [_intake(index) for index in (1, 2, 3)]
+    datasets = {str(intake["dataset_ref"]): _dataset(opening=str(100 + 10 * index), final=str(110 + 10 * index), first=f"2026-01-0{2 * index + 1}T00:00:00", last=f"2026-01-0{2 * index + 2}T00:00:00", deal="7") for index, intake in enumerate(intakes)}
+    monkeypatch.setattr(portfolio_preflight, "intake_mt5_excel", lambda _root, _path: intakes.pop(0))
+    monkeypatch.setattr(portfolio_preflight, "read_dataset", lambda _root, ref: datasets[ref])
+    result = portfolio_preflight.preflight_mt5_excel_batch(tmp_path, ["a", "b", "c"])
+    reused = [finding for finding in result["findings"] if finding["code"] == "DEAL_ID_REUSED"]
+    assert len(reused) == 1 and len(reused[0]["members"]) == 3
+    assert result["status"] == "ELIGIBLE"

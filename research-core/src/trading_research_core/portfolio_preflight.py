@@ -17,7 +17,7 @@ from .dataset_store import read_dataset
 from .time_risk import realised_balance_daily_drawdown
 
 
-CALCULATION_VERSION = "m5-sequential-batch-preflight-1"
+CALCULATION_VERSION = "m5-sequential-batch-preflight-2"
 
 
 def preflight_mt5_excel_batch(workspace_root: Any, source_paths: list[str]) -> dict[str, object]:
@@ -27,7 +27,7 @@ def preflight_mt5_excel_batch(workspace_root: Any, source_paths: list[str]) -> d
         raise CoreError("E_REQUEST_INVALID", "M5 batch preflight requires at least two selected MT5 Excel reports.")
     intakes = [intake_mt5_excel(workspace_root, path) for path in source_paths]
     members = [_member(workspace_root, intake) for intake in intakes]
-    findings: list[dict[str, str]] = []
+    findings: list[dict[str, object]] = []
     hashes = [member["source_sha256"] for member in members]
     if len(set(hashes)) != len(hashes):
         findings.append(_finding("BLOCKED", "DUPLICATE_SOURCE", "The same source SHA-256 was selected more than once."))
@@ -37,24 +37,31 @@ def preflight_mt5_excel_batch(workspace_root: Any, source_paths: list[str]) -> d
     ordered = sorted(members, key=lambda member: (member["first_timestamp"], member["source_sha256"]))
     if len({member["first_timestamp"] for member in ordered}) != len(ordered):
         findings.append(_finding("BLOCKED", "ORDER_AMBIGUOUS", "Two reports begin at the same source-reported timestamp; v1 does not infer an order."))
-    seen_event_keys: set[tuple[str, str]] = set()
-    seen_deals: set[str] = set()
+    seen_event_keys: dict[tuple[str, str], dict[str, Any]] = {}
+    seen_deals: dict[str, dict[str, Any]] = {}
+    duplicate_pairs: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    reused_pairs: list[tuple[dict[str, Any], dict[str, Any]]] = []
     for member in ordered:
-        overlap = seen_event_keys.intersection(member["source_event_keys"])
-        if overlap:
-            findings.append(_finding("BLOCKED", "POTENTIAL_DUPLICATE_EVENTS", "Selected reports contain matching source timestamp and deal identifier pairs; no deduplication was attempted."))
-            break
-        if seen_deals.intersection(member["source_deal_ids"]):
-            findings.append(_finding("WARNING", "DEAL_ID_REUSED", "Deal identifiers recur across non-overlapping source event spans; this alone is not treated as duplicate-event evidence."))
-        seen_deals.update(member["source_deal_ids"])
-        seen_event_keys.update(member["source_event_keys"])
+        duplicate_with = {id(seen_event_keys[key]): seen_event_keys[key] for key in member["source_event_keys"] if key in seen_event_keys}
+        duplicate_pairs.extend((other, member) for other in duplicate_with.values())
+        reused_with = {id(seen_deals[deal]): seen_deals[deal] for deal in member["source_deal_ids"] if deal in seen_deals}
+        reused_pairs.extend((other, member) for other in reused_with.values() if id(other) not in duplicate_with)
+        for key in member["source_event_keys"]:
+            seen_event_keys.setdefault(key, member)
+        for deal in member["source_deal_ids"]:
+            seen_deals.setdefault(deal, member)
+    for first, second in duplicate_pairs:
+        findings.append(_finding("BLOCKED", "POTENTIAL_DUPLICATE_EVENTS", f"{_label(first)} and {_label(second)} contain matching source timestamp and deal identifier pairs; no deduplication was attempted.", [first, second]))
+    if reused_pairs:
+        involved = _unique([member for pair in reused_pairs for member in pair])
+        findings.append(_finding("WARNING", "DEAL_ID_REUSED", f"Deal identifiers recur across {len(involved)} reports. MT5 Strategy Tester numbers deals per test run, so this alone is not treated as duplicate evidence.", involved))
+    for index, earlier in enumerate(ordered):
+        for later in ordered[index + 1:]:
+            if later["first_timestamp"] <= earlier["last_timestamp"]:
+                findings.append(_finding("BLOCKED", "COVERAGE_OVERLAP", f"{_label(earlier)} ({earlier['first_timestamp']} → {earlier['last_timestamp']}) overlaps {_label(later)} ({later['first_timestamp']} → {later['last_timestamp']}). Sequential batches cannot combine overlapping periods.", [earlier, later]))
     for previous, current in zip(ordered, ordered[1:]):
-        if current["first_timestamp"] <= previous["last_timestamp"]:
-            findings.append(_finding("BLOCKED", "COVERAGE_OVERLAP", "Source-reported event coverage overlaps; v1 does not combine overlapping reports."))
-            break
-        if Decimal(previous["final_reported_balance"]) != Decimal(current["opening_balance"]):
-            findings.append(_finding("BLOCKED", "BALANCE_DISCONTINUITY", "Adjacent final/opening reported balances do not reconcile exactly; no funding adjustment was inferred."))
-            break
+        if current["first_timestamp"] > previous["last_timestamp"] and Decimal(previous["final_reported_balance"]) != Decimal(current["opening_balance"]):
+            findings.append(_finding("BLOCKED", "BALANCE_DISCONTINUITY", f"{_label(previous)} ends at balance {previous['final_reported_balance']} but {_label(current)} opens at {current['opening_balance']}; no funding adjustment was inferred.", [previous, current]))
     findings.append(_finding("WARNING", "GAP_UNDETERMINED", "Regular Deals exports establish event spans, not complete no-trade coverage; no continuous daily result is available across report boundaries in this preflight."))
     blocked = any(finding["severity"] == "BLOCKED" for finding in findings)
     identity = stable_uuid("m5-batch-preflight", *(member["dataset_ref"] for member in ordered), CALCULATION_VERSION)
@@ -141,8 +148,22 @@ def _member(workspace_root: Any, intake: dict[str, object]) -> dict[str, Any]:
     }
 
 
-def _finding(severity: str, code: str, message: str) -> dict[str, str]:
-    return {"severity": severity, "code": code, "message": message}
+def _finding(severity: str, code: str, message: str, members: list[dict[str, Any]] | None = None) -> dict[str, object]:
+    finding: dict[str, object] = {"severity": severity, "code": code, "message": message}
+    if members is not None:
+        finding["members"] = [{"dataset_ref": member["dataset_ref"], "filename": member["filename"]} for member in members]
+    return finding
+
+
+def _label(member: dict[str, Any]) -> str:
+    return f"'{member['filename']}'"
+
+
+def _unique(members: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: dict[str, dict[str, Any]] = {}
+    for member in members:
+        seen.setdefault(str(member["dataset_ref"]), member)
+    return list(seen.values())
 
 
 def _file_sha256(path: Path) -> str:

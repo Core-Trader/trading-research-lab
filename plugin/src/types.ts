@@ -147,7 +147,7 @@ export type PortfolioPreflightResult = {
   account_declaration: "USER_SUPPLIED_SINGLE_ACCOUNT";
   status: "ELIGIBLE" | "BLOCKED";
   members: Array<{ dataset_ref: string; dataset_id: string; source_sha256: string; filename: string; currency: string | null; first_timestamp: string; last_timestamp: string; opening_balance: string; final_reported_balance: string; event_count: number }>;
-  findings: Array<{ severity: "BLOCKED" | "WARNING"; code: string; message: string }>;
+  findings: Array<{ severity: "BLOCKED" | "WARNING"; code: string; message: string; members?: Array<{ dataset_ref: string; filename: string }> }>;
   writes: "INDIVIDUAL_M1_INTAKE_ONLY; NO_COMBINED_ARTIFACT";
 };
 

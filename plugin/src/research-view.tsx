@@ -102,37 +102,41 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
 
   const canRun = useMemo(() => sourcePath.trim().toLowerCase().endsWith(".xlsx"), [sourcePath]);
   const canRunOptimisation = useMemo(() => optimisationPath.trim().toLowerCase().endsWith(".xml") && optimisationMode.trim().length > 0, [optimisationPath, optimisationMode]);
+  const [batchBusy, setBatchBusy] = useState<string | null>(null);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  // Any change to the batch invalidates every downstream batch result.
+  const resetBatchResults = (): void => { setBatchPreflight(null); setCombinedBalance(null); setCombinedDaily(null); setBatchError(null); };
+  const batchStep = async (message: string, step: () => Promise<void>): Promise<void> => {
+    setBatchBusy(message);
+    setBatchError(null);
+    try { await step(); } catch (caught) { setBatchError(reasonText(caught)); } finally { setBatchBusy(null); }
+  };
   const selectBatchFiles = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const files = Array.from(event.currentTarget.files ?? []);
     event.currentTarget.value = "";
     try {
       const paths = files.map(localPathForSelectedFile);
-      if (paths.length === 0 || paths.some((path) => !path.toLowerCase().endsWith(".xlsx"))) throw new Error("Select an MT5 Strategy Tester .xlsx report.");
+      if (paths.length === 0 || paths.some((path) => !path.toLowerCase().endsWith(".xlsx"))) throw new Error("Select MT5 Strategy Tester .xlsx reports.");
       setBatchPaths((current) => [...current, ...paths.filter((path) => !current.includes(path))]);
-      setBatchPreflight(null);
-      setError(null);
-    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
+      resetBatchResults();
+    } catch (caught) { setBatchError(reasonText(caught)); }
   };
-  const runBatchPreflight = async (): Promise<void> => {
-    setError(null);
-    try {
-      const result = await service.preflightBatch(batchPaths);
-      setBatchPreflight(result);
-      setCombinedBalance(null);
-      new Notice(`M5 batch preflight ${result.status.toLowerCase()}. No combined artifact was written.`);
-    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
-  };
+  const runBatchPreflight = (): Promise<void> => batchStep(`Checking ${batchPaths.length} reports (each is preserved and verified first)…`, async () => {
+    resetBatchResults();
+    const result = await service.preflightBatch(batchPaths);
+    setBatchPreflight(result);
+    new Notice(`Batch check: ${result.status === "ELIGIBLE" ? "eligible" : "blocked"}. Nothing was combined yet.`);
+  });
   const createCombinedBalance = async (): Promise<void> => {
     if (batchPreflight?.status !== "ELIGIBLE") return;
     if (!window.confirm("Create the combined realised-balance artifact for this eligible batch? This does not create a research document.")) return;
-    setError(null);
-    try {
-      const result = await service.createCombinedRealisedBalance(batchPaths);
-      setCombinedBalance(result);
+    await batchStep("Creating the combined realised-balance series…", async () => {
+      setCombinedBalance(await service.createCombinedRealisedBalance(batchPaths));
+      setCombinedDaily(null);
       new Notice("Combined realised-balance artifact created. No research document was created.");
-    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
+    });
   };
-  const runCombinedDaily = async (): Promise<void> => { try { setCombinedDaily(await service.combinedDailyDrawdown(batchPaths)); } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); } };
+  const runCombinedDaily = (): Promise<void> => batchStep("Calculating combined daily realised drawdown…", async () => { setCombinedDaily(await service.combinedDailyDrawdown(batchPaths)); });
   const run = async (requestedSourcePath = sourcePath.trim()): Promise<void> => {
     const sourceToAnalyse = requestedSourcePath.trim();
     if (!sourceToAnalyse.toLowerCase().endsWith(".xlsx")) {
@@ -643,7 +647,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       </div>
       </section>
       {evidence && <Evidence evidence={evidence} intakeStatus={intakeStatus} snapshotVerification={snapshotVerification} onVerify={() => void verifySnapshot()} />}
-      <M5Preflight paths={batchPaths} result={batchPreflight} combined={combinedBalance} daily={combinedDaily} inputRef={batchInputRef} onSelect={selectBatchFiles} onRemove={(path) => { setBatchPaths((current) => current.filter((item) => item !== path)); setBatchPreflight(null); setCombinedBalance(null); }} onClear={() => { setBatchPaths([]); setBatchPreflight(null); setCombinedBalance(null); }} onRun={() => void runBatchPreflight()} onCreate={() => void createCombinedBalance()} onDaily={() => void runCombinedDaily()} />
+      <M5Preflight paths={batchPaths} result={batchPreflight} combined={combinedBalance} daily={combinedDaily} busy={batchBusy} error={batchError} inputRef={batchInputRef} onSelect={selectBatchFiles} onRemove={(path) => { setBatchPaths((current) => current.filter((item) => item !== path)); resetBatchResults(); }} onClear={() => { setBatchPaths([]); resetBatchResults(); }} onRun={() => void runBatchPreflight()} onCreate={() => void createCombinedBalance()} onDaily={() => void runCombinedDaily()} />
     </section>}
     {activePage === "analysis" && <section className="trl-page" aria-label="Analysis">
       <header className="trl-page__header"><div><h3>Analysis</h3><p>Review verified results first. Any unavailable evidence remains explicitly unavailable.</p></div></header>
