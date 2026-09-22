@@ -209,6 +209,14 @@ export type MonteCarloResult = {
     bin_count: number;
     buckets: Array<{ lower_bound: string; upper_bound: string; count: number }>;
   };
+  drawdown_percentiles: Array<{ percentile: string; maximum_drawdown: string }>;
+  path_fan: {
+    sampling: "EVEN_INDEX_SAMPLE_V1";
+    point_count: number;
+    event_indices: number[];
+    historical: string[];
+    paths: Array<{ path_index: number; values: string[] }>;
+  };
   least_drawdown_path: { path_index: number; maximum_drawdown: string };
   worst_drawdown_path: { path_index: number; maximum_drawdown: string };
   warnings: string[];
@@ -243,4 +251,24 @@ export type PairedForwardResult = {
   rows: Array<Record<string, string>>;
   warnings: string[];
   artifacts: { table: string; manifest: string };
+};
+
+export type PeriodPnl = { net_pnl: string; close_event_count: number; win_count: number; loss_count: number };
+
+export type CloseEventDisplaySeries = {
+  analysis_basis: "VERIFIED_CLOSE_EVENTS";
+  policy_id: string;
+  calculation_version: string;
+  dataset_ref: string;
+  currency: string | null;
+  time_basis: "SOURCE_REPORTED_CLOCK";
+  configuration_hash: string;
+  close_event_count: number;
+  events: Array<{ source_sequence: number; timestamp: string; symbol: string; net_pnl: string }> | null;
+  events_omitted_reason: string | null;
+  daily: Array<PeriodPnl & { date: string }>;
+  weekly: Array<PeriodPnl & { iso_year: number; iso_week: number }>;
+  monthly: Array<PeriodPnl & { month: string }>;
+  yearly: Array<PeriodPnl & { year: number }>;
+  warnings: string[];
 };

@@ -70,3 +70,66 @@ def test_one_close_event_blocks(tmp_path: Path) -> None:
     with pytest.raises(CoreError) as raised:
         order_permutation_scenario(tmp_path, dataset_ref, "1", 10)
     assert raised.value.code == "E_MONTE_CARLO_INPUT_INVALID"
+
+
+def test_drawdown_percentile_table_is_monotonic_nearest_rank(tmp_path: Path) -> None:
+    dataset_ref = str(write_dataset(tmp_path, _imported(["5", "-3", "2", "-4", "1", "-2", "3"]))["dataset_ref"])
+    result = order_permutation_scenario(tmp_path, dataset_ref, "7", 200)
+    table = result["drawdown_percentiles"]
+    assert [row["percentile"] for row in table] == ["50", "80", "90", "95", "99"]
+    values = [float(row["maximum_drawdown"]) for row in table]
+    assert values == sorted(values)
+    assert table[0]["maximum_drawdown"] == result["drawdown_summary"]["p50"]
+    assert table[3]["maximum_drawdown"] == result["drawdown_summary"]["p95"]
+    assert float(table[-1]["maximum_drawdown"]) <= float(result["drawdown_summary"]["maximum"])
+
+
+def test_path_fan_is_bounded_starts_at_zero_and_ends_at_the_invariant_total(tmp_path: Path) -> None:
+    dataset_ref = str(write_dataset(tmp_path, _imported(["3", "-2", "-1", "4"]))["dataset_ref"])
+    result = order_permutation_scenario(tmp_path, dataset_ref, "42", 150)
+    fan = result["path_fan"]
+    assert fan["point_count"] == 5
+    assert fan["event_indices"] == [0, 1, 2, 3, 4]
+    assert fan["historical"] == ["0", "3", "1", "0", "4"]
+    assert [path["path_index"] for path in fan["paths"]] == list(range(1, 101))
+    assert all(path["values"][0] == "0" and path["values"][-1] == result["invariant_final_pnl"] for path in fan["paths"])
+    assert order_permutation_scenario(tmp_path, dataset_ref, "42", 150)["path_fan"] == fan
+
+
+def test_path_fan_samples_long_paths_with_first_and_last_point(tmp_path: Path) -> None:
+    values = [str((index % 7) - 3) for index in range(600)]
+    dataset_ref = str(write_dataset(tmp_path, _imported(values))["dataset_ref"])
+    fan = order_permutation_scenario(tmp_path, dataset_ref, "3", 5)["path_fan"]
+    assert fan["sampling"] == "EVEN_INDEX_SAMPLE_V1"
+    assert fan["point_count"] == len(fan["event_indices"]) <= 250
+    assert fan["event_indices"][0] == 0 and fan["event_indices"][-1] == 600
+    assert fan["event_indices"] == sorted(set(fan["event_indices"]))
+    assert all(len(path["values"]) == fan["point_count"] for path in fan["paths"])
+
+
+def test_recording_the_fan_does_not_change_generated_paths(tmp_path: Path) -> None:
+    # The fan must describe exactly the paths stored in the Parquet artifact.
+    dataset_ref = str(write_dataset(tmp_path, _imported(["3", "-2", "-1"]))["dataset_ref"])
+    result = order_permutation_scenario(tmp_path, dataset_ref, "42", 12)
+    import pyarrow.parquet as pq
+    table = next((tmp_path / "datasets").rglob("order-permutation-paths.parquet"))
+    drawdowns = [row["maximum_drawdown"] for row in pq.read_table(table).to_pylist()]
+    fan_drawdowns = []
+    for path in result["path_fan"]["paths"]:
+        values = [int(value) for value in path["values"]]
+        high, worst = 0, 0
+        for value in values:
+            high = max(high, value)
+            worst = max(worst, high - value)
+        fan_drawdowns.append(str(worst))
+    assert fan_drawdowns == drawdowns
+
+
+def test_path_drawdowns_match_values_pinned_from_calculation_version_2(tmp_path: Path) -> None:
+    # Produced by the committed version-2 code (seed 42, 12 paths). Version 3
+    # only records extra display data and must not change path generation.
+    dataset_ref = str(write_dataset(tmp_path, _imported(["5", "-3", "2", "-4", "1", "-2", "3"]))["dataset_ref"])
+    order_permutation_scenario(tmp_path, dataset_ref, "42", 12)
+    import pyarrow.parquet as pq
+    table = next((tmp_path / "datasets").rglob("order-permutation-paths.parquet"))
+    assert [row["maximum_drawdown"] for row in pq.read_table(table).to_pylist()] == ["4", "5", "9", "7", "5", "5", "7", "4", "7", "4", "7", "4"]

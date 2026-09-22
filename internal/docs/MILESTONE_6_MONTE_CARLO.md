@@ -78,6 +78,20 @@ returns compact results only:
   for visual presentation only. The histogram is derived from the stored path
   summaries, has no randomisation of its own, and is not a substitute for the
   Parquet evidence artifact;
+- (owner-approved 2026-09-22, calculation version 3) a **drawdown percentile
+  table** of generated maximum drawdowns at p50, p80, p90, p95, and p99 using
+  the same nearest-rank convention. Higher percentiles are larger (worse)
+  drawdowns in this finite generated set. Final P/L is invariant under order
+  permutation, so no net-P/L percentile column is produced;
+- (owner-approved 2026-09-22, calculation version 3) a bounded **path fan**:
+  the historical source-order cumulative close-event P/L path plus the first
+  `min(path_count, 100)` generated paths (path indices 1…N), each starting at 0.
+  When a path has more than 250 cumulative points, the same evenly spaced point
+  indices (`EVEN_INDEX_SAMPLE_V1`, always including the first and last point) are
+  used for every path. Intermediate extremes can fall between sampled points, so
+  the fan is illustrative; drawdown figures come only from the full paths.
+  Recording the fan does not consume random numbers, so path generation is
+  unchanged from version 2;
 - eligibility, source-quality, and explicit limitation warnings.
 
 No path-level tables are placed in Markdown automatically, and TypeScript does

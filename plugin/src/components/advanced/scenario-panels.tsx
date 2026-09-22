@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import type { FixedCostScenarioResult, MonteCarloResult } from "../../types";
 import { CollapsibleSection } from "../collapsible-section";
+import { multiLineGeometry } from "../chart-geometry";
 
 export function WhatIfAnalysis({ cost, error, result, enabled, onCostChange, onRun }: {
   cost: string;
@@ -75,6 +76,8 @@ export function MonteCarloAnalysis({ seed, pathCount, error, result, enabled, on
         <dt>Warnings</dt><dd>{result.warnings.join(" ")}</dd>
       </dl>
       <DrawdownHistogram histogram={result.drawdown_histogram} currency={currency} />
+      <DrawdownPercentileTable percentiles={result.drawdown_percentiles} currency={currency} />
+      <PathFan fan={result.path_fan} currency={currency} />
     </section>}
   </CollapsibleSection>;
 }
@@ -91,4 +94,39 @@ export function DrawdownHistogram({ histogram, currency }: { histogram: MonteCar
     <div className="trl-m0__histogram-axis"><span>{histogram.buckets[0]?.lower_bound} {currency}</span><span>{histogram.buckets.at(-1)?.upper_bound} {currency}</span></div>
     <p className="trl-m0__note">{histogram.binning.replaceAll("_", " ")} · {histogram.bin_count} bins · hover a bar for its range and path count.</p>
   </section>;
+}
+
+export function DrawdownPercentileTable({ percentiles, currency }: { percentiles: MonteCarloResult["drawdown_percentiles"]; currency: string }): React.ReactElement {
+  return <section className="trl-mc-percentiles" aria-label="Generated maximum drawdown by percentile">
+    <h5>Drawdown percentile table</h5>
+    <table>
+      <thead><tr><th scope="col">Percentile of generated paths</th><th scope="col">Maximum drawdown ({currency})</th></tr></thead>
+      <tbody>{percentiles.map((row) => <tr key={row.percentile}><th scope="row">p{row.percentile}</th><td>{row.maximum_drawdown}</td></tr>)}</tbody>
+    </table>
+    <p className="trl-m0__note">p95 means 95% of this seeded run's generated paths had a maximum drawdown at or below this value (nearest-rank). It describes these paths only and is not a probability of future losses. Net P/L is identical on every path, so it has no percentile column.</p>
+  </section>;
+}
+
+export function PathFan({ fan, currency }: { fan: MonteCarloResult["path_fan"]; currency: string }): React.ReactElement {
+  const geometry = useMemo(() => multiLineGeometry([fan.historical, ...fan.paths.map((path) => path.values)]), [fan]);
+  if (geometry === null) return <p className="trl-m0__inline-error" role="alert">The path fan could not be drawn because a Core value was not numeric.</p>;
+  const all = [fan.historical, ...fan.paths.map((path) => path.values)];
+  const high = all[geometry.highIndex.line]![geometry.highIndex.point]!;
+  const low = all[geometry.lowIndex.line]![geometry.lowIndex.point]!;
+  const lastEvent = fan.event_indices.at(-1) ?? 0;
+  return <figure className="trl-mc-fan">
+    <h5>Generated path fan</h5>
+    <div className="trl-balance-chart__body">
+      <div className="trl-balance-chart__y-axis" aria-hidden="true"><span>{high}</span><span>{low}</span></div>
+      <div className="trl-balance-chart__plot trl-mc-fan__plot" role="img" aria-label={`${fan.paths.length} generated cumulative close-event P/L paths and the historical order, ranging from ${low} to ${high} ${currency}.`}>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <line className="trl-bars__zero" x1="0" x2="100" y1={geometry.zeroY} y2={geometry.zeroY} vectorEffect="non-scaling-stroke" />
+          {geometry.lines.slice(1).map((points, index) => <polyline key={fan.paths[index]!.path_index} className="trl-mc-fan__path" points={points} vectorEffect="non-scaling-stroke" />)}
+          <polyline className="trl-mc-fan__historical" points={geometry.lines[0]} vectorEffect="non-scaling-stroke" />
+        </svg>
+      </div>
+    </div>
+    <div className="trl-balance-chart__x-axis" aria-hidden="true"><span>0 events</span><span>{lastEvent} events</span></div>
+    <figcaption className="trl-m0__note"><span className="trl-mc-fan__key is-historical" /> historical order · <span className="trl-mc-fan__key" /> first {fan.paths.length} generated paths. Cumulative close-event P/L in {currency} from 0; every path ends at the same total. {fan.sampling === "EVEN_INDEX_SAMPLE_V1" && fan.point_count <= lastEvent ? `Drawn from ${fan.point_count} evenly spaced points per path, so brief extremes can be hidden; drawdown figures use the full paths.` : ""} Illustrative only, not a forecast.</figcaption>
+  </figure>;
 }

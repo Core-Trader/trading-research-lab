@@ -29,6 +29,16 @@ foregrounding, the provenance and advanced capabilities required by TRL.
 - The dashboard shows only values supported by the selected result's evidence.
   It must not label a reported balance curve as equity or present unavailable
   metrics as zero.
+- Display formatting is presentation only (2026-09-22): percentages are shown
+  to 2 decimal places by rounding the Core decimal string (half away from zero,
+  no binary floats), with the full Core value available on hover; ISO report
+  timestamps are shown with a space instead of `T` and no timezone change.
+  Chart geometry (scaling, colour intensity) may use numbers, but every label
+  and tooltip value is a Core string.
+- Overview (tier A/B, 2026-09-22) shows the KPI tile row, verified balance
+  curve, per-close-event P/L bars, a daily P/L calendar with ISO-week totals,
+  and a year × month results table. All period sums come from the Core
+  `analysis.close_event_display_series` method on the report clock.
 - The dashboard is fixed for the MVP. No drag/drop layouts, custom widgets,
   saved layouts, broad filtering, or visual strategy scoring are introduced.
 - Advanced tools must remain visibly qualified as research evidence, not trading

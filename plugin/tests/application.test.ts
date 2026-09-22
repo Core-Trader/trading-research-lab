@@ -28,6 +28,7 @@ test("service maps application calls to the versioned worker method names and pa
   await service.fixedCostScenario("ds-1", "0.50");
   await service.monteCarloOrderPermutation("ds-1", "20260921", 1000);
   await service.verifyRawSnapshot("ds-1");
+  await service.closeEventDisplaySeries("ds-1");
   await service.prepareReportPayload("ds-1", "run-1", "report-1");
   assert.deepEqual(calls.map((call) => call.method), [
     "dataset.intake_mt5_excel",
@@ -39,6 +40,7 @@ test("service maps application calls to the versioned worker method names and pa
     "scenario.fixed_close_event_cost",
     "scenario.monte_carlo_order_permutation",
     "dataset.verify_raw_snapshot",
+    "analysis.close_event_display_series",
     "report.prepare_payload",
   ]);
   assert.deepEqual(calls[0]?.params, { source_path: "C:\\reports\\a.xlsx" });
@@ -47,7 +49,8 @@ test("service maps application calls to the versioned worker method names and pa
   // The seed stays a string so large seeds are never rounded by JavaScript numbers.
   assert.deepEqual(calls[7]?.params, { dataset_ref: "ds-1", seed: "20260921", path_count: 1000 });
   assert.equal(calls[7]?.timeoutMs, 60_000);
-  assert.deepEqual(calls[9]?.params, { dataset_ref: "ds-1", analysis_run_id: "run-1", report_id: "report-1" });
+  assert.deepEqual(calls[9]?.params, { dataset_ref: "ds-1" });
+  assert.deepEqual(calls[10]?.params, { dataset_ref: "ds-1", analysis_run_id: "run-1", report_id: "report-1" });
 });
 
 test("latest run rejects results from a superseded run", () => {

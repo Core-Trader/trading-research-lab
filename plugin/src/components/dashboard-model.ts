@@ -1,3 +1,4 @@
+import { formatPercent } from "./display-format.ts";
 import type { DailyDrawdownResult, DatasetEvidence, StatisticsResult, TradeAnalysisResult } from "../types";
 
 export const UNAVAILABLE = "Unavailable";
@@ -13,7 +14,7 @@ export type DashboardInputs = {
   experiment: DocumentReference;
   report: DocumentReference;
   /** Failure messages from automatic dashboard calculations, per source. */
-  errors?: { closeEvents?: string | null; dailyDrawdown?: string | null };
+  errors?: { closeEvents?: string | null; dailyDrawdown?: string | null; displaySeries?: string | null };
 };
 
 export type KpiSource = "statistics" | "closeEvents" | "dailyDrawdown";
@@ -27,6 +28,8 @@ export type Kpi = {
   value: string;
   detail: string;
   tone: KpiTone;
+  /** Full-precision Core value when the displayed value is rounded for presentation. */
+  exact?: string;
 };
 
 export type DashboardModel = {
@@ -49,7 +52,7 @@ export function buildDashboardModel(inputs: DashboardInputs): DashboardModel | n
   if (statistics === null || evidence === null) return null;
   const currency = statistics.currency ?? "source currency";
   const money = (value: string | null | undefined): string => value === null || value === undefined ? UNAVAILABLE : `${value} ${currency}`;
-  const percent = (value: string | null | undefined): string => value === null || value === undefined ? UNAVAILABLE : `${value}%`;
+  const percent = (value: string | null | undefined): string => formatPercent(value) ?? UNAVAILABLE;
   const summary = closeEvents?.summary ?? null;
   const worstDay = dailyDrawdown?.worst_day ?? null;
 
@@ -68,13 +71,13 @@ export function buildDashboardModel(inputs: DashboardInputs): DashboardModel | n
       ? { id: "close-events", label: "Close events", source: "closeEvents", state: "ready", value: String(summary.count), detail: `${summary.win_count} wins · ${summary.loss_count} losses · ${summary.breakeven_count} breakeven`, tone: "neutral" }
       : { id: "close-events", label: "Close events", source: "closeEvents", ...pending("closeEvents") },
     summary
-      ? { id: "win-rate", label: "Win rate", source: "closeEvents", state: "ready", value: percent(summary.win_rate), detail: "Winning verified close events", tone: "neutral" }
+      ? { id: "win-rate", label: "Win rate", source: "closeEvents", state: "ready", value: percent(summary.win_rate), detail: "Winning verified close events", tone: "neutral", exact: summary.win_rate === null ? undefined : `Core value: ${summary.win_rate}%` }
       : { id: "win-rate", label: "Win rate", source: "closeEvents", ...pending("closeEvents") },
     summary
       ? { id: "gross", label: "Gross profit / loss", source: "closeEvents", state: "ready", value: `${summary.gross_profit} / ${summary.gross_loss}`, detail: currency, tone: "neutral" }
       : { id: "gross", label: "Gross profit / loss", source: "closeEvents", ...pending("closeEvents") },
     worstDay
-      ? { id: "worst-day", label: "Worst daily decline", source: "dailyDrawdown", state: "ready", value: money(worstDay.maximum_drawdown), detail: `${worstDay.date} · ${percent(worstDay.maximum_drawdown_percent)} of day's opening balance`, tone: isZero(worstDay.maximum_drawdown) ? "neutral" : "negative" }
+      ? { id: "worst-day", label: "Worst daily decline", source: "dailyDrawdown", state: "ready", value: money(worstDay.maximum_drawdown), detail: `${worstDay.date} · ${percent(worstDay.maximum_drawdown_percent)} of day's opening balance`, tone: isZero(worstDay.maximum_drawdown) ? "neutral" : "negative", exact: worstDay.maximum_drawdown_percent === null ? undefined : `Core value: ${worstDay.maximum_drawdown_percent}% of the day's opening balance` }
       : { id: "worst-day", label: "Worst daily decline", source: "dailyDrawdown", ...pending("dailyDrawdown") },
     { id: "balance-change", label: "Reported balance change", source: "statistics", state: "ready", value: money(statistics.reported_balance_change), detail: `${statistics.opening_balance} → ${statistics.final_reported_balance}`, tone: signTone(statistics.reported_balance_change) },
   ];

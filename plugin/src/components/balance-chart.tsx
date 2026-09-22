@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import type { StatisticsResult } from "../types";
 import { lineGeometry, nearestIndex } from "./chart-geometry";
+import { formatTimestamp } from "./display-format";
 
 type BalancePoint = StatisticsResult["balance_curve"]["points"][number];
 
@@ -64,13 +65,13 @@ export function BalanceChart({ points, currency }: { points: BalancePoint[]; cur
           <span className="trl-balance-chart__dot" style={{ left: `${activePosition.x}%`, top: `${activePosition.y}%` }} />
           <span className={`trl-balance-chart__tooltip${activePosition.x > 60 ? " is-left" : ""}`} style={{ left: `${activePosition.x}%` }} role="status">
             <strong>{active.balance} {unit}</strong>
-            <span>{active.timestamp}</span>
+            <span>{formatTimestamp(active.timestamp)}</span>
             <span>Sequence #{active.source_sequence}</span>
           </span>
         </>}
       </div>
     </div>
-    <div className="trl-balance-chart__x-axis" aria-hidden="true"><span>{first.timestamp}</span><span>{last.timestamp}</span></div>
+    <div className="trl-balance-chart__x-axis" aria-hidden="true"><span>{formatTimestamp(first.timestamp)}</span><span>{formatTimestamp(last.timestamp)}</span></div>
     <figcaption className="trl-m0__note">Reported balance ({unit}) in source event order; dashed line = opening balance {first.balance}. Hover or use arrow keys for values. Realised balance only, not intratrade equity.</figcaption>
   </figure>;
 }

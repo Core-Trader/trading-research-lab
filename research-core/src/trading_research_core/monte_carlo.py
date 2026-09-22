@@ -15,10 +15,13 @@ from .trade_analysis import close_event_summary, write_trade_artifact
 
 
 POLICY_ID = "monte-carlo-close-event-order-permutation-v1"
-CALCULATION_VERSION = "m6-monte-carlo-order-permutation-2"
+CALCULATION_VERSION = "m6-monte-carlo-order-permutation-3"
 PRNG_ID = "PCG32-v1"
 MAX_PATH_COUNT = 10_000
 MAX_DRAWDOWN_HISTOGRAM_BINS = 20
+DRAWDOWN_PERCENTILES = ("50", "80", "90", "95", "99")
+MAX_FAN_PATHS = 100
+MAX_FAN_POINTS = 250
 _UINT64_MAX = (1 << 64) - 1
 _UINT32_RANGE = 1 << 32
 
@@ -53,10 +56,13 @@ def order_permutation_scenario(workspace_root: Path, dataset_ref: str, seed: str
         "shuffle": "FISHER_YATES_V1",
         "path_start": "0 cumulative close-event P/L",
         "drawdown": "maximum decline from cumulative path high-water mark",
-        "quantiles": "nearest-rank p05, p50, p95",
+        "quantiles": "nearest-rank p05, p50, p95; percentile table p50, p80, p90, p95, p99",
+        "path_fan": f"historical path plus first {MAX_FAN_PATHS} generated paths; EVEN_INDEX_SAMPLE_V1 above {MAX_FAN_POINTS} points",
     }
     configuration_hash = _configuration_hash(configuration)
     rng = _Pcg32(normalized_seed)
+    sample_indices = _fan_sample_indices(len(population) + 1)
+    fan_paths: list[dict[str, object]] = []
     rows: list[dict[str, object]] = []
     for path_index in range(1, path_count + 1):
         path = list(population)
@@ -64,10 +70,14 @@ def order_permutation_scenario(workspace_root: Path, dataset_ref: str, seed: str
         running = Decimal("0")
         high_water = Decimal("0")
         maximum_drawdown = Decimal("0")
+        cumulative = [running]
         for value in path:
             running += value
             high_water = max(high_water, running)
             maximum_drawdown = max(maximum_drawdown, high_water - running)
+            cumulative.append(running)
+        if path_index <= MAX_FAN_PATHS:
+            fan_paths.append({"path_index": path_index, "values": [_format(cumulative[index]) for index in sample_indices]})
         if running != source_total:
             raise CoreError("E_MONTE_CARLO_INVARIANT", "A permutation path changed the source population total.")
         rows.append({
@@ -117,6 +127,17 @@ def order_permutation_scenario(workspace_root: Path, dataset_ref: str, seed: str
             "maximum": _format(drawdowns[-1]),
         },
         "drawdown_histogram": drawdown_histogram,
+        "drawdown_percentiles": [
+            {"percentile": level, "maximum_drawdown": _format(_nearest_rank(drawdowns, Decimal(level) / Decimal("100")))}
+            for level in DRAWDOWN_PERCENTILES
+        ],
+        "path_fan": {
+            "sampling": "EVEN_INDEX_SAMPLE_V1",
+            "point_count": len(sample_indices),
+            "event_indices": sample_indices,
+            "historical": [_format(value) for value in _sampled_cumulative(population, sample_indices)],
+            "paths": fan_paths,
+        },
         "least_drawdown_path": {"path_index": int(lowest["path_index"]), "maximum_drawdown": str(lowest["maximum_drawdown"])},
         "worst_drawdown_path": {"path_index": int(highest["path_index"]), "maximum_drawdown": str(highest["maximum_drawdown"])},
         "warnings": [
@@ -182,6 +203,23 @@ def _fisher_yates(values: list[Decimal], rng: _Pcg32) -> None:
     for index in range(len(values) - 1, 0, -1):
         other = rng.below(index + 1)
         values[index], values[other] = values[other], values[index]
+
+
+def _fan_sample_indices(point_count: int) -> list[int]:
+    """Evenly spaced cumulative-point indices, always keeping the first and last."""
+
+    if point_count <= MAX_FAN_POINTS:
+        return list(range(point_count))
+    last = point_count - 1
+    indices = {(step * last) // (MAX_FAN_POINTS - 1) for step in range(MAX_FAN_POINTS)}
+    return sorted(indices | {0, last})
+
+
+def _sampled_cumulative(values: list[Decimal], sample_indices: list[int]) -> list[Decimal]:
+    cumulative = [Decimal("0")]
+    for value in values:
+        cumulative.append(cumulative[-1] + value)
+    return [cumulative[index] for index in sample_indices]
 
 
 def _nearest_rank(values: list[Decimal], percentile: Decimal) -> Decimal:

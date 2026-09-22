@@ -1,9 +1,12 @@
 import React from "react";
 import { BalanceChart } from "./balance-chart";
-import { DashboardCard, type CardAction } from "./dashboard-card";
+import { DashboardCard, type CardAction, type CardState } from "./dashboard-card";
 import { buildDashboardModel, type DashboardInputs, type Kpi } from "./dashboard-model";
+import { CloseEventBars, DailyPnlCalendar, MonthlyPnlTable } from "./pnl-visuals";
+import type { CloseEventDisplaySeries } from "../types";
 
 type DashboardSummaryProps = DashboardInputs & {
+  displaySeries: CloseEventDisplaySeries | null;
   busyStatus: string | null;
   onBrowseReport: () => void;
   onFocusDocuments: () => void;
@@ -13,7 +16,7 @@ type DashboardSummaryProps = DashboardInputs & {
 
 /** Presentation-only MVP dashboard. Financial results always originate in the Core. */
 export function DashboardSummary({
-  busyStatus, onBrowseReport, onFocusDocuments, onRunTradeAnalysis, onRunDailyAnalysis, ...inputs
+  displaySeries, busyStatus, onBrowseReport, onFocusDocuments, onRunTradeAnalysis, onRunDailyAnalysis, ...inputs
 }: DashboardSummaryProps): React.ReactElement {
   const model = buildDashboardModel(inputs);
   const busy = busyStatus !== null;
@@ -40,6 +43,11 @@ export function DashboardSummary({
     return undefined;
   };
   const statistics = inputs.statistics!;
+  const seriesError = inputs.errors?.displaySeries ?? null;
+  const seriesState: CardState = displaySeries
+    ? { kind: "ready" }
+    : seriesError ? { kind: "error", message: seriesError } : { kind: "empty", message: "Not calculated yet. Run trade analysis to build the close-event P/L views." };
+  const seriesAction: CardAction = { label: "Run trade analysis", onClick: onRunTradeAnalysis, disabled: busy };
 
   return <section className="trl-dashboard" aria-label="Research dashboard" aria-busy={busy}>
     <header className="trl-dashboard__header">
@@ -64,6 +72,9 @@ export function DashboardSummary({
         <p>{dataset.detail}</p>
         <p className="trl-m0__note">{dataset.adapter}</p>
       </DashboardCard>
+      <DashboardCard title="Close-event P/L" state={seriesState} action={seriesAction} className="trl-dashboard__card--chart">
+        {displaySeries && <CloseEventBars series={displaySeries} />}
+      </DashboardCard>
       <DashboardCard title="Research documents" state={{ kind: "ready" }}>
         <strong>{documents.linkedCount} of 3 linked</strong>
         <ul className="trl-doc-links">
@@ -74,12 +85,18 @@ export function DashboardSummary({
         <button type="button" onClick={onFocusDocuments}>{documents.linkedCount === 0 ? "Start Strategy → Experiment → Report" : "Open document workflow"}</button>
         {!closeEvents && <p className="trl-m0__note">Tip: run trade analysis first so the report includes verified close events.</p>}
       </DashboardCard>
+      <DashboardCard title="Daily P/L calendar" state={seriesState} className="trl-dashboard__card--wide">
+        {displaySeries && <DailyPnlCalendar series={displaySeries} />}
+      </DashboardCard>
+      <DashboardCard title="Monthly results" state={seriesState} className="trl-dashboard__card--wide">
+        {displaySeries && <MonthlyPnlTable series={displaySeries} />}
+      </DashboardCard>
     </div>
   </section>;
 }
 
 function KpiTile({ kpi, action }: { kpi: Kpi; action?: CardAction }): React.ReactElement {
-  return <div className={`trl-kpi trl-kpi--${kpi.state} trl-kpi--${kpi.tone}`}>
+  return <div className={`trl-kpi trl-kpi--${kpi.state} trl-kpi--${kpi.tone}`} title={kpi.exact}>
     <span className="trl-kpi__label">{kpi.label}</span>
     <strong className="trl-kpi__value">{kpi.value}</strong>
     <span className="trl-kpi__detail" role={kpi.state === "error" ? "alert" : undefined}>{kpi.detail}</span>
