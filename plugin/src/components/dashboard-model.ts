@@ -1,5 +1,5 @@
-import { formatPercent } from "./display-format.ts";
-import type { DailyDrawdownResult, DatasetEvidence, StatisticsResult, TradeAnalysisResult } from "../types";
+import { formatPercent, formatTimestamp, roundDecimalString } from "./display-format.ts";
+import type { DailyDrawdownResult, DatasetEvidence, PerformanceMetrics, StatisticsResult, TradeAnalysisResult } from "../types";
 
 export const UNAVAILABLE = "Unavailable";
 
@@ -13,15 +13,16 @@ export type DashboardInputs = {
   strategy: DocumentReference;
   experiment: DocumentReference;
   report: DocumentReference;
+  performance?: PerformanceMetrics | null;
   /** Failure messages from automatic dashboard calculations, per source. */
-  errors?: { closeEvents?: string | null; dailyDrawdown?: string | null; displaySeries?: string | null };
+  errors?: { closeEvents?: string | null; dailyDrawdown?: string | null; displaySeries?: string | null; performance?: string | null };
 };
 
-export type KpiSource = "statistics" | "closeEvents" | "dailyDrawdown";
+export type KpiSource = "statistics" | "closeEvents" | "dailyDrawdown" | "performance";
 export type KpiTone = "positive" | "negative" | "neutral";
 
 export type Kpi = {
-  id: "net-pnl" | "close-events" | "win-rate" | "gross" | "worst-day" | "balance-change";
+  id: "net-pnl" | "close-events" | "win-rate" | "gross" | "worst-day" | "balance-change" | "max-drawdown" | "return-drawdown" | "profit-factor" | "expectancy" | "avg-win-loss" | "stagnation";
   label: string;
   source: KpiSource;
   state: "ready" | "empty" | "error";
@@ -48,7 +49,7 @@ export type DashboardModel = {
  * missing value renders as "Unavailable", never as zero.
  */
 export function buildDashboardModel(inputs: DashboardInputs): DashboardModel | null {
-  const { statistics, evidence, closeEvents, dailyDrawdown, strategy, experiment, report, errors } = inputs;
+  const { statistics, evidence, closeEvents, dailyDrawdown, strategy, experiment, report, errors, performance } = inputs;
   if (statistics === null || evidence === null) return null;
   const currency = statistics.currency ?? "source currency";
   const money = (value: string | null | undefined): string => value === null || value === undefined ? UNAVAILABLE : `${value} ${currency}`;
@@ -57,10 +58,10 @@ export function buildDashboardModel(inputs: DashboardInputs): DashboardModel | n
   const worstDay = dailyDrawdown?.worst_day ?? null;
 
   const pending = (source: KpiSource): Pick<Kpi, "state" | "value" | "detail" | "tone"> => {
-    const error = source === "closeEvents" ? errors?.closeEvents : source === "dailyDrawdown" ? errors?.dailyDrawdown : null;
+    const error = source === "closeEvents" ? errors?.closeEvents : source === "dailyDrawdown" ? errors?.dailyDrawdown : source === "performance" ? errors?.performance : null;
     return error
       ? { state: "error", value: UNAVAILABLE, detail: error, tone: "neutral" }
-      : { state: "empty", value: "Not calculated", detail: source === "closeEvents" ? "Run verified trade analysis." : "Run daily balance analysis.", tone: "neutral" };
+      : { state: "empty", value: "Not calculated", detail: source === "closeEvents" ? "Run verified trade analysis." : source === "performance" ? "Run trade analysis to calculate performance metrics." : "Run daily balance analysis.", tone: "neutral" };
   };
 
   const kpis: Kpi[] = [
@@ -79,6 +80,7 @@ export function buildDashboardModel(inputs: DashboardInputs): DashboardModel | n
     worstDay
       ? { id: "worst-day", label: "Worst daily decline", source: "dailyDrawdown", state: "ready", value: money(worstDay.maximum_drawdown), detail: `${worstDay.date} · ${percent(worstDay.maximum_drawdown_percent)} of day's opening balance`, tone: isZero(worstDay.maximum_drawdown) ? "neutral" : "negative", exact: worstDay.maximum_drawdown_percent === null ? undefined : `Core value: ${worstDay.maximum_drawdown_percent}% of the day's opening balance` }
       : { id: "worst-day", label: "Worst daily decline", source: "dailyDrawdown", ...pending("dailyDrawdown") },
+    ...performanceKpis(performance ?? null, currency, pending),
     { id: "balance-change", label: "Reported balance change", source: "statistics", state: "ready", value: money(statistics.reported_balance_change), detail: `${statistics.opening_balance} → ${statistics.final_reported_balance}`, tone: signTone(statistics.reported_balance_change) },
   ];
 
@@ -124,4 +126,28 @@ export function signTone(value: string): KpiTone {
 
 function isZero(value: string): boolean {
   return /^[+-]?0*(?:\.0*)?$/.test(value.trim());
+}
+
+const REASON_TEXT: Record<string, string> = { NO_LOSSES: "No losses", NO_CLOSE_EVENTS: "No close events", NO_DRAWDOWN: "No drawdown" };
+
+/** Tier C1 tiles. Quotients are Core strings rounded to 2 dp for display, exact on hover. */
+function performanceKpis(performance: PerformanceMetrics | null, currency: string, pending: (source: KpiSource) => Pick<Kpi, "state" | "value" | "detail" | "tone">): Kpi[] {
+  const ids: Array<[Kpi["id"], string]> = [["max-drawdown", "Max drawdown (balance)"], ["return-drawdown", "Return / drawdown"], ["profit-factor", "Profit factor"], ["expectancy", "Expectancy (avg per close event)"], ["avg-win-loss", "Avg win / avg loss"], ["stagnation", "Longest stagnation"]];
+  if (performance === null) return ids.map(([id, label]) => ({ id, label, source: "performance", ...pending("performance") }));
+  const balance = performance.balance_metrics;
+  const close = performance.close_event_metrics;
+  const stagnation = performance.stagnation.longest_by_time;
+  const r2 = (value: string | null): string => value === null ? "—" : roundDecimalString(value, 2);
+  const exact = (label: string, value: string | null): string | undefined => value === null ? undefined : `Core value: ${label}${value}`;
+  const drawdownDetail = balance.peak && balance.trough
+    ? `${balance.maximum_drawdown_percent === null ? "% unavailable" : `${r2(balance.maximum_drawdown_percent)}% of peak`} · ${formatTimestamp(balance.peak.timestamp).slice(0, 10)} → ${formatTimestamp(balance.trough.timestamp).slice(0, 10)} · ${balance.recovery_status === "RECOVERED" ? "recovered" : "not recovered"}`
+    : "The balance never fell below a previous high.";
+  return [
+    { id: "max-drawdown", label: "Max drawdown (balance)", source: "performance", state: "ready", value: isZero(balance.maximum_drawdown) ? REASON_TEXT.NO_DRAWDOWN! : `${balance.maximum_drawdown} ${currency}`, detail: drawdownDetail, tone: isZero(balance.maximum_drawdown) ? "neutral" : "negative", exact: exact("", balance.maximum_drawdown_percent === null ? null : `${balance.maximum_drawdown_percent}% of the high-water mark at the trough`) },
+    { id: "return-drawdown", label: "Return / drawdown", source: "performance", state: "ready", value: balance.return_to_drawdown === null ? REASON_TEXT[balance.return_to_drawdown_reason ?? ""] ?? "—" : r2(balance.return_to_drawdown), detail: "Balance change ÷ max drawdown", tone: balance.return_to_drawdown === null ? "neutral" : signTone(balance.return_to_drawdown), exact: exact("", balance.return_to_drawdown) },
+    { id: "profit-factor", label: "Profit factor", source: "performance", state: "ready", value: close.profit_factor === null ? REASON_TEXT[close.profit_factor_reason ?? ""] ?? "—" : r2(close.profit_factor), detail: "Gross profit ÷ |gross loss| (close events)", tone: "neutral", exact: exact("", close.profit_factor) },
+    { id: "expectancy", label: "Expectancy (avg per close event)", source: "performance", state: "ready", value: close.expectancy === null ? "—" : `${r2(close.expectancy)} ${currency}`, detail: "Mean net P/L per verified close event", tone: close.expectancy === null ? "neutral" : signTone(close.expectancy), exact: exact("", close.expectancy) },
+    { id: "avg-win-loss", label: "Avg win / avg loss", source: "performance", state: "ready", value: `${r2(close.average_win)} / ${r2(close.average_loss)}`, detail: `${currency} · payoff ratio ${r2(close.payoff_ratio)}`, tone: "neutral", exact: exact("", `${close.average_win ?? "—"} / ${close.average_loss ?? "—"}; payoff ${close.payoff_ratio ?? "—"}`) },
+    { id: "stagnation", label: "Longest stagnation", source: "performance", state: "ready", value: `${r2(stagnation.duration_days)} days`, detail: `${stagnation.close_events} close events · ${stagnation.status === "ONGOING" ? "still ongoing" : "ended by a new high"} · from ${formatTimestamp(stagnation.start.timestamp).slice(0, 10)}`, tone: "neutral", exact: exact("", `${stagnation.duration_days} days; ${stagnation.share_of_report_period_percent ?? "—"}% of the report period`) },
+  ];
 }

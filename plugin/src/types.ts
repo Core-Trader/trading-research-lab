@@ -272,3 +272,55 @@ export type CloseEventDisplaySeries = {
   yearly: Array<PeriodPnl & { year: number }>;
   warnings: string[];
 };
+
+export type BalancePointRef = { source_sequence: number; timestamp: string; balance: string };
+export type StagnationPeriod = {
+  start: BalancePointRef;
+  end: BalancePointRef;
+  status: "ONGOING" | "ENDED_BY_NEW_HIGH";
+  duration_seconds: number;
+  duration_days: string;
+  share_of_report_period_percent: string | null;
+  close_events: number;
+};
+export type Streak = { count: number; net_pnl: string | null; first_source_sequence: number | null; last_source_sequence: number | null };
+
+export type PerformanceMetrics = {
+  analysis_basis: string;
+  policy_id: string;
+  calculation_version: string;
+  dataset_ref: string;
+  currency: string | null;
+  time_basis: "SOURCE_REPORTED_CLOCK";
+  configuration_hash: string;
+  balance_metrics: {
+    opening_balance: string;
+    final_balance: string;
+    balance_change: string;
+    maximum_drawdown: string;
+    maximum_drawdown_percent: string | null;
+    peak: BalancePointRef | null;
+    trough: BalancePointRef | null;
+    recovery: BalancePointRef | null;
+    recovery_status: "RECOVERED" | "NOT_RECOVERED" | null;
+    return_to_drawdown: string | null;
+    return_to_drawdown_reason: "NO_DRAWDOWN" | null;
+  };
+  drawdown_series: Array<{ source_sequence: number; timestamp: string; drawdown: string; drawdown_percent: string | null }>;
+  stagnation: { period_count: number; longest_by_time: StagnationPeriod; longest_by_close_events: StagnationPeriod; ongoing: StagnationPeriod };
+  close_event_metrics: {
+    close_event_count: number;
+    net_pnl: string;
+    gross_profit: string;
+    gross_loss: string;
+    profit_factor: string | null;
+    profit_factor_reason: "NO_LOSSES" | "NO_CLOSE_EVENTS" | null;
+    average_win: string | null;
+    average_loss: string | null;
+    payoff_ratio: string | null;
+    expectancy: string | null;
+    longest_winning_streak: Streak;
+    longest_losing_streak: Streak;
+  };
+  warnings: string[];
+};

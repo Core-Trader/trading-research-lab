@@ -1,4 +1,4 @@
-import type { CloseEventDisplaySeries, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CloseEventDisplaySeries, PerformanceMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -51,6 +51,10 @@ export class ResearchService {
 
   closeEventDisplaySeries(datasetRef: string): Promise<CloseEventDisplaySeries> {
     return this.worker.request("analysis.close_event_display_series", { dataset_ref: datasetRef });
+  }
+
+  performanceMetrics(datasetRef: string): Promise<PerformanceMetrics> {
+    return this.worker.request("analysis.performance_metrics", { dataset_ref: datasetRef });
   }
 
   reconstructLifecycles(datasetRef: string, accountMode: string): Promise<TradeAnalysisResult> {

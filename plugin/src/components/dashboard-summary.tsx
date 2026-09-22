@@ -1,5 +1,7 @@
 import React from "react";
 import { BalanceChart } from "./balance-chart";
+import { DrawdownChart } from "./drawdown-chart";
+import { roundDecimalString } from "./display-format";
 import { DashboardCard, type CardAction, type CardState } from "./dashboard-card";
 import { buildDashboardModel, type DashboardInputs, type Kpi } from "./dashboard-model";
 import { CloseEventBars, DailyPnlCalendar, MonthlyPnlTable } from "./pnl-visuals";
@@ -39,10 +41,12 @@ export function DashboardSummary({
   const actionFor = (kpi: Kpi): CardAction | undefined => {
     if (kpi.state === "ready") return undefined;
     if (kpi.id === "net-pnl") return { label: "Run trade analysis", onClick: onRunTradeAnalysis, disabled: busy };
+    if (kpi.id === "max-drawdown") return { label: "Calculate metrics", onClick: onRunTradeAnalysis, disabled: busy };
     if (kpi.id === "worst-day") return { label: "Run daily balance analysis", onClick: onRunDailyAnalysis, disabled: busy };
     return undefined;
   };
   const statistics = inputs.statistics!;
+  const performance = inputs.performance ?? null;
   const seriesError = inputs.errors?.displaySeries ?? null;
   const seriesState: CardState = displaySeries
     ? { kind: "ready" }
@@ -65,7 +69,8 @@ export function DashboardSummary({
     </section>
     <div className="trl-dashboard__grid">
       <DashboardCard title="Verified balance curve" state={{ kind: "ready" }} className="trl-dashboard__card--chart">
-        <BalanceChart points={statistics.balance_curve.points} currency={statistics.currency} />
+        <BalanceChart points={statistics.balance_curve.points} currency={statistics.currency} band={performance ? { startSequence: performance.stagnation.longest_by_time.start.source_sequence, endSequence: performance.stagnation.longest_by_time.end.source_sequence, label: `longest stagnation (${roundDecimalString(performance.stagnation.longest_by_time.duration_days, 2)} days${performance.stagnation.longest_by_time.status === "ONGOING" ? ", ongoing" : ""})` } : null} />
+        {performance && <DrawdownChart series={performance.drawdown_series} currency={statistics.currency} maximum={performance.balance_metrics.maximum_drawdown} />}
       </DashboardCard>
       <DashboardCard title="Dataset" state={{ kind: "ready" }}>
         <strong>{dataset.filename}</strong>
@@ -74,6 +79,7 @@ export function DashboardSummary({
       </DashboardCard>
       <DashboardCard title="Close-event P/L" state={seriesState} action={seriesAction} className="trl-dashboard__card--chart">
         {displaySeries && <CloseEventBars series={displaySeries} />}
+        {performance && <p className="trl-streaks">Longest winning streak: <strong>{performance.close_event_metrics.longest_winning_streak.count}</strong>{performance.close_event_metrics.longest_winning_streak.net_pnl ? ` (${performance.close_event_metrics.longest_winning_streak.net_pnl} ${model.currency})` : ""} · Longest losing streak: <strong>{performance.close_event_metrics.longest_losing_streak.count}</strong>{performance.close_event_metrics.longest_losing_streak.net_pnl ? ` (${performance.close_event_metrics.longest_losing_streak.net_pnl} ${model.currency})` : ""}. Breakeven events end a streak.</p>}
       </DashboardCard>
       <DashboardCard title="Research documents" state={{ kind: "ready" }}>
         <strong>{documents.linkedCount} of 3 linked</strong>

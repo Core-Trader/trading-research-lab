@@ -9,7 +9,9 @@ type BalancePoint = StatisticsResult["balance_curve"]["points"][number];
  * Verified reported-balance curve. Points are evenly spaced in source event
  * order (not scaled by time). All labels are Core-supplied strings.
  */
-export function BalanceChart({ points, currency }: { points: BalancePoint[]; currency?: string | null }): React.ReactElement {
+export type ChartBand = { startSequence: number; endSequence: number; label: string };
+
+export function BalanceChart({ points, currency, band }: { points: BalancePoint[]; currency?: string | null; band?: ChartBand | null }): React.ReactElement {
   const geometry = useMemo(() => lineGeometry(points.map((point) => point.balance)), [points]);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   if (points.length < 2) return <p className="trl-m0__note">At least two balance points are required to draw the verified balance curve.</p>;
@@ -22,6 +24,9 @@ export function BalanceChart({ points, currency }: { points: BalancePoint[]; cur
   const low = points[geometry.lowIndex]!;
   const active = activeIndex === null ? null : points[activeIndex] ?? null;
   const activePosition = activeIndex === null ? null : geometry.positions[activeIndex] ?? null;
+  const bandStart = band ? points.findIndex((point) => point.source_sequence === band.startSequence) : -1;
+  const bandEnd = band ? points.findIndex((point) => point.source_sequence === band.endSequence) : -1;
+  const bandBox = bandStart >= 0 && bandEnd >= bandStart ? { x: geometry.positions[bandStart]!.x, width: Math.max(0.3, geometry.positions[bandEnd]!.x - geometry.positions[bandStart]!.x) } : null;
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>): void => {
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -57,6 +62,7 @@ export function BalanceChart({ points, currency }: { points: BalancePoint[]; cur
         onBlur={() => setActiveIndex(null)}
       >
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          {bandBox && <rect className="trl-balance-chart__band" x={bandBox.x} width={bandBox.width} y="0" height="100" />}
           <line className="trl-balance-chart__reference" x1="0" x2="100" y1={geometry.firstY} y2={geometry.firstY} vectorEffect="non-scaling-stroke" />
           <polyline className="trl-balance-chart__line" points={geometry.polyline} vectorEffect="non-scaling-stroke" />
         </svg>
@@ -72,6 +78,6 @@ export function BalanceChart({ points, currency }: { points: BalancePoint[]; cur
       </div>
     </div>
     <div className="trl-balance-chart__x-axis" aria-hidden="true"><span>{formatTimestamp(first.timestamp)}</span><span>{formatTimestamp(last.timestamp)}</span></div>
-    <figcaption className="trl-m0__note">Reported balance ({unit}) in source event order; dashed line = opening balance {first.balance}. Hover or use arrow keys for values. Realised balance only, not intratrade equity.</figcaption>
+    <figcaption className="trl-m0__note">Reported balance ({unit}) in source event order; dashed line = opening balance {first.balance}. Hover or use arrow keys for values. Realised balance only, not intratrade equity.{bandBox && band ? ` Shaded: ${band.label}.` : ""}</figcaption>
   </figure>;
 }

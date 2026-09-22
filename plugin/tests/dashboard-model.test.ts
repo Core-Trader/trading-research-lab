@@ -61,7 +61,7 @@ test("KPI tiles show Core strings with sign-based tone and no derived values", (
   const drawdown = { worst_day: { date: "2026.01.02", maximum_drawdown: "12.00", maximum_drawdown_percent: "0.12" } } as DailyDrawdownResult;
   const model = buildDashboardModel({ ...empty, statistics, evidence, closeEvents: closeEvents("60.00"), dailyDrawdown: drawdown });
   const byId = Object.fromEntries((model?.kpis ?? []).map((kpi) => [kpi.id, kpi]));
-  assert.deepEqual(Object.keys(byId), ["net-pnl", "close-events", "win-rate", "gross", "worst-day", "balance-change"]);
+  assert.deepEqual(Object.keys(byId), ["net-pnl", "close-events", "win-rate", "gross", "worst-day", "max-drawdown", "return-drawdown", "profit-factor", "expectancy", "avg-win-loss", "stagnation", "balance-change"]);
   assert.equal(byId["net-pnl"]?.value, "250.50 USD");
   assert.equal(byId["net-pnl"]?.tone, "positive");
   assert.equal(byId["close-events"]?.value, "20");
@@ -98,4 +98,57 @@ test("document linkage counts the explicit Strategy, Experiment, and Report refe
   assert.equal(model?.documents.linkedCount, 1);
   assert.equal(model?.documents.strategy, true);
   assert.equal(model?.documents.experiment, false);
+});
+
+const point = (sequence: number, timestamp: string, balance: string) => ({ source_sequence: sequence, timestamp, balance });
+
+function performance(overrides: { profit_factor?: string | null; profit_factor_reason?: "NO_LOSSES" | null; maximum_drawdown?: string } = {}): any {
+  const drawdown = overrides.maximum_drawdown ?? "130";
+  return {
+    balance_metrics: {
+      opening_balance: "1000", final_balance: "1170", balance_change: "170", maximum_drawdown: drawdown,
+      maximum_drawdown_percent: drawdown === "0" ? null : "11.81818182",
+      peak: drawdown === "0" ? null : point(2, "2026-01-06T12:00:00", "1100"), trough: drawdown === "0" ? null : point(4, "2026-01-08T12:00:00", "970"),
+      recovery: null, recovery_status: drawdown === "0" ? null : "RECOVERED",
+      return_to_drawdown: drawdown === "0" ? null : "1.30769231", return_to_drawdown_reason: drawdown === "0" ? "NO_DRAWDOWN" : null,
+    },
+    drawdown_series: [],
+    stagnation: { period_count: 2, longest_by_time: { start: point(2, "2026-01-06T12:00:00", "1100"), end: point(5, "2026-01-09T12:00:00", "1170"), status: "ENDED_BY_NEW_HIGH", duration_seconds: 259200, duration_days: "3.00000000", share_of_report_period_percent: "75.00000000", close_events: 3 } },
+    close_event_metrics: {
+      close_event_count: 4, net_pnl: "170", gross_profit: "300", gross_loss: "-130",
+      profit_factor: overrides.profit_factor === undefined ? "2.30769231" : overrides.profit_factor, profit_factor_reason: overrides.profit_factor_reason ?? null,
+      average_win: "150.00000000", average_loss: "-65.00000000", payoff_ratio: "2.30769231", expectancy: "42.50000000",
+      longest_winning_streak: { count: 1, net_pnl: "100", first_source_sequence: 2, last_source_sequence: 2 },
+      longest_losing_streak: { count: 2, net_pnl: "-130", first_source_sequence: 3, last_source_sequence: 4 },
+    },
+  };
+}
+
+test("performance tiles round Core quotients for display and keep the exact value on hover", () => {
+  const model = buildDashboardModel({ ...empty, statistics, evidence, performance: performance() });
+  const byId = Object.fromEntries((model?.kpis ?? []).map((kpi) => [kpi.id, kpi]));
+  assert.equal(byId["max-drawdown"]?.value, "130 USD");
+  assert.equal(byId["max-drawdown"]?.detail, "11.82% of peak · 2026-01-06 → 2026-01-08 · recovered");
+  assert.equal(byId["profit-factor"]?.value, "2.31");
+  assert.equal(byId["profit-factor"]?.exact, "Core value: 2.30769231");
+  assert.equal(byId["expectancy"]?.value, "42.50 USD");
+  assert.equal(byId["avg-win-loss"]?.value, "150.00 / -65.00");
+  assert.equal(byId["stagnation"]?.value, "3.00 days");
+  assert.equal(byId["return-drawdown"]?.value, "1.31");
+});
+
+test("undefined performance values show their reason, never zero or infinity", () => {
+  const model = buildDashboardModel({ ...empty, statistics, evidence, performance: performance({ profit_factor: null, profit_factor_reason: "NO_LOSSES", maximum_drawdown: "0" }) });
+  const byId = Object.fromEntries((model?.kpis ?? []).map((kpi) => [kpi.id, kpi]));
+  assert.equal(byId["profit-factor"]?.value, "No losses");
+  assert.equal(byId["max-drawdown"]?.value, "No drawdown");
+  assert.equal(byId["return-drawdown"]?.value, "No drawdown");
+  assert.ok(!Object.values(byId).some((kpi) => /Infinity|∞/.test(String(kpi?.value))));
+});
+
+test("performance tiles without Core metrics are pending, or carry the Core error", () => {
+  const pending = buildDashboardModel({ ...empty, statistics, evidence });
+  assert.equal(pending?.kpis.find((kpi) => kpi.id === "profit-factor")?.value, "Not calculated");
+  const failed = buildDashboardModel({ ...empty, statistics, evidence, errors: { performance: "E_DATASET_INVALID: bad timestamps" } });
+  assert.equal(failed?.kpis.find((kpi) => kpi.id === "stagnation")?.detail, "E_DATASET_INVALID: bad timestamps");
 });

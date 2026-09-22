@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ItemView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import type TradingResearchLabPlugin from "./main";
-import type { CloseEventDisplaySeries, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "./types";
+import type { CloseEventDisplaySeries, PerformanceMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "./types";
 import { experimentDocumentText, inspectReportForRegeneration, regenerateReportText, reportDocumentText, strategyDocumentText, uuidv7 } from "./research-documents";
 import { ResearchService } from "./application/research-service";
 import { LatestRun } from "./application/latest-run";
@@ -89,7 +89,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const [forwardResult, setForwardResult] = useState<PairedForwardResult | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [displaySeries, setDisplaySeries] = useState<CloseEventDisplaySeries | null>(null);
-  const [cardErrors, setCardErrors] = useState<{ closeEvents: string | null; dailyDrawdown: string | null; displaySeries: string | null }>({ closeEvents: null, dailyDrawdown: null, displaySeries: null });
+  const [performanceMetrics, setPerformance] = useState<PerformanceMetrics | null>(null);
+  const [cardErrors, setCardErrors] = useState<{ closeEvents: string | null; dailyDrawdown: string | null; displaySeries: string | null; performance: string | null }>({ closeEvents: null, dailyDrawdown: null, displaySeries: null, performance: null });
   // Resolve the worker per request: saving settings replaces `plugin.worker`.
   const service = useMemo(() => new ResearchService({ request: (method, params, timeoutMs) => plugin.worker.request(method, params, timeoutMs) }), [plugin]);
   const importRuns = useRef(new LatestRun()).current;
@@ -143,8 +144,9 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     const isCurrent = (): boolean => importRuns.isCurrent(token);
     setImportBusy(true);
     setError(null);
-    setCardErrors({ closeEvents: null, dailyDrawdown: null, displaySeries: null });
+    setCardErrors({ closeEvents: null, dailyDrawdown: null, displaySeries: null, performance: null });
     setDisplaySeries(null);
+    setPerformance(null);
     setDiagnostics(null);
     setCloseEventAnalysis(null);
     setLifecycleAnalysis(null);
@@ -174,6 +176,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
         service.realisedBalanceDailyDrawdown(datasetRef),
         service.equityAvailability(datasetRef),
         service.closeEventDisplaySeries(datasetRef),
+        service.performanceMetrics(datasetRef),
       ]);
       if (!isCurrent()) return;
       const presentationStartedAt = performance.now();
@@ -189,7 +192,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       };
       setStatistics(calculated.result);
       setEvidence(imported.result.intake_receipt);
-      const [closeEventResult, dailyDrawdownResult, equityAvailabilityResult, displaySeriesResult] = automaticResults;
+      const [closeEventResult, dailyDrawdownResult, equityAvailabilityResult, displaySeriesResult, performanceResult] = automaticResults;
+      if (performanceResult.status === "fulfilled") setPerformance(performanceResult.value);
       if (displaySeriesResult.status === "fulfilled") setDisplaySeries(displaySeriesResult.value);
       if (closeEventResult.status === "fulfilled") setCloseEventAnalysis(closeEventResult.value);
       if (dailyDrawdownResult.status === "fulfilled") setDailyDrawdown(dailyDrawdownResult.value);
@@ -197,6 +201,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
         closeEvents: closeEventResult.status === "rejected" ? reasonText(closeEventResult.reason) : null,
         dailyDrawdown: dailyDrawdownResult.status === "rejected" ? reasonText(dailyDrawdownResult.reason) : null,
         displaySeries: displaySeriesResult.status === "rejected" ? reasonText(displaySeriesResult.reason) : null,
+        performance: performanceResult.status === "rejected" ? reasonText(performanceResult.reason) : null,
       });
       if (equityAvailabilityResult.status === "fulfilled") setEquityAvailability(equityAvailabilityResult.value);
       setIntakeStatus(imported.result.intake_status);
@@ -395,6 +400,12 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
         setCardErrors((current) => ({ ...current, displaySeries: null }));
       } catch (caught) {
         setCardErrors((current) => ({ ...current, displaySeries: reasonText(caught) }));
+      }
+      try {
+        setPerformance(await service.performanceMetrics(datasetRef));
+        setCardErrors((current) => ({ ...current, performance: null }));
+      } catch (caught) {
+        setCardErrors((current) => ({ ...current, performance: reasonText(caught) }));
       }
       setLifecycleAnalysis(lifecycles);
       setFixedCostScenario(null);
@@ -609,6 +620,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       report={report}
       errors={cardErrors}
       displaySeries={displaySeries}
+      performance={performanceMetrics}
       busyStatus={importBusy ? status : null}
       onBrowseReport={() => fileInputRef.current?.click()}
       onFocusDocuments={() => setActivePage("research")}

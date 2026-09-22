@@ -21,6 +21,7 @@ from .portfolio_preflight import combined_daily_drawdown, create_combined_realis
 from .what_if import fixed_close_event_cost_scenario
 from .monte_carlo import order_permutation_scenario
 from .display_series import close_event_display_series
+from .performance_metrics import performance_metrics
 from .mt5_optimisation import intake_parameter_grid, intake_paired_forward_grid
 
 
@@ -51,6 +52,7 @@ class Worker:
                     "analysis.basic_statistics",
                     "analysis.close_event_summary",
                     "analysis.close_event_display_series",
+                    "analysis.performance_metrics",
                     "analysis.reconstruct_lifecycles",
                     "analysis.lifecycle_summary",
                     "time.validate_profile",
@@ -98,6 +100,8 @@ class Worker:
         if method == "analysis.basic_statistics":
             dataset_ref = _required_string(params, "dataset_ref")
             return basic_statistics(read_dataset(self.workspace_root, dataset_ref))
+        if method == "analysis.performance_metrics":
+            return performance_metrics(read_dataset(self.workspace_root, _required_string(params, "dataset_ref")))
         if method == "analysis.close_event_display_series":
             dataset_ref = _required_string(params, "dataset_ref")
             return close_event_display_series(read_dataset(self.workspace_root, dataset_ref))
