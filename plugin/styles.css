@@ -168,5 +168,18 @@
 .trl-batch__findings li strong { color: var(--text-error); font-weight: 600; }
 .trl-batch__findings li span { color: var(--text-muted); font-size: var(--font-ui-smaller); }
 .trl-batch__warnings { margin: 0.5rem 0; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.trl-badge { display: inline-block; margin-left: 0.5rem; padding: 0.1rem 0.45rem; border-radius: 999px; font-size: var(--font-ui-smaller); font-weight: 600; vertical-align: middle; }
+.trl-badge.is-inferred { background: color-mix(in srgb, var(--color-orange) 25%, transparent); color: var(--text-normal); }
+.trl-badge.is-user { background: color-mix(in srgb, var(--interactive-accent) 25%, transparent); color: var(--text-normal); }
+.trl-r-histogram { margin-top: 0.75rem; }
+.trl-r-histogram__bars { display: flex; align-items: end; gap: 0.15rem; height: 10rem; padding: 0.5rem; border: 1px solid var(--background-modifier-border); border-radius: 0.35rem; background: var(--background-primary); }
+.trl-r-histogram__bin { position: relative; display: flex; flex: 1 1 0; flex-direction: column; justify-content: flex-end; align-items: center; min-width: 0; height: 100%; }
+.trl-r-histogram__bin.is-zero { border-left: 1px dashed var(--text-faint); }
+.trl-r-histogram__bar { width: 100%; border-radius: 0.15rem 0.15rem 0 0; }
+.trl-r-histogram__bin.is-positive .trl-r-histogram__bar { background: var(--color-green); }
+.trl-r-histogram__bin.is-negative .trl-r-histogram__bar { background: var(--color-red); }
+.trl-r-histogram__count { font-size: 0.65rem; color: var(--text-muted); }
+.trl-r-histogram__axis { position: relative; height: 1.1rem; margin-top: 0.3rem; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.trl-r-histogram__axis span { position: absolute; top: 0; white-space: nowrap; }
 @media (max-width: 58rem) { .trl-dashboard__workflow, .trl-dashboard__grid { grid-template-columns: 1fr; } .trl-dashboard__card--chart, .trl-dashboard__card--wide { grid-column: auto; } }
 @media (max-width: 42rem) { .trl-m0 { padding: 1rem; } .trl-m0__workspace-header, .trl-dashboard__header { display: block; } .trl-m0__workspace-header > span, .trl-dashboard__status { display: inline-block; margin-top: 0.5rem; } .trl-dashboard__card--chart { grid-column: span 1; } .trl-balance-chart__plot { height: 11rem; } .trl-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

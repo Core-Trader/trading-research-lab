@@ -22,7 +22,7 @@ export type KpiSource = "statistics" | "closeEvents" | "dailyDrawdown" | "perfor
 export type KpiTone = "positive" | "negative" | "neutral";
 
 export type Kpi = {
-  id: "net-pnl" | "close-events" | "win-rate" | "gross" | "worst-day" | "balance-change" | "max-drawdown" | "return-drawdown" | "profit-factor" | "expectancy" | "avg-win-loss" | "stagnation";
+  id: "net-pnl" | "close-events" | "win-rate" | "worst-day" | "balance-change" | "max-drawdown" | "return-drawdown" | "profit-factor" | "expectancy" | "avg-win-loss" | "stagnation" | "sqn";
   label: string;
   source: KpiSource;
   state: "ready" | "empty" | "error";
@@ -74,9 +74,6 @@ export function buildDashboardModel(inputs: DashboardInputs): DashboardModel | n
     summary
       ? { id: "win-rate", label: "Win rate", source: "closeEvents", state: "ready", value: percent(summary.win_rate), detail: "Winning verified close events", tone: "neutral", exact: summary.win_rate === null ? undefined : `Core value: ${summary.win_rate}%` }
       : { id: "win-rate", label: "Win rate", source: "closeEvents", ...pending("closeEvents") },
-    summary
-      ? { id: "gross", label: "Gross profit / loss", source: "closeEvents", state: "ready", value: `${summary.gross_profit} / ${summary.gross_loss}`, detail: currency, tone: "neutral" }
-      : { id: "gross", label: "Gross profit / loss", source: "closeEvents", ...pending("closeEvents") },
     worstDay
       ? { id: "worst-day", label: "Worst daily decline", source: "dailyDrawdown", state: "ready", value: money(worstDay.maximum_drawdown), detail: `${worstDay.date} · ${percent(worstDay.maximum_drawdown_percent)} of day's opening balance`, tone: isZero(worstDay.maximum_drawdown) ? "neutral" : "negative", exact: worstDay.maximum_drawdown_percent === null ? undefined : `Core value: ${worstDay.maximum_drawdown_percent}% of the day's opening balance` }
       : { id: "worst-day", label: "Worst daily decline", source: "dailyDrawdown", ...pending("dailyDrawdown") },
@@ -132,7 +129,7 @@ const REASON_TEXT: Record<string, string> = { NO_LOSSES: "No losses", NO_CLOSE_E
 
 /** Tier C1 tiles. Quotients are Core strings rounded to 2 dp for display, exact on hover. */
 function performanceKpis(performance: PerformanceMetrics | null, currency: string, pending: (source: KpiSource) => Pick<Kpi, "state" | "value" | "detail" | "tone">): Kpi[] {
-  const ids: Array<[Kpi["id"], string]> = [["max-drawdown", "Max drawdown (balance)"], ["return-drawdown", "Return / drawdown"], ["profit-factor", "Profit factor"], ["expectancy", "Expectancy (avg per close event)"], ["avg-win-loss", "Avg win / avg loss"], ["stagnation", "Longest stagnation"]];
+  const ids: Array<[Kpi["id"], string]> = [["max-drawdown", "Max drawdown (balance)"], ["return-drawdown", "Return / drawdown"], ["profit-factor", "Profit factor"], ["expectancy", "Expectancy (avg per close event)"], ["avg-win-loss", "Avg win / avg loss"], ["stagnation", "Longest stagnation"], ["sqn", "SQN (Van Tharp)"]];
   if (performance === null) return ids.map(([id, label]) => ({ id, label, source: "performance", ...pending("performance") }));
   const balance = performance.balance_metrics;
   const close = performance.close_event_metrics;
@@ -145,9 +142,10 @@ function performanceKpis(performance: PerformanceMetrics | null, currency: strin
   return [
     { id: "max-drawdown", label: "Max drawdown (balance)", source: "performance", state: "ready", value: isZero(balance.maximum_drawdown) ? REASON_TEXT.NO_DRAWDOWN! : `${balance.maximum_drawdown} ${currency}`, detail: drawdownDetail, tone: isZero(balance.maximum_drawdown) ? "neutral" : "negative", exact: exact("", balance.maximum_drawdown_percent === null ? null : `${balance.maximum_drawdown_percent}% of the high-water mark at the trough`) },
     { id: "return-drawdown", label: "Return / drawdown", source: "performance", state: "ready", value: balance.return_to_drawdown === null ? REASON_TEXT[balance.return_to_drawdown_reason ?? ""] ?? "—" : r2(balance.return_to_drawdown), detail: "Balance change ÷ max drawdown", tone: balance.return_to_drawdown === null ? "neutral" : signTone(balance.return_to_drawdown), exact: exact("", balance.return_to_drawdown) },
-    { id: "profit-factor", label: "Profit factor", source: "performance", state: "ready", value: close.profit_factor === null ? REASON_TEXT[close.profit_factor_reason ?? ""] ?? "—" : r2(close.profit_factor), detail: "Gross profit ÷ |gross loss| (close events)", tone: "neutral", exact: exact("", close.profit_factor) },
+    { id: "profit-factor", label: "Profit factor", source: "performance", state: "ready", value: close.profit_factor === null ? REASON_TEXT[close.profit_factor_reason ?? ""] ?? "—" : r2(close.profit_factor), detail: `Gross ${close.gross_profit} ÷ |${close.gross_loss}| ${currency}`, tone: "neutral", exact: exact("", close.profit_factor) },
     { id: "expectancy", label: "Expectancy (avg per close event)", source: "performance", state: "ready", value: close.expectancy === null ? "—" : `${r2(close.expectancy)} ${currency}`, detail: "Mean net P/L per verified close event", tone: close.expectancy === null ? "neutral" : signTone(close.expectancy), exact: exact("", close.expectancy) },
     { id: "avg-win-loss", label: "Avg win / avg loss", source: "performance", state: "ready", value: `${r2(close.average_win)} / ${r2(close.average_loss)}`, detail: `${currency} · payoff ratio ${r2(close.payoff_ratio)}`, tone: "neutral", exact: exact("", `${close.average_win ?? "—"} / ${close.average_loss ?? "—"}; payoff ${close.payoff_ratio ?? "—"}`) },
     { id: "stagnation", label: "Longest stagnation", source: "performance", state: "ready", value: `${r2(stagnation.duration_days)} days`, detail: `${stagnation.close_events} close events · ${stagnation.status === "ONGOING" ? "still ongoing" : "ended by a new high"} · from ${formatTimestamp(stagnation.start.timestamp).slice(0, 10)}`, tone: "neutral", exact: exact("", `${stagnation.duration_days} days; ${stagnation.share_of_report_period_percent ?? "—"}% of the report period`) },
+    { id: "sqn", label: "SQN (Van Tharp)", source: "performance", state: "ready", value: close.sqn_capped_100 === null ? "—" : r2(close.sqn_capped_100), detail: close.sqn === null ? "Needs at least 2 close events with varying results" : `N capped at 100 · raw SQN ${r2(close.sqn)} (N = ${close.close_event_count}) · no quality band`, tone: "neutral", exact: exact("", close.sqn_capped_100 === null ? null : `capped ${close.sqn_capped_100}; raw ${close.sqn}; √N × mean ÷ sample stdev of close-event P/L`) },
   ];
 }

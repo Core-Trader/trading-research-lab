@@ -19,7 +19,7 @@ from .errors import CoreError
 from .trade_analysis import close_event_summary
 
 
-CALCULATION_VERSION = "mvp-performance-metrics-1"
+CALCULATION_VERSION = "mvp-performance-metrics-2"
 POLICY_ID = "performance-metrics-v1"
 TIME_BASIS = "SOURCE_REPORTED_CLOCK"
 _QUOTIENT_STEP = Decimal("0.00000001")
@@ -42,6 +42,7 @@ def performance_metrics(dataset: dict[str, object]) -> dict[str, object]:
         "stagnation_measures": "report-clock duration and close-event count",
         "profit_factor_without_losses": "null (NO_LOSSES)",
         "quotient_precision": "8dp ROUND_HALF_EVEN",
+        "sqn": "sqrt(N) x mean / sample stdev of close-event net P/L; capped variant uses sqrt(min(N, 100))",
     }
     return {
         "analysis_basis": "REPORTED_BALANCE_AND_VERIFIED_CLOSE_EVENTS",
@@ -205,8 +206,26 @@ def _close_event_metrics(values: list[Decimal], sequences: list[int]) -> dict[st
         "average_loss": None if average_loss is None else _q(average_loss),
         "payoff_ratio": _q(average_win / -average_loss) if average_win is not None and average_loss is not None else None,
         "expectancy": _q(sum(values, _ZERO) / count) if count else None,
+        **sqn_statistics(values),
         "longest_winning_streak": _longest_streak(values, sequences, lambda value: value > 0),
         "longest_losing_streak": _longest_streak(values, sequences, lambda value: value < 0),
+    }
+
+
+def sqn_statistics(values: list[Decimal]) -> dict[str, str | None]:
+    """Van Tharp SQN on a series; scale-invariant, so P/L and constant-1R R give the same value."""
+
+    count = len(values)
+    if count < 2:
+        return {"standard_deviation": None, "sqn": None, "sqn_capped_100": None}
+    mean = sum(values, _ZERO) / count
+    deviation = (sum(((value - mean) ** 2 for value in values), _ZERO) / (count - 1)).sqrt()
+    if deviation == 0:
+        return {"standard_deviation": _q(deviation), "sqn": None, "sqn_capped_100": None}
+    return {
+        "standard_deviation": _q(deviation),
+        "sqn": _q(Decimal(count).sqrt() * mean / deviation),
+        "sqn_capped_100": _q(Decimal(min(count, 100)).sqrt() * mean / deviation),
     }
 
 

@@ -56,6 +56,16 @@ test("service maps application calls to the versioned worker method names and pa
   assert.deepEqual(calls[11]?.params, { dataset_ref: "ds-1", analysis_run_id: "run-1", report_id: "report-1" });
 });
 
+test("R-multiple requests send an amount only for a declared 1R", async () => {
+  const { worker, calls } = recordingWorker();
+  const service = new ResearchService(worker);
+  await service.rMultipleMetrics("ds-1", "AVERAGE_LOSS");
+  await service.rMultipleMetrics("ds-1", "DECLARED", "100");
+  assert.deepEqual(calls.map((call) => call.method), ["analysis.r_multiple_metrics", "analysis.r_multiple_metrics"]);
+  assert.deepEqual(calls[0]?.params, { dataset_ref: "ds-1", r_source: "AVERAGE_LOSS" });
+  assert.deepEqual(calls[1]?.params, { dataset_ref: "ds-1", r_source: "DECLARED", r_amount: "100" });
+});
+
 test("latest run rejects results from a superseded run", () => {
   const runs = new LatestRun();
   const first = runs.begin();

@@ -61,12 +61,11 @@ test("KPI tiles show Core strings with sign-based tone and no derived values", (
   const drawdown = { worst_day: { date: "2026.01.02", maximum_drawdown: "12.00", maximum_drawdown_percent: "0.12" } } as DailyDrawdownResult;
   const model = buildDashboardModel({ ...empty, statistics, evidence, closeEvents: closeEvents("60.00"), dailyDrawdown: drawdown });
   const byId = Object.fromEntries((model?.kpis ?? []).map((kpi) => [kpi.id, kpi]));
-  assert.deepEqual(Object.keys(byId), ["net-pnl", "close-events", "win-rate", "gross", "worst-day", "max-drawdown", "return-drawdown", "profit-factor", "expectancy", "avg-win-loss", "stagnation", "balance-change"]);
+  assert.deepEqual(Object.keys(byId), ["net-pnl", "close-events", "win-rate", "worst-day", "max-drawdown", "return-drawdown", "profit-factor", "expectancy", "avg-win-loss", "stagnation", "sqn", "balance-change"]);
   assert.equal(byId["net-pnl"]?.value, "250.50 USD");
   assert.equal(byId["net-pnl"]?.tone, "positive");
   assert.equal(byId["close-events"]?.value, "20");
   assert.equal(byId["close-events"]?.detail, "12 wins · 8 losses · 0 breakeven");
-  assert.equal(byId["gross"]?.value, "400.00 / -149.50");
   assert.equal(byId["worst-day"]?.value, "12.00 USD");
   assert.equal(byId["worst-day"]?.tone, "negative");
   assert.equal(byId["worst-day"]?.detail, "2026.01.02 · 0.12% of day's opening balance");
@@ -117,7 +116,7 @@ function performance(overrides: { profit_factor?: string | null; profit_factor_r
     close_event_metrics: {
       close_event_count: 4, net_pnl: "170", gross_profit: "300", gross_loss: "-130",
       profit_factor: overrides.profit_factor === undefined ? "2.30769231" : overrides.profit_factor, profit_factor_reason: overrides.profit_factor_reason ?? null,
-      average_win: "150.00000000", average_loss: "-65.00000000", payoff_ratio: "2.30769231", expectancy: "42.50000000",
+      average_win: "150.00000000", average_loss: "-65.00000000", payoff_ratio: "2.30769231", expectancy: "42.50000000", standard_deviation: "133.00000000", sqn: "0.63909774", sqn_capped_100: "0.63909774",
       longest_winning_streak: { count: 1, net_pnl: "100", first_source_sequence: 2, last_source_sequence: 2 },
       longest_losing_streak: { count: 2, net_pnl: "-130", first_source_sequence: 3, last_source_sequence: 4 },
     },
@@ -131,6 +130,7 @@ test("performance tiles round Core quotients for display and keep the exact valu
   assert.equal(byId["max-drawdown"]?.detail, "11.82% of peak · 2026-01-06 → 2026-01-08 · recovered");
   assert.equal(byId["profit-factor"]?.value, "2.31");
   assert.equal(byId["profit-factor"]?.exact, "Core value: 2.30769231");
+  assert.equal(byId["profit-factor"]?.detail, "Gross 300 ÷ |-130| USD");
   assert.equal(byId["expectancy"]?.value, "42.50 USD");
   assert.equal(byId["avg-win-loss"]?.value, "150.00 / -65.00");
   assert.equal(byId["stagnation"]?.value, "3.00 days");
@@ -151,4 +151,11 @@ test("performance tiles without Core metrics are pending, or carry the Core erro
   assert.equal(pending?.kpis.find((kpi) => kpi.id === "profit-factor")?.value, "Not calculated");
   const failed = buildDashboardModel({ ...empty, statistics, evidence, errors: { performance: "E_DATASET_INVALID: bad timestamps" } });
   assert.equal(failed?.kpis.find((kpi) => kpi.id === "stagnation")?.detail, "E_DATASET_INVALID: bad timestamps");
+});
+
+test("SQN tile shows the capped value with raw N and no quality band", () => {
+  const byId = Object.fromEntries((buildDashboardModel({ ...empty, statistics, evidence, performance: performance() })?.kpis ?? []).map((kpi) => [kpi.id, kpi]));
+  assert.equal(byId["sqn"]?.value, "0.64");
+  assert.equal(byId["sqn"]?.detail, "N capped at 100 · raw SQN 0.64 (N = 4) · no quality band");
+  assert.ok(!/poor|good|excellent|holy/i.test(byId["sqn"]?.detail ?? ""));
 });

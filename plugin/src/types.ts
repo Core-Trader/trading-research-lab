@@ -319,8 +319,32 @@ export type PerformanceMetrics = {
     average_loss: string | null;
     payoff_ratio: string | null;
     expectancy: string | null;
+    standard_deviation: string | null;
+    sqn: string | null;
+    sqn_capped_100: string | null;
     longest_winning_streak: Streak;
     longest_losing_streak: Streak;
   };
+  warnings: string[];
+};
+
+export type RMultipleMetrics = {
+  analysis_basis: string;
+  calculation_version: string;
+  dataset_ref: string;
+  currency: string | null;
+  one_r: string;
+  r_quality: "USER_SUPPLIED" | "INFERRED";
+  close_event_count: number;
+  expectancy_r: string | null;
+  standard_deviation_r: string | null;
+  sqn: string | null;
+  sqn_capped_100: string | null;
+  largest_win_r: string | null;
+  largest_loss_r: string | null;
+  opportunity_per_30_days: string | null;
+  expectunity_r_per_30_days: string | null;
+  top_events_share_percent: { value: string | null; reason: "NON_POSITIVE_NET" | null; event_count: number };
+  histogram: { binning: "FIXED_HALF_R_V1"; underflow_count: number; overflow_count: number; buckets: Array<{ lower_r: string; upper_r: string; count: number }> };
   warnings: string[];
 };

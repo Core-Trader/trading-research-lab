@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ItemView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import type TradingResearchLabPlugin from "./main";
-import type { CloseEventDisplaySeries, PerformanceMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "./types";
+import type { CloseEventDisplaySeries, PerformanceMetrics, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "./types";
 import { experimentDocumentText, inspectReportForRegeneration, regenerateReportText, reportDocumentText, strategyDocumentText, uuidv7 } from "./research-documents";
 import { ResearchService } from "./application/research-service";
 import { LatestRun } from "./application/latest-run";
@@ -13,6 +13,7 @@ import { WorkspaceNavigation, type WorkspacePage } from "./components/workspace-
 import { Evidence, type SnapshotVerification } from "./components/data/evidence-panel";
 import { M5Preflight } from "./components/data/batch-preflight-panel";
 import { M2Analysis, M3Analysis, Results } from "./components/analysis/analysis-panels";
+import { RMultiplePanel, type RSource } from "./components/analysis/r-multiple-panel";
 import { M4Documents } from "./components/research/documents-panel";
 import { MonteCarloAnalysis, WhatIfAnalysis } from "./components/advanced/scenario-panels";
 import { OptimisationEvidence, PairedForwardEvidence } from "./components/advanced/optimisation-panels";
@@ -151,6 +152,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     setCardErrors({ closeEvents: null, dailyDrawdown: null, displaySeries: null, performance: null });
     setDisplaySeries(null);
     setPerformance(null);
+    setRResult(null);
+    setRError(null);
     setDiagnostics(null);
     setCloseEventAnalysis(null);
     setLifecycleAnalysis(null);
@@ -367,6 +370,21 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       setError(message);
       setDocumentStatus(`Report check did not complete: ${message}`);
     }
+  };
+
+  const [rSource, setRSource] = useState<RSource>("AVERAGE_LOSS");
+  const [rAmount, setRAmount] = useState("");
+  const [rResult, setRResult] = useState<RMultipleMetrics | null>(null);
+  const [rBusy, setRBusy] = useState(false);
+  const [rError, setRError] = useState<string | null>(null);
+  const runRMultiples = async (): Promise<void> => {
+    const datasetRef = evidence?.dataset_ref ?? statistics?.dataset_ref;
+    if (datasetRef === undefined) return;
+    setRBusy(true);
+    setRError(null);
+    try { setRResult(await service.rMultipleMetrics(datasetRef, rSource, rSource === "DECLARED" ? rAmount.trim() : undefined)); }
+    catch (caught) { setRResult(null); setRError(reasonText(caught)); }
+    finally { setRBusy(false); }
   };
 
   const runM3Analysis = async (): Promise<void> => {
@@ -665,6 +683,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       equity={equityAvailability}
       onRun={() => void runM3Analysis()}
     />}
+      {(evidence || statistics) && <RMultiplePanel source={rSource} amount={rAmount} result={rResult} busy={rBusy} error={rError} enabled={statistics !== null} onSourceChange={(value) => { setRSource(value); setRResult(null); setRError(null); }} onAmountChange={(value) => { setRAmount(value); setRError(null); }} onRun={() => void runRMultiples()} />}
     </section>}
     {activePage === "research" && <section className="trl-page" aria-label="Research documents">
       <header className="trl-page__header"><div><h3>Research</h3><p>Link explicit Strategy, Experiment, and Report notes without overwriting your writing.</p></div></header>
