@@ -52,6 +52,10 @@ financial results.
 4. **MVP-D — release readiness:** release allowlists, internal-material
    exclusion, dependency/licence review, and local installation smoke checks.
 
+Dashboard tiers A and B are implemented (2026-09-22). Tier C performance
+metrics are specified in `MVP_TIER_C_PERFORMANCE_METRICS.md` (draft, awaiting
+owner decisions D1–D7; no implementation authorised yet).
+
 M6 advanced-research features remain available as separately qualified tools,
 but do not block this sequence.
 

@@ -94,8 +94,9 @@ states (A); and Core `analysis.close_event_display_series`, P/L bars, daily
 calendar, monthly table, and Monte Carlo v3 percentile table and path fan (B).
 See `internal/development-journal/2026-09-22-mvp-dashboard-tier-{a,b}.md`.
 **Owner action:** reload the plugin, import a real report, and review Overview
-and Advanced → Monte Carlo (dark and light theme). Tier C (whole-period drawdown; profit factor and expectancy)
-needs a Core specification and fixtures first. After that come MVP-C
+and Advanced → Monte Carlo (dark and light theme). Tier C is drafted in
+`internal/docs/MVP_TIER_C_PERFORMANCE_METRICS.md`; **owner decisions D1–D7
+are required before implementation**. After that come MVP-C
 narrow-width review and MVP-D release-allowlist preparation per
 `MVP_FAST_TRACK.md`.
 
