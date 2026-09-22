@@ -85,26 +85,24 @@ Excel reports and is formally closed after owner panel validation.
 
 ## Next exact task
 
-**Owner action required (Obsidian).** Reload the plugin in the dev vault, then
-build and manually review the Core-derived Monte Carlo drawdown-distribution
-chart in Advanced after importing a representative report and running verified
-trade-event analysis. Confirm its ranges/counts are readable on hover and that
-its wording does not imply a forecast. Then complete the MVP dashboard usability
-pass across Overview, Data & import, Analysis, Research, and Advanced: technical
-identifiers must not dominate Overview, and no navigation action may
-automatically change Markdown. Use
-`MILESTONE_6_PAIRED_EVIDENCE_COLLECTION_PROTOCOL.md` only when collecting
-future like-for-like optimisation/forward pairs. Automatic selection remains
-deferred; do not implement it, robustness scoring, money-management, or broad
-aggregation without a separately approved package.
+The owner accepted the MVP dashboard review "for now" on 2026-09-22 (Monte Carlo
+histogram and the modularisation changes included). Dashboard/UX reference
+research is recorded in `internal/references/DASHBOARD_UX_RESEARCH.md`.
 
-The same pass must also confirm the 2026-09-22 modularisation changed no
-behaviour except: import buttons disable while an import runs; Overview shows a
-progress line during import; the close-event card shows the Core win rate; the
-daily-risk card shows the Core percentage of the daily reference balance; and
-the evidence/diagnostics sections are no longer nested twice. After owner
-acceptance, the next engineering item is MVP-C narrow-width review and MVP-D
-release-allowlist preparation per `MVP_FAST_TRACK.md`.
+Next: the owner chooses which of that document's backlog tiers to build. The
+recommended order is tier A, plugin-only (KPI tile row, a readable balance chart
+with axes and tooltip, and uniform card states), then tier B (small bounded Core
+display series: per-close-event P/L bars, a daily realised-P/L calendar, and a
+monthly table). Tier C (whole-period drawdown; profit factor and expectancy)
+needs a Core specification and fixtures first. After that come MVP-C
+narrow-width review and MVP-D release-allowlist preparation per
+`MVP_FAST_TRACK.md`.
+
+Use `MILESTONE_6_PAIRED_EVIDENCE_COLLECTION_PROTOCOL.md` only when collecting
+future like-for-like optimisation/forward pairs. Automatic selection,
+robustness scoring, composite scores or verdicts, money-management, and broad
+aggregation remain deferred. Do not implement them without a separately
+approved package.
 
 ## Open issues / blockers
 
@@ -190,7 +188,7 @@ Set-Location C:\DEV\Trading_Research_Lab\plugin
 | M6 What-If increment | Pass | 32 Core tests, 7 plugin tests, production build, and owner-confirmed panel review; see `internal/docs/MILESTONE_6_WHAT_IF_CLOSURE_REPORT.md`. |
 | M6 Monte Carlo technical validation | Pass | 42 Core tests, 7 plugin tests, production build, and independently documented Strategy Factory concept review. Owner accepted the original panel review; the new histogram needs a focused manual review. |
 | M6 optimisation evidence viewer | Accepted | 41 Core tests, 7 plugin tests, production build, and owner-confirmed 162-pass panel review. |
-| MVP dashboard workspace | In progress | Central workspace, concise navigation, automatic safe Overview population, and Core-derived Monte Carlo chart are implemented; view modularised behind `ResearchService` with a stale-import guard (42 Core tests, 15 plugin tests, production build pass on 2026-09-22). Owner usability review in Obsidian is pending and not yet performed. |
+| MVP dashboard workspace | In progress | Central workspace, concise navigation, automatic safe Overview population, and Core-derived Monte Carlo chart are implemented; view modularised behind `ResearchService` with a stale-import guard (42 Core tests, 15 plugin tests, production build pass on 2026-09-22). Owner accepted the Obsidian usability review "for now" on 2026-09-22; further dashboard refinement is expected after competitor/reference UX research. |
 
 ## Recently changed files
 
