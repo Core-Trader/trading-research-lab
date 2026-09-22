@@ -12,7 +12,7 @@ export function Results({ statistics }: { statistics: StatisticsResult }): React
       <li>Reported change: <code>{statistics.reported_balance_change} {statistics.currency ?? ""}</code></li>
       <li>Equity curve: <code>{statistics.equity_curve.status}</code> — {statistics.equity_curve.reason}</li>
     </ul>
-    <BalanceChart points={statistics.balance_curve.points} />
+    <BalanceChart points={statistics.balance_curve.points} currency={statistics.currency} />
   </CollapsibleSection>;
 }
 

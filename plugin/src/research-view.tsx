@@ -10,7 +10,6 @@ import { localPathForSelectedFile } from "./services/local-file-path";
 import { createVaultDocument, readCurrentDocument, requestDocumentName } from "./vault/research-vault";
 import { DashboardSummary } from "./components/dashboard-summary";
 import { WorkspaceNavigation, type WorkspacePage } from "./components/workspace-navigation";
-import { BalanceChart } from "./components/balance-chart";
 import { Evidence, type SnapshotVerification } from "./components/data/evidence-panel";
 import { M5Preflight } from "./components/data/batch-preflight-panel";
 import { M2Analysis, M3Analysis, Results } from "./components/analysis/analysis-panels";
@@ -89,6 +88,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const [activePage, setActivePage] = useState<WorkspacePage>("overview");
   const [forwardResult, setForwardResult] = useState<PairedForwardResult | null>(null);
   const [importBusy, setImportBusy] = useState(false);
+  const [cardErrors, setCardErrors] = useState<{ closeEvents: string | null; dailyDrawdown: string | null }>({ closeEvents: null, dailyDrawdown: null });
   // Resolve the worker per request: saving settings replaces `plugin.worker`.
   const service = useMemo(() => new ResearchService({ request: (method, params, timeoutMs) => plugin.worker.request(method, params, timeoutMs) }), [plugin]);
   const importRuns = useRef(new LatestRun()).current;
@@ -142,6 +142,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     const isCurrent = (): boolean => importRuns.isCurrent(token);
     setImportBusy(true);
     setError(null);
+    setCardErrors({ closeEvents: null, dailyDrawdown: null });
     setDiagnostics(null);
     setCloseEventAnalysis(null);
     setLifecycleAnalysis(null);
@@ -188,6 +189,10 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       const [closeEventResult, dailyDrawdownResult, equityAvailabilityResult] = automaticResults;
       if (closeEventResult.status === "fulfilled") setCloseEventAnalysis(closeEventResult.value);
       if (dailyDrawdownResult.status === "fulfilled") setDailyDrawdown(dailyDrawdownResult.value);
+      setCardErrors({
+        closeEvents: closeEventResult.status === "rejected" ? reasonText(closeEventResult.reason) : null,
+        dailyDrawdown: dailyDrawdownResult.status === "rejected" ? reasonText(dailyDrawdownResult.reason) : null,
+      });
       if (equityAvailabilityResult.status === "fulfilled") setEquityAvailability(equityAvailabilityResult.value);
       setIntakeStatus(imported.result.intake_status);
       setSnapshotVerification({
@@ -359,6 +364,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       const drawdown = await service.realisedBalanceDailyDrawdown(datasetRef);
       const equity = await service.equityAvailability(datasetRef);
       setDailyDrawdown(drawdown);
+      setCardErrors((current) => ({ ...current, dailyDrawdown: null }));
       setEquityAvailability(equity);
       setStatus("M3 basic analysis completed. Results use the report clock and realised balances only.");
       new Notice("Trading Research Lab M3 analysis completed.");
@@ -378,6 +384,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       setStatus("Applying the declared account-mode lifecycle policy…");
       const lifecycles = await service.reconstructLifecycles(datasetRef, accountMode);
       setCloseEventAnalysis(closeEvents);
+      setCardErrors((current) => ({ ...current, closeEvents: null }));
       setLifecycleAnalysis(lifecycles);
       setFixedCostScenario(null);
       setFixedCostError(null);
@@ -589,8 +596,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       strategy={strategy}
       experiment={experiment}
       report={report}
+      errors={cardErrors}
       busyStatus={importBusy ? status : null}
-      chart={statistics ? <BalanceChart points={statistics.balance_curve.points} /> : null}
       onBrowseReport={() => fileInputRef.current?.click()}
       onFocusDocuments={() => setActivePage("research")}
       onRunTradeAnalysis={() => void runM2Analysis()}
@@ -678,6 +685,10 @@ async function measure<T>(operation: () => Promise<T>): Promise<{ result: T; ela
   const startedAt = performance.now();
   const result = await operation();
   return { result, elapsedMs: performance.now() - startedAt };
+}
+
+function reasonText(reason: unknown): string {
+  return reason instanceof Error ? reason.message : String(reason);
 }
 
 function nextAnimationFrame(): Promise<void> {

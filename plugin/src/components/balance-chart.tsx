@@ -1,18 +1,76 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import type { StatisticsResult } from "../types";
+import { lineGeometry, nearestIndex } from "./chart-geometry";
 
-export function BalanceChart({ points }: { points: StatisticsResult["balance_curve"]["points"] }): React.ReactElement {
+type BalancePoint = StatisticsResult["balance_curve"]["points"][number];
+
+/**
+ * Verified reported-balance curve. Points are evenly spaced in source event
+ * order (not scaled by time). All labels are Core-supplied strings.
+ */
+export function BalanceChart({ points, currency }: { points: BalancePoint[]; currency?: string | null }): React.ReactElement {
+  const geometry = useMemo(() => lineGeometry(points.map((point) => point.balance)), [points]);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   if (points.length < 2) return <p className="trl-m0__note">At least two balance points are required to draw the verified balance curve.</p>;
-  const values = points.map((point) => Number(point.balance));
-  const low = Math.min(...values);
-  const high = Math.max(...values);
-  const range = high - low || 1;
-  const polyline = values.map((value, index) => {
-    const x = (index / (values.length - 1)) * 100;
-    const y = 95 - ((value - low) / range) * 90;
-    return `${x},${y}`;
-  }).join(" ");
-  return <svg className="trl-m0__chart" viewBox="0 0 100 100" role="img" aria-label="Verified reported balance curve">
-    <polyline points={polyline} fill="none" stroke="var(--interactive-accent)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-  </svg>;
+  if (geometry === null) return <p className="trl-m0__inline-error" role="alert">The balance curve could not be drawn because a Core balance value was not numeric.</p>;
+
+  const unit = currency ?? "source currency";
+  const first = points[0]!;
+  const last = points.at(-1)!;
+  const high = points[geometry.highIndex]!;
+  const low = points[geometry.lowIndex]!;
+  const active = activeIndex === null ? null : points[activeIndex] ?? null;
+  const activePosition = activeIndex === null ? null : geometry.positions[activeIndex] ?? null;
+
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>): void => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (bounds.width <= 0) return;
+    setActiveIndex(nearestIndex((event.clientX - bounds.left) / bounds.width, points.length));
+  };
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    const step = event.shiftKey ? Math.max(1, Math.round(points.length / 20)) : 1;
+    const current = activeIndex ?? 0;
+    if (event.key === "ArrowRight") setActiveIndex(Math.min(points.length - 1, current + step));
+    else if (event.key === "ArrowLeft") setActiveIndex(Math.max(0, current - step));
+    else if (event.key === "Home") setActiveIndex(0);
+    else if (event.key === "End") setActiveIndex(points.length - 1);
+    else if (event.key === "Escape") setActiveIndex(null);
+    else return;
+    event.preventDefault();
+  };
+
+  return <figure className="trl-balance-chart">
+    <div className="trl-balance-chart__body">
+      <div className="trl-balance-chart__y-axis" aria-hidden="true">
+        <span>{high.balance}</span>
+        <span>{low.balance}</span>
+      </div>
+      <div
+        className="trl-balance-chart__plot"
+        tabIndex={0}
+        role="img"
+        aria-label={`Verified reported balance in ${unit}: ${points.length} points from ${first.balance} to ${last.balance}, high ${high.balance}, low ${low.balance}. Use arrow keys to inspect points.`}
+        onPointerMove={onPointerMove}
+        onPointerLeave={() => setActiveIndex(null)}
+        onKeyDown={onKeyDown}
+        onBlur={() => setActiveIndex(null)}
+      >
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <line className="trl-balance-chart__reference" x1="0" x2="100" y1={geometry.firstY} y2={geometry.firstY} vectorEffect="non-scaling-stroke" />
+          <polyline className="trl-balance-chart__line" points={geometry.polyline} vectorEffect="non-scaling-stroke" />
+        </svg>
+        {activePosition && active && <>
+          <span className="trl-balance-chart__guide" style={{ left: `${activePosition.x}%` }} />
+          <span className="trl-balance-chart__dot" style={{ left: `${activePosition.x}%`, top: `${activePosition.y}%` }} />
+          <span className={`trl-balance-chart__tooltip${activePosition.x > 60 ? " is-left" : ""}`} style={{ left: `${activePosition.x}%` }} role="status">
+            <strong>{active.balance} {unit}</strong>
+            <span>{active.timestamp}</span>
+            <span>Sequence #{active.source_sequence}</span>
+          </span>
+        </>}
+      </div>
+    </div>
+    <div className="trl-balance-chart__x-axis" aria-hidden="true"><span>{first.timestamp}</span><span>{last.timestamp}</span></div>
+    <figcaption className="trl-m0__note">Reported balance ({unit}) in source event order; dashed line = opening balance {first.balance}. Hover or use arrow keys for values. Realised balance only, not intratrade equity.</figcaption>
+  </figure>;
 }
