@@ -128,6 +128,60 @@ was copied, so `EXTERNAL_CODE_USAGE_REGISTER.md` is unchanged.
 11. Weekday and hour breakdowns (these need a timezone-semantics decision first).
 12. Configurable grid layout, widget picker, template canvas, unit and privacy views, period chips.
 
+## StrategyQuant blog and documentation (added 2026-09-22)
+
+StrategyQuant is **not** an approved code-reuse source. Only publicly described
+concepts are used here; no code, text, screenshots, or visual assets are copied.
+TRL analyses MT5 report evidence and does not run backtests. Anything needing
+price data, strategy code, or re-optimisation is therefore outside TRL's current
+evidence model.
+
+### Findings
+
+- **Monte Carlo methods** (MC article): exact trade-order shuffle (net profit
+  unchanged, drawdown varies); resampling with replacement (profit and drawdown
+  both vary); and skip-trades with a given probability. Results are shown as a
+  fan of about 100 simulated equity curves over the original, plus a table of
+  net profit and drawdown at confidence levels (for example 80/90/95%). The
+  article suggests rules of thumb such as at least 100 simulations, drawdown at
+  95% below about twice the original, and rejecting strategies with little or no
+  profit at 95%.
+- **Robustness workflow** (robustness article): in-sample / out-of-sample split
+  shown as one equity curve with the out-of-sample segment in a different
+  colour; multi-symbol overlays; robustness tests with confidence tables; and a
+  walk-forward matrix heatmap.
+- **What-If scenarios** (What-If article; QuantAnalyzer): exclude weekdays, trade
+  only certain hours, limit trades per day, remove deposits/withdrawals, exclude
+  best trades, prevent overlapping trades, and fixed lot size. Each is saved as
+  an alternative and compared side by side (statistics and before/after curves).
+- **Metrics** (strategy analysis metrics doc): profit factor, return/drawdown,
+  average trade, expectancy, R-expectancy, SQN, Z-score, exposure, stagnation
+  (longest time to a new high), and "stability" (a proprietary regression
+  formula). The doc separates closed-trade metrics from equity-based metrics.
+- **Equity chart** (equity chart doc): a maximum-stagnation marker, optional
+  daily view, MAE/MFE lines, and per-symbol plus portfolio curves. It
+  distinguishes balance (closed positions) from equity (including open positions).
+
+### Mapping to TRL
+
+| Idea | Needs | TRL classification |
+| --- | --- | --- |
+| Monte Carlo **confidence table** (drawdown, and later net profit, at chosen percentiles) | Core already returns p05/p50/p95 drawdown; other levels are a small Core change | Tier B candidate (extends accepted M6 Monte Carlo slice) |
+| Monte Carlo **path fan** (sample of generated cumulative-P/L paths over the historical path) | Bounded, seeded Core display series | Tier B candidate |
+| Monte Carlo **resampling** and **skip-trades** methods | New Core simulation policy, fixtures, seed rules | Needs M6 specification (not approved) |
+| Pass/fail rules ("reject if…", "DD < 2×") | A verdict on the strategy | **DEFERRED — POST-MVP**: conflicts with the no-scoring/selection decision. TRL may show the numbers side by side without a verdict. |
+| **Stagnation** (longest period without a new realised-balance high) with a chart marker | Core metric on realised balance | Tier C (spec + fixtures), alongside whole-period drawdown |
+| Profit factor, return/drawdown, average trade, expectancy, SQN, Z-score | Written formulas and tests | Tier C; "stability" is proprietary and excluded |
+| What-If: **exclude best N close events**, **limit close events per source-clock day** | Trade list only | M6 What-If extension candidates (need approval) |
+| What-If: weekday and hour filters | Timezone semantics decision first | **DEFERRED — POST-MVP** |
+| What-If: remove deposits/withdrawals, fixed lot, no overlap | Balance-transaction handling; position sizing is deferred; overlap needs lifecycles | **DEFERRED — POST-MVP** |
+| Before/after **comparison view** for a What-If alternative | Existing What-If result + two curves | Tier B/C candidate (plugin + small Core series) |
+| **In-sample / forward segment colouring** on a curve | Paired-forward context already declared by user | Post-MVP candidate |
+| Distribution of a metric across **all optimisation passes** (SPP-like, descriptive only) | Existing optimisation-grid evidence | Post-MVP candidate; must not select a pass |
+| Walk-forward matrix, optimisation profile, re-optimisation | Running backtests | Out of scope (TRL does not backtest) |
+| MAE/MFE lines, open-position equity | Data not in MT5 Excel reports | **DEFERRED — POST-MVP** (already excluded) |
+| Multi-symbol / portfolio overlays | Portfolio aggregation | **DEFERRED — POST-MVP** |
+
 ## Charting dependency note
 
 Journalit uses `recharts`. Adding it to TRL would be a new runtime dependency and
@@ -138,7 +192,9 @@ revisit if interactive zoom or brushing becomes a requirement.
 
 ## Sources
 
-- QuantAnalyzer: https://strategyquant.com/quantanalyzer/ ; https://strategyquant.com/quantanalyzer/extensive-reports/
+- StrategyQuant blog: https://strategyquant.com/blog/what-is-monte-carlo-analysis-and-why-you-should-use-it/ ; https://strategyquant.com/blog/robustness-tests-and-analysis/ ; https://strategyquant.com/blog/analyzing-and-improving-your-strategies-using-what-if-scenarios/
+- StrategyQuant docs: https://strategyquant.com/doc/strategyquant/results-overview/strategy-analysis-metrics/ ; https://strategyquant.com/doc/strategyquant/results-equity-chart/ ; https://strategyquant.com/doc/strategyquant/walk-forward-matrix/ ; https://strategyquant.com/doc/strategyquant/optimization-profile-system-parameter-permutation-strategyquant/
+- QuantAnalyzer: https://strategyquant.com/quantanalyzer/ ; https://strategyquant.com/quantanalyzer/what-if-scenarios/ ; https://strategyquant.com/quantanalyzer/extensive-reports/
 - StrategyQuant X: https://strategyquant.com/ ; https://strategyquant.com/doc/strategyquant/databank/
 - FXOptimize: https://fxoptimize.com/ ; https://www.forexfactory.com/thread/1391025-fxoptimize-free-ea-portfolio-optimizer
 - Forex Tester: https://forextester.com/ (HTTP 403 to automated fetch) ; https://www.tradingheroes.com/forex-tester-2-tip-how-to-view-the-equity-graph/
