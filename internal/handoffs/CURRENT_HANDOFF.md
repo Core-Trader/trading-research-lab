@@ -111,8 +111,10 @@ release-allowlist preparation per `MVP_FAST_TRACK.md`.
 - Peak Python-worker memory, deliberate crash recovery, portable-terminal
   automation, and broader cross-process integration coverage are documented
   non-blocking M0 deferrals; they require later validation, not M1 scope creep.
-- `C:\DEV\Trading_Research_Lab` has no `.git` metadata. Git is installed, but
-  repository initialization and any initial commit are not yet verified.
+- Git initialised 2026-09-22 on branch `main` (initial commit `25fa5fa`); no
+  remote is configured. Worker workspaces (`.trl-*/`) hold real MT5 report
+  snapshots and are git-ignored. Commit author email is the placeholder
+  `you@example.com` from global Git config.
 - External code reuse from Journalit and Strategy Factory is permitted subject
   to mandatory provenance tracking and a final usage report. See
   `internal/references/EXTERNAL_CODE_USAGE_REGISTER.md`.
@@ -138,7 +140,7 @@ release-allowlist preparation per `MVP_FAST_TRACK.md`.
 
 | Purpose | Path | State |
 | --- | --- | --- |
-| Repository | `C:\DEV\Trading_Research_Lab` | Exists; not Git-initialized. |
+| Repository | `C:\DEV\Trading_Research_Lab` | Exists; Git `main`, local only (no remote). |
 | Disposable development vault | `C:\DEV\vaults\TRL-Dev-Vault` | Exists. |
 | Plugin source | `C:\DEV\Trading_Research_Lab\plugin` | Exists. |
 | Research Core | `C:\DEV\Trading_Research_Lab\research-core` | Exists. |
