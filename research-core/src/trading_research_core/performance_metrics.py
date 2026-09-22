@@ -65,6 +65,20 @@ def performance_metrics(dataset: dict[str, object]) -> dict[str, object]:
     }
 
 
+def series_metrics(points: list[dict[str, Any]], close_values: list[Decimal], close_sequences: list[int]) -> dict[str, object]:
+    """Apply the C1/C2 definitions to any realised-balance series (used by Portfolio Lab).
+
+    Each point needs source_sequence, timestamp, moment (datetime), balance (Decimal), and is_close.
+    """
+
+    return {
+        "balance_metrics": _balance_metrics(points),
+        "drawdown_series": _drawdown_series(points),
+        "stagnation": _stagnation(points),
+        "close_event_metrics": _close_event_metrics(close_values, close_sequences),
+    }
+
+
 def _balance_points(dataset: dict[str, object]) -> list[dict[str, Any]]:
     events_value = dataset.get("events")
     if not isinstance(events_value, list) or not events_value:

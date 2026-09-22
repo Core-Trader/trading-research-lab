@@ -23,6 +23,7 @@ from .monte_carlo import order_permutation_scenario
 from .display_series import close_event_display_series
 from .performance_metrics import performance_metrics
 from .r_metrics import r_multiple_metrics
+from .portfolio_lab import combine as portfolio_combine
 from .mt5_optimisation import intake_parameter_grid, intake_paired_forward_grid
 
 
@@ -55,6 +56,7 @@ class Worker:
                     "analysis.close_event_display_series",
                     "analysis.performance_metrics",
                     "analysis.r_multiple_metrics",
+                    "portfolio.combine",
                     "analysis.reconstruct_lifecycles",
                     "analysis.lifecycle_summary",
                     "time.validate_profile",
@@ -102,6 +104,11 @@ class Worker:
         if method == "analysis.basic_statistics":
             dataset_ref = _required_string(params, "dataset_ref")
             return basic_statistics(read_dataset(self.workspace_root, dataset_ref))
+        if method == "portfolio.combine":
+            tracks = params.get("tracks")
+            if not isinstance(tracks, list):
+                raise CoreError("E_REQUEST_INVALID", "params.tracks must be a list of dataset-reference lists.")
+            return portfolio_combine(self.workspace_root, tracks, _required_string(params, "starting_capital"), str(params.get("window", "UNION")), str(params.get("day_boundary", "REPORT_CLOCK_MIDNIGHT")))
         if method == "analysis.r_multiple_metrics":
             amount = params.get("r_amount")
             if amount is not None and not isinstance(amount, str):

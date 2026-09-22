@@ -26,7 +26,25 @@ def preflight_mt5_excel_batch(workspace_root: Any, source_paths: list[str]) -> d
     if len(source_paths) < 2:
         raise CoreError("E_REQUEST_INVALID", "M5 batch preflight requires at least two selected MT5 Excel reports.")
     intakes = [intake_mt5_excel(workspace_root, path) for path in source_paths]
-    members = [_member(workspace_root, intake) for intake in intakes]
+    return _evaluate([_member(workspace_root, intake) for intake in intakes])
+
+
+def preflight_datasets(workspace_root: Any, dataset_refs: list[str]) -> dict[str, object]:
+    """Apply the same sequential checks to already-imported canonical datasets."""
+
+    if len(dataset_refs) < 2:
+        raise CoreError("E_REQUEST_INVALID", "Sequential preflight requires at least two datasets.")
+    members = []
+    for dataset_ref in dataset_refs:
+        dataset = read_dataset(workspace_root, dataset_ref)
+        metadata = dataset["metadata"]
+        source = metadata.get("source", {}) if isinstance(metadata, dict) else {}
+        settings = metadata.get("settings", {}) if isinstance(metadata, dict) else {}
+        members.append(_member_from_dataset(dataset_ref, str(metadata.get("dataset_id", "")), str(source.get("sha256", "")), str(source.get("filename", "")), settings.get("Currency"), dataset))
+    return _evaluate(members)
+
+
+def _evaluate(members: list[dict[str, Any]]) -> dict[str, object]:
     findings: list[dict[str, object]] = []
     hashes = [member["source_sha256"] for member in members]
     if len(set(hashes)) != len(hashes):
@@ -127,17 +145,23 @@ def combined_daily_drawdown(workspace_root: Path, source_paths: list[str]) -> di
 
 def _member(workspace_root: Any, intake: dict[str, object]) -> dict[str, Any]:
     dataset_ref = str(intake["dataset_ref"])
-    dataset = read_dataset(workspace_root, dataset_ref)
-    events = sorted(dataset["events"], key=lambda event: int(event["source_sequence"]))
     receipt = intake["intake_receipt"]
-    if not isinstance(receipt, dict) or not events:
+    if not isinstance(receipt, dict):
+        raise CoreError("E_INTERNAL", "Batch preflight could not read complete intake evidence.")
+    currency = receipt["supplied_facts"].get("currency") if isinstance(receipt.get("supplied_facts"), dict) else None
+    return _member_from_dataset(dataset_ref, str(intake["dataset_id"]), str(receipt["source_sha256"]), str(receipt["original_filename"]), currency, read_dataset(workspace_root, dataset_ref))
+
+
+def _member_from_dataset(dataset_ref: str, dataset_id: str, source_sha256: str, filename: str, currency: Any, dataset: dict[str, Any]) -> dict[str, Any]:
+    events = sorted(dataset["events"], key=lambda event: int(event["source_sequence"]))
+    if not events:
         raise CoreError("E_INTERNAL", "Batch preflight could not read complete intake evidence.")
     return {
         "dataset_ref": dataset_ref,
-        "dataset_id": str(intake["dataset_id"]),
-        "source_sha256": str(receipt["source_sha256"]),
-        "filename": str(receipt["original_filename"]),
-        "currency": receipt["supplied_facts"].get("currency") if isinstance(receipt.get("supplied_facts"), dict) else None,
+        "dataset_id": dataset_id,
+        "source_sha256": source_sha256,
+        "filename": filename,
+        "currency": currency,
         "first_timestamp": str(events[0]["source_timestamp"]),
         "last_timestamp": str(events[-1]["source_timestamp"]),
         "opening_balance": str(events[0]["reported_balance"]),
