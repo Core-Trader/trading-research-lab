@@ -100,9 +100,11 @@ metrics are implemented (defaults D1–D7 accepted); see
 Tier C2 (Van Tharp R-multiples, SQN) is implemented and the sequential
 batch panel was reworked after the feedback analysis; see
 `internal/development-journal/2026-09-22-batch-feedback-and-van-tharp.md`.
-**Pending owner decisions:** P0–P8 in `PORTFOLIO_CONCURRENT_COMBINATION.md`
-(the FXOptimize-style concurrent portfolio is deferred and needs a scope
-decision), and approval to build V2/V3 from `MVP_VISUALISATION_AUDIT.md`. After that come MVP-C
+**Owner clarified the multi-import intent (2026-09-22):** concurrent
+portfolio combinations of EA backtests (return vs drawdown over active
+periods), later checked against prop-firm rules. See
+`internal/docs/PORTFOLIO_LAB_RECOMMENDATION.md`. **Pending owner decisions
+R1–R6** before any Portfolio Lab implementation; V2/V3 visuals are on hold. After that come MVP-C
 narrow-width review and MVP-D release-allowlist preparation per
 `MVP_FAST_TRACK.md`.
 
