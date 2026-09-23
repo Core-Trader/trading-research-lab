@@ -134,7 +134,7 @@ The equity logger (PL-006/PL-008) is built and validated in MT5; see
 0 link mismatches on V1–V3, and the owner's DCA EA shows equity drawdown
 12.5× balance drawdown. The navigation sidebar (NAV-1–3) and the Help & downloads page (HELP-001) are
 built. **Revert point:** tag `plugin-pre-nav-sidebar`, plus the built-file
-backup and steps in `C:\DEV\TRL_Plugin_Backups6-09-23_pre-nav-sidebar\HOW_TO_REVERT.md`.
+backup and steps in `C:\DEV\TRL_Plugin_Backups\2026-09-23_pre-nav-sidebar\HOW_TO_REVERT.md`.
 The Data page is redesigned (UX-002): validate first, then companions (equity
 log, `.set` check), then analyse; all charts have Expand. **Next:** owner review of
 the new Data page and the Analysis-page equity
