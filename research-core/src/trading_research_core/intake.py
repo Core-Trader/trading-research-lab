@@ -83,6 +83,18 @@ def set_archived(workspace_root: Path, dataset_ref: str, archived: bool) -> dict
     return {"dataset_ref": dataset_ref, "archived": archived, "used_by": dataset_usages(root, dataset_ref)}
 
 
+def set_equity_evidence(workspace_root: Path, dataset_ref: str, equity: dict[str, object]) -> None:
+    """Record a verified equity log on the report's registry entry (PL-006)."""
+
+    root = workspace_root.resolve()
+    registry = _load_registry(root)
+    entry = next((item for item in registry["entries"] if item.get("dataset_ref") == dataset_ref), None)
+    if entry is None:
+        raise CoreError("E_DATASET_NOT_FOUND", "The report is not in the library.", details={"dataset_ref": dataset_ref})
+    entry["equity"] = equity
+    _atomic_json(_registry_path(root), {"registry_schema_version": REGISTRY_SCHEMA_VERSION, "entries": sorted(registry["entries"], key=lambda item: str(item["dataset_ref"]))})
+
+
 def dataset_usages(workspace_root: Path, dataset_ref: str) -> list[dict[str, str]]:
     """TRL-managed items that reference a report (saved combinations, study
     single tests, sequential batches, report revisions). Vault notes are found

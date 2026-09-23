@@ -27,6 +27,7 @@ from .portfolio_lab import combine as portfolio_combine, delete_saved_combinatio
 from .pareto import evaluate as pareto_evaluate
 from .mt5_set import intake_parameter_schema
 from .parameter_exploration import add_single_test, attach_forward, create_study, evaluate as exploration_evaluate, render_choice
+from .equity_log import attach_equity_log, equity_metrics
 from .neighbourhood import attach_neighbourhood_run, neighbourhood, render_neighbourhood_set, write_neighbourhood_set
 from .mt5_optimisation import intake_parameter_grid, intake_paired_forward_grid
 
@@ -86,6 +87,8 @@ class Worker:
                     "time.validate_profile",
                     "analysis.realised_balance_daily_drawdown",
                     "analysis.equity_availability",
+                    "dataset.attach_equity_log",
+                    "analysis.equity_metrics",
                     "scenario.fixed_close_event_cost",
                     "scenario.monte_carlo_order_permutation",
                     "optimisation.intake_parameter_grid",
@@ -236,8 +239,18 @@ class Worker:
             dataset_ref = _required_string(params, "dataset_ref")
             result, rows = realised_balance_daily_drawdown(read_dataset(self.workspace_root, dataset_ref))
             return write_daily_drawdown_artifact(self.workspace_root, dataset_ref, result, rows)
+        if method == "dataset.attach_equity_log":
+            return attach_equity_log(self.workspace_root, _required_string(params, "dataset_ref"), _required_string(params, "source_path"), _required_string(params, "modelling_mode"))
+        if method == "analysis.equity_metrics":
+            return equity_metrics(self.workspace_root, _required_string(params, "dataset_ref"))
         if method == "analysis.equity_availability":
             dataset_ref = _required_string(params, "dataset_ref")
+            try:
+                equity = get_evidence(self.workspace_root, dataset_ref).get("equity")
+            except CoreError:  # datasets without a registry entry have no equity evidence
+                equity = None
+            if isinstance(equity, dict) and equity.get("status") == "LINKED_VERIFIED":
+                return {"dataset_ref": dataset_ref, "status": "AVAILABLE", "basis": "INTRATRADE_EQUITY", "source": "MT5_TESTER_LOGGED", "equity": equity, "warnings": ["Equity comes from a linked TRL tester log, verified against this report's balances."]}
             return equity_availability(read_dataset(self.workspace_root, dataset_ref))
         if method == "scenario.fixed_close_event_cost":
             return fixed_close_event_cost_scenario(

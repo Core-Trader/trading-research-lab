@@ -1,7 +1,18 @@
 # Equity evidence: MT5 tester equity logger and TRL adapter (PL-006)
 
-**Status:** DRAFT for owner approval (2026-09-23). No implementation is
-authorised until decisions E1–E8 are answered.
+**Status:** APPROVED 2026-09-23 (owner accepted E1–E7 as recommended and
+E8 = yes). Implementation:
+- `mql5/Include/TRL_EquityLogger.mqh`
+- `research-core/.../equity_log.py`
+
+Implementation notes:
+- File names use the test start date plus a counter, because the end date
+  is unknown at init.
+- Linking accepts MT5 counting the opening-balance deal or not (offset 0 or
+  1, chosen deterministically).
+- A final state closed by MT5's "end of test" deals after the logger's last
+  row is accepted when the logged final equity equals the report's final
+  balance.
 
 **Builds on:**
 - PL-006: equity evidence comes before the prop-firm module
