@@ -3,8 +3,10 @@ import { Notice } from "obsidian";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
 import { localPathForSelectedFile } from "../../services/local-file-path";
-import type { DatasetEvidence, PortfolioCombination } from "../../types";
+import type { DatasetEvidence, ParetoEvaluation, PortfolioCombination, PortfolioExploration } from "../../types";
+import { CombinationExplorer } from "./combination-explorer";
 import { CombinedDashboard } from "./combined-dashboard";
+import { SavedCombinations, type SavedCombination } from "./saved-combinations";
 import { addToTrack, addTrack, combinationRequest, removeReport, removeTrack, renameTrack, toggleIncluded, type TrackDraft } from "./portfolio-model";
 
 type Props = { service: ResearchService };
@@ -23,6 +25,13 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const runs = useRef(new LatestRun()).current;
+  const [saved, setSaved] = useState<SavedCombination[]>([]);
+  const [evaluation, setEvaluation] = useState<ParetoEvaluation | null>(null);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [saveName, setSaveName] = useState("");
+  const [exploration, setExploration] = useState<{ result: PortfolioExploration; labels: string[]; tracks: string[][]; capital: string; period: "UNION" | "COMMON" } | null>(null);
+  const [explorerSelected, setExplorerSelected] = useState<string | null>(null);
+  const evaluations = useRef(new LatestRun()).current;
 
   const refreshLibrary = useCallback(async (): Promise<void> => {
     try { setLibrary((await service.listRegistry()).entries); } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
@@ -60,15 +69,59 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
     }
   };
 
-  const runCombine = async (): Promise<void> => {
+  const resolveAmount = (): string | null => {
     const amount = (capital.trim() || suggestedCapital).trim();
-    if (!/^\d+(\.\d+)?$/.test(amount) || Number(amount) <= 0) { setError("Enter a positive starting capital, for example 10000."); return; }
-    const token = runs.begin();
-    setBusy(`Combining ${request.tracks.length} track(s) on ${amount}…`);
+    if (!/^\d+(\.\d+)?$/.test(amount) || Number(amount) <= 0) { setError("Enter a positive starting capital, for example 10000."); return null; }
+    return amount;
+  };
+
+  // Pareto status of saved combinations always comes from the Core.
+  useEffect(() => {
+    if (saved.length < 2) { setEvaluation(null); return; }
+    const token = evaluations.begin();
+    setEvaluation(null);
+    service.paretoEvaluate(saved.map((item) => ({ id: item.key, values: { net_pnl: item.combination.net_pnl, maximum_drawdown: item.combination.metrics.balance_metrics.maximum_drawdown } })), [{ metric: "net_pnl", direction: "MAX" }, { metric: "maximum_drawdown", direction: "MIN" }])
+      .then((evaluated) => { if (evaluations.isCurrent(token)) setEvaluation(evaluated); })
+      .catch((caught) => { if (evaluations.isCurrent(token)) setError(caught instanceof Error ? caught.message : String(caught)); });
+  }, [saved, service, evaluations]);
+
+  const saveCurrent = (): void => {
+    if (!result) return;
+    const name = saveName.trim() || result.labels.join(" + ");
+    const key = result.combination.combination_id;
+    setSaved((current) => [...current.filter((item) => item.key !== key), { key, name, labels: result.labels, combination: result.combination }]);
+    setActiveKey(key);
+    setSaveName("");
+  };
+
+  const runExplore = async (): Promise<void> => {
+    const amount = resolveAmount();
+    if (amount === null) return;
+    setBusy(`Exploring all combinations of ${request.tracks.length} tracks…`);
     setError(null);
     try {
-      const combination = await service.portfolioCombine(request.tracks, amount, period);
-      if (runs.isCurrent(token)) setResult({ combination, labels: request.labels });
+      const explored = await service.portfolioExplore(request.tracks, amount, period);
+      setExploration({ result: explored, labels: request.labels, tracks: request.tracks, capital: amount, period });
+      setExplorerSelected(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const runCombine = async (tracksToCombine = request.tracks, labelsToUse = request.labels, amountOverride?: string, periodOverride?: "UNION" | "COMMON"): Promise<void> => {
+    const amount = amountOverride ?? resolveAmount();
+    if (amount === null) return;
+    const token = runs.begin();
+    setBusy(`Combining ${tracksToCombine.length} track(s) on ${amount}…`);
+    setError(null);
+    try {
+      const combination = await service.portfolioCombine(tracksToCombine, amount, periodOverride ?? period);
+      if (runs.isCurrent(token)) {
+        setResult({ combination, labels: labelsToUse });
+        setActiveKey(saved.some((item) => item.key === combination.combination_id) ? combination.combination_id : null);
+      }
     } catch (caught) {
       if (runs.isCurrent(token)) { setResult(null); setError(caught instanceof Error ? caught.message : String(caught)); }
     } finally {
@@ -127,12 +180,21 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
           <option value="COMMON">Only when all tracks were active (common)</option>
         </select></label>
       </div>
-      <button type="button" className="mod-cta" disabled={busy !== null || request.tracks.length === 0} onClick={() => void runCombine()}>Combine {request.tracks.length} track{request.tracks.length === 1 ? "" : "s"}</button>
+      <div className="trl-m0__actions">
+        <button type="button" className="mod-cta" disabled={busy !== null || request.tracks.length === 0} onClick={() => void runCombine()}>Combine {request.tracks.length} track{request.tracks.length === 1 ? "" : "s"}</button>
+        <button type="button" disabled={busy !== null || request.tracks.length < 2 || request.tracks.length > 10} onClick={() => void runExplore()} title="Compute every combination of the included tracks (2 to 10 tracks)">Explore all combinations</button>
+      </div>
       {!capital.trim() && suggestedCapital && <span className="trl-m0__note"> Uses {suggestedCapital} (largest initial deposit) unless you enter another amount.</span>}
       {busy && <p className="trl-dashboard__progress" role="status">{busy}</p>}
       {error && <p className="trl-m0__inline-error" role="alert">{error}</p>}
     </section>
 
+    {result && <section className="trl-portfolio__save">
+      <input value={saveName} placeholder={result.labels.join(" + ")} aria-label="Combination name" onChange={(event) => setSaveName(event.currentTarget.value)} />
+      <button type="button" onClick={saveCurrent}>{saved.some((item) => item.key === result.combination.combination_id) ? "Update saved combination" : "Save combination for comparison"}</button>
+    </section>}
     {result && <CombinedDashboard combination={result.combination} labels={result.labels} />}
+    <SavedCombinations saved={saved} evaluation={evaluation} activeKey={activeKey} onOpen={(key) => { const item = saved.find((entry) => entry.key === key); if (item) { setResult({ combination: item.combination, labels: item.labels }); setActiveKey(key); } }} onRemove={(key) => { setSaved((current) => current.filter((item) => item.key !== key)); if (activeKey === key) setActiveKey(null); }} />
+    {exploration && <CombinationExplorer exploration={exploration.result} labels={exploration.labels} selectedId={explorerSelected} onPick={(members, id) => { setExplorerSelected(id); void runCombine(members.map((index) => exploration.tracks[index]!), members.map((index) => exploration.labels[index]!), exploration.capital, exploration.period); }} />}
   </section>;
 }

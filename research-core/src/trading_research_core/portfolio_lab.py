@@ -18,7 +18,8 @@ from typing import Any
 from .dataset_store import read_dataset
 from .errors import CoreError
 from .identities import stable_uuid
-from .performance_metrics import series_metrics
+from .pareto import evaluate as pareto_evaluate
+from .performance_metrics import balance_metrics, series_metrics
 from .portfolio_preflight import preflight_datasets
 from .trade_analysis import close_event_summary
 
@@ -112,6 +113,73 @@ def combine(workspace_root: Path, tracks: list[list[str]], starting_capital: str
             "Lots are as reported in each backtest. Each backtest ran on its own balance, so compounding and margin interaction between EAs are not modelled.",
             "Correlation between tracks is not assumed; check the daily correlation matrix before reading the drawdown offset as diversification.",
             "Starting capital is user-supplied.",
+        ],
+    }
+
+
+EXPLORE_VERSION = "mvp-portfolio-explore-1"
+MAX_EXPLORE_TRACKS = 10
+EXPLORE_METRICS = {"net_pnl", "maximum_drawdown", "maximum_drawdown_percent", "return_to_drawdown", "close_event_count"}
+DEFAULT_EXPLORE_OBJECTIVES = [{"metric": "net_pnl", "direction": "MAX"}, {"metric": "maximum_drawdown", "direction": "MIN"}]
+
+
+def explore(workspace_root: Path, tracks: list[list[str]], starting_capital: str, window: str = "UNION", objectives: list[dict[str, str]] | None = None, constraints: list[dict[str, str]] | None = None) -> dict[str, object]:
+    """Every non-empty subset of 2–10 tracks, with the same definitions as combine().
+
+    Descriptive only (PL-003): each subset gets Core Pareto status for the
+    chosen objectives; nothing is ranked as best.
+    """
+
+    capital = _capital(starting_capital)
+    _validate(tracks, window, "REPORT_CLOCK_MIDNIGHT")
+    if not 2 <= len(tracks) <= MAX_EXPLORE_TRACKS:
+        raise CoreError("E_PORTFOLIO_CONFIG_INVALID", f"The explorer needs 2 to {MAX_EXPLORE_TRACKS} tracks.")
+    objectives = objectives or DEFAULT_EXPLORE_OBJECTIVES
+    constraints = constraints or []
+    if any(item.get("metric") not in EXPLORE_METRICS for item in [*objectives, *constraints]):
+        raise CoreError("E_PORTFOLIO_CONFIG_INVALID", "Explorer objectives and constraints must use: " + ", ".join(sorted(EXPLORE_METRICS)) + ".")
+    loaded = [_load_track(workspace_root, refs, index) for index, refs in enumerate(tracks)]
+    _check_currency(loaded)
+    _check_duplicates(loaded)
+
+    subsets: list[dict[str, object]] = []
+    for mask in range(1, 1 << len(loaded)):
+        members = [track for track in loaded if mask >> track["index"] & 1]
+        row: dict[str, object] = {"id": f"s{mask}", "members": [track["index"] for track in members], "track_ids": [track["track_id"] for track in members]}
+        try:
+            start, end = _window(members, window)
+        except CoreError:
+            subsets.append({**row, "window_start": None, "window_end": None, "reason": "NO_COMMON_WINDOW", **{metric: None for metric in sorted(EXPLORE_METRICS)}})
+            continue
+        merged = sorted((event for track in members for event in track["events"] if start <= event["moment"] <= end), key=lambda event: (event["moment"], event["track_index"], event["order"]))
+        balance = balance_metrics(_balance_path(capital, start, merged))
+        subsets.append({
+            **row,
+            "window_start": _iso(start),
+            "window_end": _iso(end),
+            "reason": None,
+            "net_pnl": _fmt(sum((event["net_pnl"] for event in merged), _ZERO)),
+            "maximum_drawdown": balance["maximum_drawdown"],
+            "maximum_drawdown_percent": balance["maximum_drawdown_percent"],
+            "return_to_drawdown": balance["return_to_drawdown"],
+            "close_event_count": str(len(merged)),
+        })
+    analysis = pareto_evaluate([{"id": row["id"], "values": {metric: row[metric] for metric in EXPLORE_METRICS}} for row in subsets], objectives, constraints)
+    by_id = {item["id"]: item for item in analysis["candidates"]}
+    configuration = {"calculation_version": EXPLORE_VERSION, "track_ids": [track["track_id"] for track in loaded], "starting_capital": _fmt(capital), "window": window, "sizing": "AS_REPORTED", "pareto": analysis["configuration"]}
+    return {
+        "calculation_version": EXPLORE_VERSION,
+        "configuration": configuration,
+        "configuration_hash": _hash(configuration),
+        "currency": loaded[0]["currency"],
+        "subset_count": len(subsets),
+        "counts": analysis["counts"],
+        "front_count": analysis["front_count"],
+        "subsets": [{**row, "pareto": {key: by_id[row["id"]][key] for key in ("status", "rank", "dominated_by_count", "dominated_by_example", "violations")}} for row in subsets],
+        "warnings": [
+            "Every subset is shown; the Pareto frontier marks trade-offs that no other subset beats on all chosen objectives. It is not a recommendation.",
+            "Realised balance only, lots as reported, starting capital user-supplied.",
+            "Exploring many combinations of the same history increases the chance of finding one that looks good by luck.",
         ],
     }
 

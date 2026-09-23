@@ -1,4 +1,4 @@
-import type { CloseEventDisplaySeries, PerformanceMetrics, PortfolioCombination, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CloseEventDisplaySeries, ParetoEvaluation, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -63,6 +63,14 @@ export class ResearchService {
 
   portfolioCombine(tracks: string[][], startingCapital: string, window: "UNION" | "COMMON"): Promise<PortfolioCombination> {
     return this.worker.request("portfolio.combine", { tracks, starting_capital: startingCapital, window }, LONG_RUNNING_MS);
+  }
+
+  portfolioExplore(tracks: string[][], startingCapital: string, window: "UNION" | "COMMON"): Promise<PortfolioExploration> {
+    return this.worker.request("portfolio.explore", { tracks, starting_capital: startingCapital, window }, LONG_RUNNING_MS);
+  }
+
+  paretoEvaluate(candidates: Array<{ id: string; values: Record<string, string | null> }>, objectives: Array<{ metric: string; direction: "MAX" | "MIN" }>): Promise<ParetoEvaluation> {
+    return this.worker.request("analysis.pareto_evaluate", { candidates, objectives });
   }
 
   reconstructLifecycles(datasetRef: string, accountMode: string): Promise<TradeAnalysisResult> {

@@ -179,3 +179,68 @@ def test_worker_exposes_portfolio_combine(tmp_path: Path) -> None:
     assert "portfolio.combine" in worker.dispatch({"method": "core.capabilities", "params": {}})["methods"]
     result = worker.dispatch({"method": "portfolio.combine", "params": {"tracks": [[a], [b]], "starting_capital": "1000"}})
     assert result["net_pnl"] == "130" and result["configuration"]["window"] == "UNION"
+
+
+def test_p14_explorer_subsets_and_pareto_flags(tmp_path: Path) -> None:
+    from trading_research_core.portfolio_lab import explore
+    a, b = _ab(tmp_path)
+    result = explore(tmp_path, [[a], [b]], "1000")
+    rows = {tuple(row["members"]): row for row in result["subsets"]}
+    assert result["subset_count"] == 3
+    assert (rows[(0,)]["net_pnl"], rows[(0,)]["maximum_drawdown"]) == ("80", "50")
+    assert (rows[(1,)]["net_pnl"], rows[(1,)]["maximum_drawdown"]) == ("50", "60")
+    assert (rows[(0, 1)]["net_pnl"], rows[(0, 1)]["maximum_drawdown"]) == ("130", "70")
+    assert [rows[key]["pareto"]["status"] for key in ((0,), (1,), (0, 1))] == ["PARETO", "DOMINATED", "PARETO"]
+    assert rows[(1,)]["pareto"]["dominated_by_example"] == rows[(0,)]["id"]
+
+
+@pytest.mark.parametrize("window", ["UNION", "COMMON"])
+def test_explorer_matches_combine_for_every_subset(tmp_path: Path, window: str) -> None:
+    from trading_research_core.portfolio_lab import explore
+    generator = random.Random(4242)
+    refs = []
+    for member in range(4):
+        start = D0 + timedelta(days=member)
+        closes = sorted((start + timedelta(hours=generator.randint(1, 600)), str(generator.randint(-60, 70))) for _ in range(20))
+        refs.append(_report(tmp_path, f"CD{member}", closes, start=start, deal_base=1000 * (member + 1)))
+    tracks = [[ref] for ref in refs]
+    explored = explore(tmp_path, tracks, "5000", window)
+    assert explored["subset_count"] == 15
+    for row in explored["subsets"]:
+        combined = combine(tmp_path, [tracks[index] for index in row["members"]], "5000", window)
+        balance = combined["metrics"]["balance_metrics"]
+        assert row["net_pnl"] == combined["net_pnl"]
+        assert row["maximum_drawdown"] == balance["maximum_drawdown"]
+        assert row["maximum_drawdown_percent"] == balance["maximum_drawdown_percent"]
+        assert row["return_to_drawdown"] == balance["return_to_drawdown"]
+        assert row["close_event_count"] == str(combined["close_event_count"])
+
+
+def test_explorer_common_window_without_overlap_is_incomplete(tmp_path: Path) -> None:
+    from trading_research_core.portfolio_lab import explore
+    january = _report(tmp_path, "A", [(day(2), "10")], deal_base=100)
+    march = _report(tmp_path, "C", [(datetime(2026, 3, 3, 12), "10")], start=datetime(2026, 3, 1), deal_base=300)
+    rows = {tuple(row["members"]): row for row in explore(tmp_path, [[january], [march]], "1000", "COMMON")["subsets"]}
+    assert rows[(0, 1)]["reason"] == "NO_COMMON_WINDOW" and rows[(0, 1)]["pareto"]["status"] == "INCOMPLETE"
+    assert rows[(0,)]["pareto"]["status"] == "PARETO"
+
+
+def test_explorer_constraints_and_configuration(tmp_path: Path) -> None:
+    from trading_research_core.portfolio_lab import explore
+    a, b = _ab(tmp_path)
+    rows = {tuple(row["members"]): row for row in explore(tmp_path, [[a], [b]], "1000", constraints=[{"metric": "maximum_drawdown", "operator": "<=", "threshold": "60"}])["subsets"]}
+    assert rows[(0, 1)]["pareto"]["status"] == "CONSTRAINED"
+    with pytest.raises(CoreError):
+        explore(tmp_path, [[a]], "1000")
+    with pytest.raises(CoreError):
+        explore(tmp_path, [[a], [b]], "1000", objectives=[{"metric": "sharpe", "direction": "MAX"}])
+
+
+def test_worker_exposes_explore_and_pareto(tmp_path: Path) -> None:
+    a, b = _ab(tmp_path)
+    worker = Worker(tmp_path)
+    methods = worker.dispatch({"method": "core.capabilities", "params": {}})["methods"]
+    assert "portfolio.explore" in methods and "analysis.pareto_evaluate" in methods
+    assert worker.dispatch({"method": "portfolio.explore", "params": {"tracks": [[a], [b]], "starting_capital": "1000"}})["subset_count"] == 3
+    evaluated = worker.dispatch({"method": "analysis.pareto_evaluate", "params": {"candidates": [{"id": "x", "values": {"p": "1"}}, {"id": "y", "values": {"p": "2"}}], "objectives": [{"metric": "p", "direction": "MAX"}]}})
+    assert [row["status"] for row in evaluated["candidates"]] == ["DOMINATED", "PARETO"]

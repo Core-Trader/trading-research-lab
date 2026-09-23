@@ -79,6 +79,12 @@ def series_metrics(points: list[dict[str, Any]], close_values: list[Decimal], cl
     }
 
 
+def balance_metrics(points: list[dict[str, Any]]) -> dict[str, object]:
+    """The C1 balance-basis metrics alone (maximum drawdown, recovery, return/drawdown)."""
+
+    return _balance_metrics(points)
+
+
 def _balance_points(dataset: dict[str, object]) -> list[dict[str, Any]]:
     events_value = dataset.get("events")
     if not isinstance(events_value, list) or not events_value:

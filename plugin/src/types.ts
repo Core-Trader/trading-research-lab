@@ -384,3 +384,45 @@ export type PortfolioCombination = {
   active_tracks: Array<{ index: number; track_id: string; start: string; end: string }>;
   warnings: string[];
 };
+
+export type ParetoStatus = "PARETO" | "DOMINATED" | "CONSTRAINED" | "INCOMPLETE";
+export type ParetoCandidateResult = {
+  id: string;
+  status: ParetoStatus;
+  rank: number | null;
+  dominated_by_count: number;
+  dominated_by_example: string | null;
+  violations: Array<{ metric: string; operator: string; threshold: string; value: string | null; reason: "NOT_SATISFIED" | "MISSING_VALUE" }>;
+};
+export type ParetoEvaluation = {
+  calculation_version: string;
+  configuration_hash: string;
+  candidate_count: number;
+  counts: Record<ParetoStatus, number>;
+  front_count: number;
+  candidates: ParetoCandidateResult[];
+};
+
+export type PortfolioExploration = {
+  calculation_version: string;
+  configuration_hash: string;
+  currency: string | null;
+  subset_count: number;
+  counts: Record<ParetoStatus, number>;
+  front_count: number;
+  subsets: Array<{
+    id: string;
+    members: number[];
+    track_ids: string[];
+    window_start: string | null;
+    window_end: string | null;
+    reason: "NO_COMMON_WINDOW" | null;
+    net_pnl: string | null;
+    maximum_drawdown: string | null;
+    maximum_drawdown_percent: string | null;
+    return_to_drawdown: string | null;
+    close_event_count: string | null;
+    pareto: Omit<ParetoCandidateResult, "id">;
+  }>;
+  warnings: string[];
+};

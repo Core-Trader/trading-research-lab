@@ -15,6 +15,8 @@ type Props = {
   onSelect?: (point: TradeOffPoint) => void;
   /** Extra rows for the hover/focus card (parameters, metrics, constraints...). */
   details?: (point: TradeOffPoint) => ReactNode;
+  /** When false, frontier and dominated candidates look the same (overlay off). */
+  highlightFrontier?: boolean;
 };
 
 const STATUS_LABEL: Record<TradeOffStatus, string> = {
@@ -29,8 +31,9 @@ const STATUS_LABEL: Record<TradeOffStatus, string> = {
  * Presentation only: statuses and ranks are Core results. Nothing is labelled
  * "best"; the frontier marks non-dominated candidates for the owner to choose from.
  */
-export function TradeOffScatter({ points, xLabel, yLabel, xBetter, yBetter, frontierLine, sizeLabel, selectedId, onSelect, details }: Props): React.ReactElement {
-  const layout = useMemo(() => scatterLayout(points, { sizeByValue: sizeLabel !== undefined, frontierLine }), [points, sizeLabel, frontierLine]);
+export function TradeOffScatter({ points, xLabel, yLabel, xBetter, yBetter, frontierLine, sizeLabel, selectedId, onSelect, details, highlightFrontier = true }: Props): React.ReactElement {
+  const layout = useMemo(() => scatterLayout(points, { sizeByValue: sizeLabel !== undefined, frontierLine: frontierLine && highlightFrontier }), [points, sizeLabel, frontierLine, highlightFrontier]);
+  const shown = (status: TradeOffStatus): string => (!highlightFrontier && status === "PARETO" ? "dominated" : status.toLowerCase());
   const order = useMemo(() => layout ? keyboardOrder(layout.placed) : [], [layout]);
   const [hovered, setHovered] = useState<PlacedPoint | null>(null);
   const counts = useMemo(() => {
@@ -78,11 +81,11 @@ export function TradeOffScatter({ points, xLabel, yLabel, xBetter, yBetter, fron
       >
         {layout.frontier && <svg className="trl-tradeoff__frontier" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points={layout.frontier} vectorEffect="non-scaling-stroke" /></svg>}
         {drawOrder.map((point) => point.isDefault
-          ? <span key={point.id} className={`trl-tradeoff__default is-${point.status.toLowerCase()}${point.id === selectedId ? " is-selected" : ""}`} style={{ left: `${point.left}%`, top: `${point.top}%` }} aria-hidden="true">★</span>
-          : <span key={point.id} className={`trl-tradeoff__point is-${point.status.toLowerCase()}${point.id === selectedId ? " is-selected" : ""}${point.id === hovered?.id ? " is-hovered" : ""}`} style={{ left: `${point.left}%`, top: `${point.top}%`, width: `${point.radius * 2}px`, height: `${point.radius * 2}px` }} aria-hidden="true" />)}
+          ? <span key={point.id} className={`trl-tradeoff__default is-${shown(point.status)}${point.id === selectedId ? " is-selected" : ""}`} style={{ left: `${point.left}%`, top: `${point.top}%` }} aria-hidden="true">★</span>
+          : <span key={point.id} className={`trl-tradeoff__point is-${shown(point.status)}${point.id === selectedId ? " is-selected" : ""}${point.id === hovered?.id ? " is-hovered" : ""}`} style={{ left: `${point.left}%`, top: `${point.top}%`, width: `${point.radius * 2}px`, height: `${point.radius * 2}px` }} aria-hidden="true" />)}
         {card && <div className={`trl-tradeoff__card${card.left > 60 ? " is-left" : ""}${card.top > 60 ? " is-up" : ""}`} style={{ left: `${card.left}%`, top: `${card.top}%` }} role="status">
           <strong>{card.isDefault ? "★ Default · " : ""}{card.label}</strong>
-          <span>{STATUS_LABEL[card.status]}{card.rank && card.status !== "PARETO" ? ` · front ${card.rank}` : ""}</span>
+          {(highlightFrontier || card.status === "CONSTRAINED" || card.status === "INCOMPLETE") && <span>{STATUS_LABEL[card.status]}{card.rank && card.status !== "PARETO" ? ` · front ${card.rank}` : ""}</span>}
           <span>{xLabel}: {card.x}</span>
           <span>{yLabel}: {card.y}</span>
           {sizeLabel && card.size !== undefined && <span>{sizeLabel}: {card.size ?? "—"}</span>}
@@ -93,9 +96,10 @@ export function TradeOffScatter({ points, xLabel, yLabel, xBetter, yBetter, fron
     </div>
     <div className="trl-tradeoff__x-axis" aria-hidden="true"><span>{layout.xMin}</span><span className="trl-tradeoff__axis-title">{xLabel}{xBetter ? ` (${xBetter} is better)` : ""}</span><span>{layout.xMax}</span></div>
     <ul className="trl-tradeoff__legend">
-      <li><span className="trl-tradeoff__swatch is-pareto" /> Pareto frontier {counts.PARETO}</li>
-      <li><span className="trl-tradeoff__swatch is-dominated" /> Dominated {counts.DOMINATED}</li>
-      <li><span className="trl-tradeoff__swatch is-constrained" /> Fails a constraint {counts.CONSTRAINED}</li>
+      {highlightFrontier
+        ? <><li><span className="trl-tradeoff__swatch is-pareto" /> Pareto frontier {counts.PARETO}</li><li><span className="trl-tradeoff__swatch is-dominated" /> Dominated {counts.DOMINATED}</li></>
+        : <li><span className="trl-tradeoff__swatch is-dominated" /> Candidate {counts.PARETO + counts.DOMINATED}</li>}
+      {counts.CONSTRAINED > 0 && <li><span className="trl-tradeoff__swatch is-constrained" /> Fails a constraint {counts.CONSTRAINED}</li>}
       {counts.INCOMPLETE > 0 && <li>Missing a value {counts.INCOMPLETE} (not plotted)</li>}
       {points.some((point) => point.isDefault) && <li><span className="trl-tradeoff__star">★</span> Default</li>}
       {layout.omitted.length > 0 && <li>{layout.omitted.length} without both axis values (not plotted)</li>}

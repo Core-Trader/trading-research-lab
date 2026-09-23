@@ -58,3 +58,33 @@ were checked on real points.
 
 - No worker method exposes `pareto.evaluate` on its own; each consumer adds
   its own method (`portfolio.explore`, `exploration.evaluate`).
+
+## Build step 2 (2026-09-23): Portfolio Lab slices 3–4
+
+- Core `portfolio.explore` (`mvp-portfolio-explore-1`): every non-empty subset
+  of 2–10 tracks, computed with the same window rules, merge order, and
+  `performance_metrics.balance_metrics` as `combine`. Per subset: net P/L,
+  maximum drawdown, maximum drawdown %, return/drawdown, and close events,
+  plus Core Pareto status (default objectives: net MAX, maximum drawdown MIN;
+  optional constraints limited to explorer metrics). A COMMON window without
+  overlap marks the subset `NO_COMMON_WINDOW` (INCOMPLETE).
+- Core worker method `analysis.pareto_evaluate` (a generic wrapper), so saved
+  combinations get their Pareto status from the Core, never from TypeScript.
+- Tests: P14 explorer example; **every explored subset equals `combine` for
+  that subset** (UNION and COMMON, 4 random tracks); no-common-window
+  handling; constraints; configuration errors; worker methods. Core 138/138.
+- Plugin: "Save combination for comparison" (session), a saved-combinations
+  table (net, maximum drawdown, %, return/drawdown, profit factor, SQN,
+  stagnation, events, Pareto) with a warning when capital or period settings
+  differ, and a return-versus-drawdown `TradeOffScatter`; "Explore all
+  combinations" with the frontier overlay **off by default** (PL-003, new
+  `highlightFrontier` option: neutral "Candidate" styling until switched on).
+  Clicking a subset opens it as a full combination, which can then be saved.
+  Plugin 51/51; build passes.
+- Real data (four owner reports as separate tracks, capital 10,000): 15
+  subsets, 5 on the frontier, running from a 7.83 / 116.50 subset to all four
+  (48.74 / 2828.44). Every subset containing CENT 2024–26 shares its 48.74
+  maximum drawdown. Among the three saved combinations, only "All four" is
+  non-dominated.
+- **Not validated in Obsidian.** Saved combinations are session-only; saving
+  them to plugin data is a follow-up.

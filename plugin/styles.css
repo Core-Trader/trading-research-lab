@@ -222,5 +222,10 @@
 .trl-tradeoff__swatch.is-dominated { background: var(--text-muted); opacity: 0.45; }
 .trl-tradeoff__swatch.is-constrained { border: 1px solid var(--text-faint); }
 .trl-tradeoff__star { color: var(--color-yellow); }
+.trl-portfolio__save { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0.75rem 0; }
+.trl-portfolio__save input { min-width: 18rem; }
+.trl-link-button { padding: 0; border: 0; background: none; box-shadow: none; color: var(--text-accent); font-weight: 600; cursor: pointer; text-align: left; }
+.trl-link-button:hover { text-decoration: underline; }
+.trl-monthly tr.is-active th, .trl-monthly tr.is-active td { background: color-mix(in srgb, var(--interactive-accent) 12%, transparent); }
 @media (max-width: 58rem) { .trl-dashboard__workflow, .trl-dashboard__grid { grid-template-columns: 1fr; } .trl-dashboard__card--chart, .trl-dashboard__card--wide { grid-column: auto; } }
 @media (max-width: 42rem) { .trl-m0 { padding: 1rem; } .trl-m0__workspace-header, .trl-dashboard__header { display: block; } .trl-m0__workspace-header > span, .trl-dashboard__status { display: inline-block; margin-top: 0.5rem; } .trl-dashboard__card--chart { grid-column: span 1; } .trl-balance-chart__plot { height: 11rem; } .trl-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

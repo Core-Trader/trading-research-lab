@@ -23,7 +23,8 @@ from .monte_carlo import order_permutation_scenario
 from .display_series import close_event_display_series
 from .performance_metrics import performance_metrics
 from .r_metrics import r_multiple_metrics
-from .portfolio_lab import combine as portfolio_combine
+from .portfolio_lab import combine as portfolio_combine, explore as portfolio_explore
+from .pareto import evaluate as pareto_evaluate
 from .mt5_optimisation import intake_parameter_grid, intake_paired_forward_grid
 
 
@@ -57,6 +58,8 @@ class Worker:
                     "analysis.performance_metrics",
                     "analysis.r_multiple_metrics",
                     "portfolio.combine",
+                    "portfolio.explore",
+                    "analysis.pareto_evaluate",
                     "analysis.reconstruct_lifecycles",
                     "analysis.lifecycle_summary",
                     "time.validate_profile",
@@ -104,6 +107,18 @@ class Worker:
         if method == "analysis.basic_statistics":
             dataset_ref = _required_string(params, "dataset_ref")
             return basic_statistics(read_dataset(self.workspace_root, dataset_ref))
+        if method == "portfolio.explore":
+            tracks = params.get("tracks")
+            if not isinstance(tracks, list):
+                raise CoreError("E_REQUEST_INVALID", "params.tracks must be a list of dataset-reference lists.")
+            return portfolio_explore(self.workspace_root, tracks, _required_string(params, "starting_capital"), str(params.get("window", "UNION")), params.get("objectives"), params.get("constraints"))
+        if method == "analysis.pareto_evaluate":
+            candidates = params.get("candidates")
+            objectives = params.get("objectives")
+            constraints = params.get("constraints") or []
+            if not isinstance(candidates, list) or not isinstance(objectives, list) or not isinstance(constraints, list):
+                raise CoreError("E_REQUEST_INVALID", "params.candidates and params.objectives must be lists.")
+            return pareto_evaluate(candidates, objectives, constraints)
         if method == "portfolio.combine":
             tracks = params.get("tracks")
             if not isinstance(tracks, list):
