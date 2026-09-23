@@ -1,4 +1,4 @@
-import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, SavedCombinationEntry, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -107,8 +107,25 @@ export class ResearchService {
     return this.worker.request("exploration.attach_forward", { study_ref: studyRef, forward_optimisation_ref: forwardOptimisationRef }, LONG_RUNNING_MS);
   }
 
-  renderParameterChoice(studyRef: string, objectives: Objective[], constraints: Constraint[], candidateId: string, reason: string): Promise<{ evaluation_id: string; candidate_id: string; markdown: string }> {
-    return this.worker.request("exploration.render_choice", { study_ref: studyRef, objectives, constraints, candidate_id: candidateId, reason }, LONG_RUNNING_MS);
+  renderParameterChoice(studyRef: string, objectives: Objective[], constraints: Constraint[], candidateId: string, reason: string, neighbourhood?: NeighbourhoodSettings): Promise<{ evaluation_id: string; candidate_id: string; markdown: string }> {
+    return this.worker.request("exploration.render_choice", { study_ref: studyRef, objectives, constraints, candidate_id: candidateId, reason, ...(neighbourhood ? { neighbourhood } : {}) }, LONG_RUNNING_MS);
+  }
+
+  neighbourhood(studyRef: string, candidateId: string, objectives: Objective[], settings: NeighbourhoodSettings, sliceAxes: [string, string] | null, sliceMetric: string | null): Promise<NeighbourhoodResult> {
+    return this.worker.request("exploration.neighbourhood", { study_ref: studyRef, candidate_id: candidateId, objectives, roles: settings.roles, radius: settings.radius, slice_axes: sliceAxes, slice_metric: sliceMetric }, LONG_RUNNING_MS);
+  }
+
+  renderNeighbourhoodSet(studyRef: string, candidateId: string, settings: NeighbourhoodSettings): Promise<NeighbourhoodSet> {
+    return this.worker.request("exploration.render_neighbourhood_set", { study_ref: studyRef, candidate_id: candidateId, roles: settings.roles, radius: settings.radius }, LONG_RUNNING_MS);
+  }
+
+  /** The Core writes a new file only; it refuses to overwrite. */
+  writeNeighbourhoodSet(studyRef: string, candidateId: string, settings: NeighbourhoodSettings, targetPath: string): Promise<NeighbourhoodSetWritten> {
+    return this.worker.request("exploration.write_neighbourhood_set", { study_ref: studyRef, candidate_id: candidateId, roles: settings.roles, radius: settings.radius, target_path: targetPath }, LONG_RUNNING_MS);
+  }
+
+  attachNeighbourhoodRun(studyRef: string, optimisationRef: string): Promise<NeighbourhoodRunAttachment> {
+    return this.worker.request("exploration.attach_neighbourhood_run", { study_ref: studyRef, optimisation_ref: optimisationRef }, LONG_RUNNING_MS);
   }
 
   reconstructLifecycles(datasetRef: string, accountMode: string): Promise<TradeAnalysisResult> {

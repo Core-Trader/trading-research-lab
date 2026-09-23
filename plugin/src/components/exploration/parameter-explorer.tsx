@@ -2,8 +2,10 @@ import React, { useMemo, useRef, useState } from "react";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
 import { localPathForSelectedFile } from "../../services/local-file-path";
-import type { Constraint, ForwardAttachment, Objective, ParameterEvaluation, ParameterStudy, SingleTestAttachment, StudyFinding } from "../../types";
+import type { Constraint, ForwardAttachment, NeighbourhoodSettings, Objective, ParameterEvaluation, ParameterStudy, SingleTestAttachment, StudyFinding } from "../../types";
 import { TradeOffScatter } from "../tradeoff/trade-off-scatter";
+import { NeighbourhoodPanel } from "./neighbourhood-panel";
+import { defaultSettings } from "./neighbourhood-model";
 import { axisOptions, betterHint, candidateLabel, compareTable, defaultObjectives, FORWARD_PREFIX, frontierMatchesAxes, scatterPoints, statusText } from "./exploration-model";
 
 type Props = {
@@ -51,6 +53,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
   const [attachments, setAttachments] = useState<SingleTestAttachment[]>([]);
   const forwardInput = useRef<HTMLInputElement>(null);
   const [forward, setForward] = useState<ForwardAttachment | null>(null);
+  const [neighbourhoodSettings, setNeighbourhoodSettings] = useState<NeighbourhoodSettings>({ roles: {}, radius: 1 });
   const runs = useRef(new LatestRun()).current;
 
   const configKey = JSON.stringify({ objectives, constraints });
@@ -98,6 +101,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
       setStudy(created);
       setAttachments([]);
       setForward(null);
+      setNeighbourhoodSettings(defaultSettings(created.parameters));
       setObjectives(initial);
       setConstraints([]);
       setEvaluation(null);
@@ -159,7 +163,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
     setBusy("Recording your choice in the experiment note…");
     setError(null);
     try {
-      const rendered = await service.renderParameterChoice(study.study_ref, objectives, constraints, selected, reason);
+      const rendered = await service.renderParameterChoice(study.study_ref, objectives, constraints, selected, reason, study.schema_ref ? neighbourhoodSettings : undefined);
       await onRecordChoice(rendered.markdown, rendered.evaluation_id);
       setNotice(`Choice recorded in ${experiment?.path ?? "the experiment note"}.`);
     } catch (caught) {
@@ -309,6 +313,9 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
       </table></div>
       <p className="trl-m0__note">Highlighted parameter values differ from your default. Metrics are MT5-reported for each pass{evaluation.forward ? (overlap ? "; forward rows come from an export whose period overlaps the in-sample period" : "; forward rows are the same settings on the later forward period") : ""}. Pin up to {MAX_PINNED} passes from the field.</p>
     </section>}
+
+    {evaluation && selectedCandidate && study?.schema_ref && <NeighbourhoodPanel service={service} study={study} candidateId={selectedCandidate.id} objectives={(JSON.parse(evaluatedConfig) as { objectives: Objective[] }).objectives} settings={neighbourhoodSettings} onSettingsChange={setNeighbourhoodSettings} setPath={setPath} modellingMode={modellingMode} />}
+    {evaluation && selectedCandidate && study && !study.schema_ref && <p className="trl-m0__note">Neighbourhood analysis needs the study's .set file (its ranges and steps define which settings are neighbours).</p>}
 
     {evaluation && selectedCandidate && <section className="trl-page__surface">
       <h4>5. Record your choice</h4>

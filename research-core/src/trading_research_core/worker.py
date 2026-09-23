@@ -27,6 +27,7 @@ from .portfolio_lab import combine as portfolio_combine, delete_saved_combinatio
 from .pareto import evaluate as pareto_evaluate
 from .mt5_set import intake_parameter_schema
 from .parameter_exploration import add_single_test, attach_forward, create_study, evaluate as exploration_evaluate, render_choice
+from .neighbourhood import attach_neighbourhood_run, neighbourhood, render_neighbourhood_set, write_neighbourhood_set
 from .mt5_optimisation import intake_parameter_grid, intake_paired_forward_grid
 
 
@@ -71,6 +72,10 @@ class Worker:
                     "exploration.render_choice",
                     "exploration.add_single_test",
                     "exploration.attach_forward",
+                    "exploration.neighbourhood",
+                    "exploration.render_neighbourhood_set",
+                    "exploration.write_neighbourhood_set",
+                    "exploration.attach_neighbourhood_run",
                     "analysis.reconstruct_lifecycles",
                     "analysis.lifecycle_summary",
                     "time.validate_profile",
@@ -158,7 +163,29 @@ class Worker:
             reason = params.get("reason", "")
             if not isinstance(reason, str) or len(reason) > 4000:
                 raise CoreError("E_REQUEST_INVALID", "params.reason must be text of at most 4000 characters.")
-            return render_choice(self.workspace_root, _required_string(params, "study_ref"), objectives, constraints, _required_string(params, "candidate_id"), reason)
+            settings = params.get("neighbourhood")
+            if settings is not None and not isinstance(settings, dict):
+                raise CoreError("E_REQUEST_INVALID", "params.neighbourhood must be an object with roles and radius.")
+            return render_choice(self.workspace_root, _required_string(params, "study_ref"), objectives, constraints, _required_string(params, "candidate_id"), reason, settings)
+        if method in {"exploration.neighbourhood", "exploration.render_neighbourhood_set", "exploration.write_neighbourhood_set"}:
+            roles = params.get("roles")
+            radius = params.get("radius", 1)
+            if roles is not None and not isinstance(roles, dict):
+                raise CoreError("E_REQUEST_INVALID", "params.roles must map parameter names to roles.")
+            if not isinstance(radius, int):
+                raise CoreError("E_REQUEST_INVALID", "params.radius must be an integer.")
+            study_ref, candidate_id = _required_string(params, "study_ref"), _required_string(params, "candidate_id")
+            if method == "exploration.render_neighbourhood_set":
+                return render_neighbourhood_set(self.workspace_root, study_ref, candidate_id, roles, radius)
+            if method == "exploration.write_neighbourhood_set":
+                return write_neighbourhood_set(self.workspace_root, study_ref, candidate_id, _required_string(params, "target_path"), roles, radius)
+            objectives = params.get("objectives")
+            axes = params.get("slice_axes")
+            if not isinstance(objectives, list) or (axes is not None and not isinstance(axes, list)):
+                raise CoreError("E_REQUEST_INVALID", "params.objectives must be a list and params.slice_axes a list or null.")
+            return neighbourhood(self.workspace_root, study_ref, candidate_id, objectives, roles, radius, axes, params.get("slice_metric"))
+        if method == "exploration.attach_neighbourhood_run":
+            return attach_neighbourhood_run(self.workspace_root, _required_string(params, "study_ref"), _required_string(params, "optimisation_ref"))
         if method == "analysis.pareto_evaluate":
             candidates = params.get("candidates")
             objectives = params.get("objectives")

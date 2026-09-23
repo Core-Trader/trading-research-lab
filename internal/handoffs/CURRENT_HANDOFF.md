@@ -127,10 +127,16 @@ Independent MVP work done on 2026-09-23 (see
 The owner review passed on 2026-09-23. Tracks are now numbered and the
 stagnation band has a legend. Multi-XML studies (PX-008), the release
 decisions R-D1 to R-D4, and the clean-machine install check are deferred.
-**Next exact task:** the owner decides N1–N7 in
-`internal/docs/PARAMETER_NEIGHBOURHOOD_SPEC.md`. Once approved, write its
-fixture plan and implement `neighbourhood.py` and the Parameters-page panel.
-V2/V3 visuals remain on hold.
+Neighbourhood analysis (PX-010, N1–N7) is implemented; see
+`internal/development-journal/2026-09-23-neighbourhood-analysis.md`.
+**Next exact task:** the owner reviews the Neighbourhood panel in Obsidian:
+1. Select a frontier pass and check the coverage, statistics, and map.
+2. Save a neighbourhood `.set`.
+3. Optionally run it in MT5 with the "Slow complete algorithm" and attach
+   the XML.
+After that, the remaining deferred items are the release decisions R-D1 to
+R-D4, multi-XML studies, and the equity-logger spec (PL-006) before the
+prop-firm module. V2/V3 visuals remain on hold.
 
 Use `MILESTONE_6_PAIRED_EVIDENCE_COLLECTION_PROTOCOL.md` only when collecting
 future like-for-like optimisation/forward pairs. Automatic selection,
@@ -208,8 +214,8 @@ Set-Location C:\DEV\Trading_Research_Lab\plugin
 | Area | Status | Evidence / limit |
 | --- | --- | --- |
 | Environment | Pass | Python/Node/npm/Git versions and core imports verified on 2026-09-20. |
-| Research Core unit tests | Pass | 173 `pytest` tests passed on 2026-09-23 (plus 4 release-script tests in `scripts/tests`), including saved-combination persistence, parameter exploration (single tests, forward pairing), including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
-| Plugin automated tests | Pass | 63 Node tests passed on 2026-09-23 (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
+| Research Core unit tests | Pass | 188 `pytest` tests passed on 2026-09-23 (plus 4 release-script tests in `scripts/tests`), including neighbourhood analysis, saved-combination persistence, parameter exploration (single tests, forward pairing), including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
+| Plugin automated tests | Pass | 68 Node tests passed on 2026-09-23 (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
 | Plugin build | Pass | TypeScript check and esbuild production bundle passed. |
 | Live M0 path | Pass, owner-confirmed | EURUSD import, verified balance curve, generated note, Browse workflow, and diagnostics panel were manually exercised. |
 | Integration/negative coverage | Partial | Live structured unknown-method response was verified; a broader formal integration suite is not yet present. |

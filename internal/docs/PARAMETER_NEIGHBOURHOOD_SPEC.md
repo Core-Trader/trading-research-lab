@@ -1,7 +1,16 @@
 # Parameter neighbourhood analysis: specification
 
-**Status:** DRAFT for owner approval (drafted 2026-09-23 at the owner's
-request). No implementation is authorised until decisions N1–N7 are answered.
+**Status:** APPROVED 2026-09-23. The owner accepted N1–N7 as recommended, and
+the spec is implemented (`neighbourhood.py` and the Parameters-page panel).
+
+Implementation notes:
+- Quartiles use Hyndman–Fan type 7 (linear interpolation; Excel
+  QUARTILE.INC).
+- The default slice uses the two ordinal inputs with the fewest grid values.
+- Neighbours are ordered by distance, then by grid position.
+- The `.set` comment is plain ASCII.
+- Neighbourhood-run passes never join the Pareto field. The opt-in in §5 is
+  deferred (POST-MVP).
 
 **Builds on:** `PARAMETER_EXPLORATION_ARCHITECTURE.md` §8, and PX-001, PX-005,
 and PX-007.

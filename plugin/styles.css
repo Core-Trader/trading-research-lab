@@ -240,6 +240,22 @@
 .trl-exploration__row input { width: 7rem; }
 .trl-exploration__row select { min-width: 0; max-width: 100%; }
 .trl-exploration__selected { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-top: 0.6rem; font-size: var(--font-ui-smaller); }
+.trl-neighbourhood__coverage { margin: 0.5rem 0; }
+.trl-neighbourhood__coverage.is-low strong { color: var(--text-warning, var(--color-orange)); }
+.trl-neighbourhood__peak { margin: 0.5rem 0; padding: 0.45rem 0.6rem; border-left: 3px solid var(--background-modifier-border); }
+.trl-neighbourhood__peak.is-flagged { border-left-color: var(--color-orange); background: color-mix(in srgb, var(--color-orange) 10%, transparent); }
+.trl-neighbourhood__roles { margin: 0.4rem 0 0.6rem; font-size: var(--font-ui-smaller); }
+.trl-neighbourhood__param { min-width: 9rem; font-family: var(--font-monospace); }
+.trl-neighbourhood h5 { margin: 0.9rem 0 0.3rem; }
+.trl-neighbourhood__grid-wrap { overflow-x: auto; }
+.trl-neighbourhood__grid { border-collapse: separate; border-spacing: 2px; font-size: var(--font-ui-smaller); font-variant-numeric: tabular-nums; }
+.trl-neighbourhood__grid th { padding: 0.2rem 0.35rem; color: var(--text-muted); font-weight: 600; text-align: center; white-space: nowrap; }
+.trl-neighbourhood__grid td { min-width: 3.2rem; height: 1.9rem; padding: 0 0.3rem; border: 1px solid var(--background-modifier-border); border-radius: 0.2rem; text-align: center; white-space: nowrap; }
+.trl-neighbourhood__grid td.is-tested { background: color-mix(in srgb, var(--interactive-accent) calc(var(--trl-shade, 0.5) * 70% + 8%), transparent); }
+.trl-neighbourhood__grid td.is-untested { background: repeating-linear-gradient(135deg, transparent 0 4px, var(--background-modifier-border) 4px 5px); }
+.trl-neighbourhood__grid td.is-candidate { outline: 2px solid var(--text-normal); outline-offset: 1px; font-weight: 700; }
+.trl-neighbourhood__fill { margin-top: 1rem; padding-top: 0.6rem; border-top: 1px solid var(--background-modifier-border); }
+.trl-neighbourhood__save { display: grid; gap: 0.4rem; margin-top: 0.5rem; }
 .trl-exploration__compare td.is-different { background: color-mix(in srgb, var(--color-yellow) 22%, transparent); font-weight: 600; }
 .trl-exploration__compare tr.is-status td, .trl-exploration__compare tr.is-status th { border-top: 2px solid var(--background-modifier-border); }
 .trl-exploration__notice { color: var(--color-green); }

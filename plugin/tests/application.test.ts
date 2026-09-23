@@ -67,6 +67,21 @@ test("saved combinations send the setup only", async () => {
   assert.deepEqual(calls[2]?.params, { key: "k" });
 });
 
+test("neighbourhood requests send roles, radius, and the target path verbatim", async () => {
+  const { worker, calls } = recordingWorker();
+  const service = new ResearchService(worker);
+  const settings = { roles: { InpLot: "HELD_FIXED" as const }, radius: 1 as const };
+  await service.neighbourhood("s", "c", [{ metric: "net_profit", direction: "MAX" }], settings, ["A", "B"], "net_profit");
+  await service.renderNeighbourhoodSet("s", "c", settings);
+  await service.writeNeighbourhoodSet("s", "c", settings, "C:\MT5\n.set");
+  await service.attachNeighbourhoodRun("s", "mt5-optimisation:X");
+  await service.renderParameterChoice("s", [], [], "c", "why", settings);
+  assert.deepEqual(calls.map((call) => call.method), ["exploration.neighbourhood", "exploration.render_neighbourhood_set", "exploration.write_neighbourhood_set", "exploration.attach_neighbourhood_run", "exploration.render_choice"]);
+  assert.deepEqual(calls[0]?.params, { study_ref: "s", candidate_id: "c", objectives: [{ metric: "net_profit", direction: "MAX" }], roles: { InpLot: "HELD_FIXED" }, radius: 1, slice_axes: ["A", "B"], slice_metric: "net_profit" });
+  assert.equal(calls[2]?.params.target_path, "C:\MT5\n.set");
+  assert.deepEqual(calls[4]?.params.neighbourhood, settings);
+});
+
 test("R-multiple requests send an amount only for a declared 1R", async () => {
   const { worker, calls } = recordingWorker();
   const service = new ResearchService(worker);

@@ -80,6 +80,24 @@ TRL reads the dates from both export titles:
 - It refuses to pair exports for a different EA, symbol, or timeframe, or
   exports that vary different inputs.
 
+## Neighbourhood runs (is my chosen setting a lucky peak?)
+
+MT5's genetic optimiser rarely tests the settings right next to a good
+result. On TRL's Parameters page, select a setting, look at **Neighbourhood**,
+and use **Prepare neighbourhood .set**. TRL writes a *new* `.set` file (it
+never overwrites one) that varies only the chosen inputs by ±1 or ±2 steps
+and holds everything else fixed.
+
+1. In MT5, load that `.set` on the **Inputs** tab.
+2. Choose the optimisation algorithm **Slow complete algorithm** so every
+   setting in the small box is tested.
+3. Use the same symbol, timeframe, dates, deposit, and modelling mode as the
+   original optimisation.
+4. Export the results to XML and use **Attach neighbourhood run (.xml)…**.
+
+TRL refuses a run with different dates or market, or one that does not match
+a `.set` it wrote for this study.
+
 ## What TRL does not know from MT5 reports
 
 - **Floating (open-position) losses.** MT5 reports record closed trades and

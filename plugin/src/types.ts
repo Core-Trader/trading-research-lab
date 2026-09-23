@@ -464,6 +464,32 @@ export type ParameterEvaluation = {
   candidates: Array<{ id: string; pass: string | null; label?: string; source?: "OPTIMISATION" | "SINGLE_TEST"; parameters: Record<string, string>; metrics: Record<string, string | null>; is_default: boolean; forward?: { pass: string | null; metrics: Record<string, string | null> } | null; pareto: Omit<ParetoCandidateResult, "id"> }>;
   warnings: string[];
 };
+export type NeighbourhoodRole = "ORDINAL" | "CATEGORICAL" | "HELD_FIXED";
+export type NeighbourhoodSettings = { roles: Record<string, NeighbourhoodRole>; radius: 1 | 2 };
+export type NeighbourPoint = { id: string; label: string; source: "OPTIMISATION" | "SINGLE_TEST" | "NEIGHBOURHOOD_RUN"; distance: number; differs: Record<string, string>; metrics: Record<string, string | null>; forward: { pass: string | null; metrics: Record<string, string | null> } | null };
+export type NeighbourhoodStatistic = { direction: "MAX" | "MIN"; count: number; median?: string; q1?: string; q3?: string; iqr?: string; candidate_value?: string | null; candidate_better_than?: number | null; best_neighbour?: string; margin_over_best?: string | null };
+export type NeighbourhoodSlice = { axes: [string, string]; metric: string; x_values: string[]; y_values: string[]; cells: Array<Array<{ value: string | null; tested: boolean; id: string | null; is_candidate: boolean }>>; windowed: boolean };
+/** Neighbourhood of one candidate (PARAMETER_NEIGHBOURHOOD_SPEC.md); every value is Core output. */
+export type NeighbourhoodResult = {
+  neighbourhood_id: string;
+  calculation_version: string;
+  configuration_hash: string;
+  candidate: { id: string; label: string; source: string; parameters: Record<string, string>; metrics: Record<string, string | null> };
+  roles: Record<string, NeighbourhoodRole>;
+  radius: number;
+  coverage: { possible: number; tested: number; minimum_for_statistics: number; sufficient: boolean; by_source: Record<string, number>; held_equal: string[] };
+  boundaries: Array<{ name: string; steps_below: number; steps_above: number }>;
+  neighbours: NeighbourPoint[];
+  nearest: NeighbourPoint[];
+  statistics: Record<string, NeighbourhoodStatistic> | null;
+  context: { profit_positive_share: string | null; worst_equity_drawdown_pct: string | null } | null;
+  isolated_peak: { assessed: boolean; flag: boolean; rule: string } | null;
+  slice: NeighbourhoodSlice | null;
+  warnings: string[];
+};
+export type NeighbourhoodSet = { box_id: string; runs: number; varied: Record<string, { start: string; step: string; stop: string }>; fixed: Record<string, string>; set_text: string; suggested_filename: string };
+export type NeighbourhoodSetWritten = { box_id: string; runs: number; path: string; bytes: number; sha256: string; filename: string };
+export type NeighbourhoodRunAttachment = { optimisation_ref: string; box_id: string | null; candidate_id: string | null; run_count: number; findings: StudyFinding[]; status: "READY" | "BLOCKED" };
 /** Forward (out-of-sample) MT5 optimisation joined to a study by parameter signature. */
 export type ForwardSummary = {
   forward_optimisation_ref: string;

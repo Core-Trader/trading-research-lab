@@ -320,12 +320,13 @@ def _single_tests(workspace_root: Path, study: dict[str, Any]) -> list[dict[str,
     return [json.loads(path.read_text(encoding="utf-8")) for path in sorted(folder.glob("*.json"))]
 
 
-def render_choice(workspace_root: Path, study_ref: str, objectives: list[dict[str, str]], constraints: list[dict[str, str]] | None, candidate_id: str, reason: str) -> dict[str, object]:
+def render_choice(workspace_root: Path, study_ref: str, objectives: list[dict[str, str]], constraints: list[dict[str, str]] | None, candidate_id: str, reason: str, neighbourhood: dict[str, Any] | None = None) -> dict[str, object]:
     """Markdown recording the owner's chosen candidate, re-derived from a fresh evaluation.
 
     The Core re-evaluates, so the recorded status and values are authentic; the
     owner's reason is quoted verbatim. The text describes a choice, not a
-    recommendation.
+    recommendation. With `neighbourhood` ({roles, radius}) the neighbourhood
+    coverage and isolated-peak flag are recorded too (N7).
     """
 
     result = evaluate(workspace_root, study_ref, objectives, constraints)
@@ -344,6 +345,7 @@ def render_choice(workspace_root: Path, study_ref: str, objectives: list[dict[st
         "- Objectives: " + ", ".join(f"{labels.get(item['metric'], item['metric'])} {'↑' if item['direction'] == 'MAX' else '↓'}" for item in objectives),
         "- Constraints: " + (", ".join(f"{labels.get(item['metric'], item['metric'])} {item['operator']} {item['threshold']}" for item in constraints or []) or "none"),
         f"- Candidate: {'MT5 pass ' + str(chosen['pass']) if chosen['pass'] is not None else chosen['label']} — {_status_text(chosen['pareto'])}{' — this is the default' if chosen['is_default'] else ''}",
+        *_neighbourhood_lines(workspace_root, study_ref, candidate_id, objectives, neighbourhood),
         "",
         "| Parameter | Chosen | Default |",
         "| --- | --- | --- |",
@@ -361,6 +363,17 @@ def render_choice(workspace_root: Path, study_ref: str, objectives: list[dict[st
         "",
     ]
     return {"evaluation_id": result["evaluation_id"], "candidate_id": candidate_id, "markdown": "\n".join(lines)}
+
+
+def _neighbourhood_lines(workspace_root: Path, study_ref: str, candidate_id: str, objectives: list[dict[str, str]], settings: dict[str, Any] | None) -> list[str]:
+    if settings is None:
+        return []
+    from .neighbourhood import neighbourhood, summary_lines
+
+    try:
+        return summary_lines(neighbourhood(workspace_root, study_ref, candidate_id, objectives, settings.get("roles"), int(settings.get("radius", 1))))
+    except CoreError as error:
+        return [f"- Neighbourhood: not available ({error.message})"]
 
 
 def _status_text(pareto: dict[str, Any]) -> str:
