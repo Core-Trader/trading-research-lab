@@ -129,7 +129,7 @@ stagnation band has a legend. Multi-XML studies (PX-008), the release
 decisions R-D1 to R-D4, and the clean-machine install check are deferred.
 Neighbourhood analysis (PX-010, N1–N7) is implemented; see
 `internal/development-journal/2026-09-23-neighbourhood-analysis.md`.
-The first MT5 test corpus is built (DEV-002); see
+The equity logger spec (PL-006) is drafted in `internal/docs/EQUITY_LOGGER_SPEC.md`: **owner decisions E1–E8 are pending**, then the fixture plan, the `.mqh` include plus adapter, and validation with the backtest agent. The first MT5 test corpus is built (DEV-002); see
 `internal/development-journal/2026-09-23-test-corpus-and-bias-fixes.md`. It
 fixed three parser biases (the `Inp` prefix, spaced EA names, and built-in
 forward). Run `scripts/corpus_check.py` after importer changes. Permanent
