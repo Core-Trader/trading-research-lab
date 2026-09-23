@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } fro
 import { createRoot, type Root } from "react-dom/client";
 import { ItemView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import type TradingResearchLabPlugin from "./main";
-import type { SetCheckResult, CloseEventDisplaySeries, PerformanceMetrics, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "./types";
+import type { SetCheckResult, CloseEventDisplaySeries, PerformanceMetrics, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, MonteCarloResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "./types";
 import { experimentDocumentText, inspectReportForRegeneration, regenerateReportText, reportDocumentText, strategyDocumentText, uuidv7 } from "./research-documents";
 import { ResearchService } from "./application/research-service";
 import { LatestRun } from "./application/latest-run";
@@ -17,7 +17,6 @@ import { M2Analysis, M3Analysis, Results } from "./components/analysis/analysis-
 import { RMultiplePanel, type RSource } from "./components/analysis/r-multiple-panel";
 import { M4Documents } from "./components/research/documents-panel";
 import { MonteCarloAnalysis, WhatIfAnalysis } from "./components/advanced/scenario-panels";
-import { OptimisationEvidence, PairedForwardEvidence } from "./components/advanced/optimisation-panels";
 import { Diagnostics, type RunDiagnostics } from "./components/advanced/diagnostics-panel";
 import { PortfolioLab } from "./components/portfolio/portfolio-lab";
 import { EquityAttach, EquityHowTo } from "./components/analysis/equity-panel";
@@ -93,23 +92,10 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const [monteCarloPathCount, setMonteCarloPathCount] = useState("1000");
   const [monteCarloResult, setMonteCarloResult] = useState<MonteCarloResult | null>(null);
   const [monteCarloError, setMonteCarloError] = useState<string | null>(null);
-  const [optimisationPath, setOptimisationPath] = useState("");
-  const [optimisationResult, setOptimisationResult] = useState<OptimisationGridResult | null>(null);
-  const [optimisationMode, setOptimisationMode] = useState("1-minute OHLC");
-  const [optimisationFilter, setOptimisationFilter] = useState("");
-  const [optimisationSort, setOptimisationSort] = useState("Pass");
-  const [forwardInPath, setForwardInPath] = useState("");
-  const [forwardPath, setForwardPath] = useState("");
-  const [forwardInStart, setForwardInStart] = useState("");
-  const [forwardInEnd, setForwardInEnd] = useState("");
-  const [forwardStart, setForwardStart] = useState("");
-  const [forwardEnd, setForwardEnd] = useState("");
-  const [forwardMode, setForwardMode] = useState("");
   // The page lives in the plugin's navigation store, shared with the left sidebar (NAV-1).
   const navigation = plugin.navigation;
   const activePage = useSyncExternalStore((listener) => navigation.subscribe(listener), () => navigation.current.page);
   const setActivePage = (page: WorkspacePage): void => navigation.setPage(page);
-  const [forwardResult, setForwardResult] = useState<PairedForwardResult | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [validated, setValidated] = useState<{ datasetRef: string; eventCount: number; workerWasReady: boolean; readinessMs: number; importMs: number } | null>(null);
   const [libraryEntries, setLibraryEntries] = useState<DatasetEvidence[]>([]);
@@ -122,12 +108,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const service = useMemo(() => new ResearchService({ request: (method, params, timeoutMs) => plugin.worker.request(method, params, timeoutMs) }), [plugin]);
   const importRuns = useRef(new LatestRun()).current;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const optimisationInputRef = useRef<HTMLInputElement>(null);
-  const forwardInInputRef = useRef<HTMLInputElement>(null);
-  const forwardInputRef = useRef<HTMLInputElement>(null);
   const batchInputRef = useRef<HTMLInputElement>(null);
 
-  const canRunOptimisation = useMemo(() => optimisationPath.trim().toLowerCase().endsWith(".xml") && optimisationMode.trim().length > 0, [optimisationPath, optimisationMode]);
   const [batchBusy, setBatchBusy] = useState<string | null>(null);
   const [batchError, setBatchError] = useState<string | null>(null);
   // Any change to the batch invalidates every downstream batch result.
@@ -461,11 +443,11 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       setDailyDrawdown(drawdown);
       setCardErrors((current) => ({ ...current, dailyDrawdown: null }));
       setEquityAvailability(equity);
-      setStatus("M3 basic analysis completed. Results use the report clock and realised balances only.");
-      new Notice("Trading Research Lab M3 analysis completed.");
+      setStatus("Daily balance analysis completed (report clock, closed-trade balance).");
+      new Notice("Daily balance analysis completed.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
-      setStatus("M3 balance and risk analysis did not complete.");
+      setStatus("Daily balance analysis did not complete.");
     }
   };
 
@@ -498,12 +480,12 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       setMonteCarloResult(null);
       setMonteCarloError(null);
       setStatus(lifecycles.eligible
-        ? "M2 analysis completed. Verified close events and inferred lifecycles are shown separately."
-        : "M2 close-event analysis completed. No inferred lifecycles were created for the current account-mode declaration.");
-      new Notice("Trading Research Lab M2 analysis completed.");
+        ? "Trade analysis completed. Verified closes and inferred lifecycles are shown separately."
+        : "Trade analysis completed. No lifecycles were inferred for this account-mode declaration.");
+      new Notice("Trade analysis completed.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
-      setStatus("M2 trade analysis did not complete.");
+      setStatus("Trade analysis did not complete.");
     }
   };
 
@@ -516,20 +498,20 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     if (!/^\+?(?:\d+(?:\.\d*)?|\.\d+)$/.test(cost)) {
       const message = "Additional cost must be a non-negative decimal, for example 0.50. Negative values are not allowed.";
       setFixedCostError(message);
-      setStatus("M6 What-If scenario was not run: correct the additional cost.");
+      setStatus("What-if scenario not run: correct the additional cost.");
       return;
     }
     setStatus("Calculating the declared fixed-cost What-If scenario over verified close events…");
     try {
       const result = await service.fixedCostScenario(datasetRef, cost);
       setFixedCostScenario(result);
-      setStatus("M6 What-If scenario completed. It is a user-supplied cost sensitivity result, not a forecast.");
-      new Notice("Trading Research Lab M6 What-If scenario completed.");
+      setStatus("What-if scenario completed: a cost sensitivity check, not a forecast.");
+      new Notice("What-if scenario completed.");
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       setFixedCostError(message);
       setError(message);
-      setStatus("M6 What-If scenario did not complete.");
+      setStatus("What-if scenario did not complete.");
     }
   };
 
@@ -582,42 +564,6 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
   };
 
-  const runOptimisationIntake = async (): Promise<void> => {
-    setError(null);
-    setStatus("Creating immutable optimisation-export snapshot and preserving reported pass values…");
-    try {
-      const result = await service.intakeOptimisationGrid(optimisationPath.trim(), optimisationMode.trim());
-      setOptimisationResult(result);
-      setOptimisationSort("Pass");
-      setOptimisationFilter("");
-      setStatus(`Optimisation evidence imported: ${result.pass_count} MT5-reported passes. Sorting and filtering are inspection only.`);
-      new Notice("Trading Research Lab optimisation evidence imported. No parameter was selected.");
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      setError(message);
-      setStatus("Optimisation evidence import did not complete.");
-    }
-  };
-
-  const runForwardPair = async (): Promise<void> => {
-    setError(null);
-    try {
-      const result = await service.intakePairedForwardGrid({
-        in_sample_path: forwardInPath, forward_path: forwardPath,
-        in_sample_start: forwardInStart, in_sample_end: forwardInEnd,
-        forward_start: forwardStart, forward_end: forwardEnd,
-        modelling_mode: forwardMode,
-      });
-      setForwardResult(result);
-      setStatus(`Paired forward evidence imported: ${result.pair_count} exact parameter pairs. No parameter was selected.`);
-      new Notice("Paired forward evidence imported. No parameter was selected.");
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      setError(message);
-      setStatus("Paired forward evidence import did not complete.");
-    }
-  };
-
   const verifySnapshot = async (): Promise<void> => {
     if (evidence === null) return;
     setError(null);
@@ -625,7 +571,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     try {
       const verification = await service.verifyRawSnapshot(evidence.dataset_ref);
       if (!verification.verified) throw new Error("The managed raw snapshot hash does not match its recorded source hash.");
-      setStatus(`Managed raw snapshot verified: ${verification.observed_sha256}`);
+      setStatus("Snapshot verified: TRL's stored copy matches the original file.");
       setSnapshotVerification({
         state: "VERIFIED",
         message: "Verified on demand: the managed raw snapshot hash matches the recorded source SHA-256.",
@@ -655,35 +601,6 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       setError(message);
       setStatus("No report was selected.");
     }
-  };
-
-  const selectOptimisationFile = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    const file = event.currentTarget.files?.[0];
-    event.currentTarget.value = "";
-    if (file === undefined) return;
-    try {
-      const selectedPath = localPathForSelectedFile(file);
-      if (!selectedPath.toLowerCase().endsWith(".xml")) throw new Error("Select an MT5 optimisation XML export with the .xml extension.");
-      setOptimisationPath(selectedPath);
-      setError(null);
-      setStatus(`Selected optimisation export: ${selectedPath}`);
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      setError(message);
-      setStatus("No optimisation export was selected.");
-    }
-  };
-
-  const selectForwardFile = (target: "in" | "forward") => (event: React.ChangeEvent<HTMLInputElement>): void => {
-    const file = event.currentTarget.files?.[0];
-    event.currentTarget.value = "";
-    if (file === undefined) return;
-    try {
-      const selected = localPathForSelectedFile(file);
-      if (!selected.toLowerCase().endsWith(".xml")) throw new Error("Select an MT5 XML export.");
-      if (target === "in") setForwardInPath(selected); else setForwardPath(selected);
-      setError(null);
-    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
   };
 
   // Report status for the sidebar card (NAV-3); the sidebar never calculates.
@@ -758,6 +675,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
           <dt>Source events</dt><dd>{validated.eventCount}</dd>
           <dt>Checks</dt><dd>Copied unchanged and hash-verified{evidence.source_checks?.includes("HTML_DEALS_TOTALS_MATCH") ? "; HTML deal totals match the deals" : ""}{evidence.equity ? "; equity log attached" : ""}</dd>
         </dl>}
+        {validated && evidence && evidence.warnings.length > 0 && <ul className="trl-batch__warnings">{evidence.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
         <p className="trl-m0__note" role="status">{status}</p>
       </section>
       {validated && evidence && <section className="trl-page__surface trl-import__step" aria-label="Step 2: companion files">
@@ -793,8 +711,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
           </>}
         </div>
       </section>}
-      {evidence && <Evidence evidence={evidence} intakeStatus={intakeStatus} snapshotVerification={snapshotVerification} onVerify={() => void verifySnapshot()} />}
       <M5Preflight paths={batchPaths} result={batchPreflight} combined={combinedBalance} daily={combinedDaily} busy={batchBusy} error={batchError} inputRef={batchInputRef} onSelect={selectBatchFiles} onRemove={(path) => { setBatchPaths((current) => current.filter((item) => item !== path)); resetBatchResults(); }} onClear={() => { setBatchPaths([]); resetBatchResults(); }} onRun={() => void runBatchPreflight()} onCreate={() => void createCombinedBalance()} onDaily={() => void runCombinedDaily()} />
+      {evidence && <Evidence evidence={evidence} intakeStatus={intakeStatus} snapshotVerification={snapshotVerification} onVerify={() => void verifySnapshot()} />}
     </section>}
     {activePage === "analysis" && <section className="trl-page" aria-label="Analysis">
       <header className="trl-page__header"><div><h3>Analysis</h3><p>Review verified results first. Any unavailable evidence remains explicitly unavailable.</p></div></header>
@@ -836,8 +754,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     {activePage === "parameters" && <ParameterExplorer service={service} experiment={experiment} onRecordChoice={recordParameterChoice} />}
     {activePage === "advanced" && <section className="trl-page" aria-label="Advanced research">
       <header className="trl-page__header"><div><h3>Advanced research</h3><p>Optional, qualified studies. Results are research evidence, not trading recommendations.</p></div></header>
-      <OptimisationEvidence path={optimisationPath} mode={optimisationMode} result={optimisationResult} filter={optimisationFilter} sort={optimisationSort} inputRef={optimisationInputRef} enabled={canRunOptimisation} onPathChange={setOptimisationPath} onModeChange={setOptimisationMode} onSelect={selectOptimisationFile} onRun={() => void runOptimisationIntake()} onFilterChange={setOptimisationFilter} onSortChange={setOptimisationSort} />
-      <PairedForwardEvidence inPath={forwardInPath} forwardPath={forwardPath} inStart={forwardInStart} inEnd={forwardInEnd} forwardStart={forwardStart} forwardEnd={forwardEnd} mode={forwardMode} result={forwardResult} inRef={forwardInInputRef} forwardRef={forwardInputRef} onInPathChange={setForwardInPath} onForwardPathChange={setForwardPath} onInStartChange={setForwardInStart} onInEndChange={setForwardInEnd} onForwardStartChange={setForwardStart} onForwardEndChange={setForwardEnd} onModeChange={setForwardMode} onInSelect={selectForwardFile("in")} onForwardSelect={selectForwardFile("forward")} onRun={() => void runForwardPair()} />
+      <section className="trl-page__surface trl-moved-card"><h4>Parameter studies and forward checks</h4><p className="trl-m0__note">Importing MT5 optimisation results, pairing forward tests, and neighbourhood checks now live on the Parameters page.</p><button type="button" onClick={() => setActivePage("parameters")}>Open Parameters</button></section>
       {(evidence || statistics) && <WhatIfAnalysis
       cost={fixedCost}
       error={fixedCostError}
@@ -856,7 +773,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       onPathCountChange={(value) => { setMonteCarloPathCount(value); setMonteCarloError(null); }}
       onRun={() => void runMonteCarlo()}
     />}
-      {diagnostics && <Diagnostics diagnostics={diagnostics} />}
+      {diagnostics && plugin.settings.showDeveloperDiagnostics && <Diagnostics diagnostics={diagnostics} />}
     </section>}
   </section>;
 }

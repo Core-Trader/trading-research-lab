@@ -315,11 +315,11 @@
 .trl-pagebar__brand { display: block; color: var(--text-muted); font-size: var(--font-ui-smaller); letter-spacing: 0.02em; text-transform: uppercase; }
 .trl-pagebar__controls { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
 /* Left-sidebar navigation (NAV-1, NAV-3) */
-.trl-sidenav { display: grid; gap: 0.9rem; padding: 0.5rem 0.25rem 1rem; font-size: var(--font-ui-small); }
-.trl-sidenav__brand { display: grid; gap: 0.1rem; padding: 0 0.4rem; }
+.trl-sidenav { display: grid; gap: 0.9rem; padding: 0.4rem 0 1rem; font-size: var(--font-ui-small); }
+.trl-sidenav__brand { display: grid; gap: 0.1rem; padding: 0 0.15rem; }
 .trl-sidenav__brand span { color: var(--text-muted); font-size: var(--font-ui-smaller); }
 .trl-sidenav__report { display: grid; gap: 0.35rem; padding: 0.6rem; border: 1px solid var(--background-modifier-border); border-radius: 0.4rem; background: var(--background-primary); }
-.trl-sidenav__report > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trl-sidenav__report > strong { display: flex; align-items: center; gap: 0.35rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trl-sidenav__market, .trl-sidenav__empty, .trl-sidenav__busy { color: var(--text-muted); font-size: var(--font-ui-smaller); }
 .trl-sidenav__badges { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }
 .trl-sidenav__badges li { padding: 0.05rem 0.4rem; border-radius: 999px; background: var(--background-secondary); color: var(--text-muted); font-size: 0.7rem; }
@@ -327,12 +327,22 @@
 .trl-sidenav__badges li.is-warn { color: var(--color-orange); }
 .trl-sidenav__actions { display: grid; gap: 0.3rem; }
 .trl-sidenav__actions button { width: 100%; }
-.trl-sidenav__group h6 { margin: 0 0 0.2rem; padding: 0 0.4rem; color: var(--text-muted); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.trl-sidenav__group h6 { margin: 0 0 0.2rem; padding: 0 0.15rem; color: var(--text-muted); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; }
 .trl-sidenav__group ul { display: grid; gap: 0.05rem; margin: 0; padding: 0; list-style: none; }
-.trl-sidenav__group button { width: 100%; padding: 0.3rem 0.5rem; border: 0; border-radius: 0.3rem; background: transparent; box-shadow: none; color: var(--text-normal); text-align: left; }
+.trl-sidenav__group button { display: flex; align-items: center; gap: 0.45rem; width: 100%; padding: 0.3rem 0.25rem; border: 0; border-radius: 0.3rem; background: transparent; box-shadow: none; color: var(--text-normal); text-align: left; }
 .trl-sidenav__group button:hover { background: var(--background-modifier-hover); }
 .trl-sidenav__group button.is-active { background: var(--background-modifier-active-hover, var(--background-secondary)); color: var(--text-accent); font-weight: 600; }
 /* Help page */
 .trl-help h5 { margin: 1rem 0 0.35rem; }
 .trl-help__code { padding: 0.6rem 0.75rem; border-radius: 0.35rem; background: var(--background-secondary); font-size: var(--font-ui-smaller); overflow-x: auto; }
 .trl-help__files { margin: 0.25rem 0 0.5rem; }
+
+.trl-icon { display: inline-flex; flex: none; align-items: center; color: var(--icon-color, var(--text-muted)); }
+.trl-icon svg { width: var(--icon-s, 16px); height: var(--icon-s, 16px); }
+.trl-sidenav__group button.is-active .trl-icon { color: var(--text-accent); }
+/* Technical details · audit trail (UI/UX pass §2) */
+.trl-audit { margin-top: 0.75rem; font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.trl-audit > summary { cursor: pointer; width: fit-content; }
+.trl-audit[open] > summary { margin-bottom: 0.4rem; }
+.trl-audit code { font-size: 0.72rem; overflow-wrap: anywhere; }
+.trl-moved-card { max-width: 52rem; }

@@ -23,7 +23,7 @@ export function Diagnostics({ diagnostics }: { diagnostics: RunDiagnostics }): R
       <dt>Note write</dt><dd>{formatDuration(diagnostics.noteWriteMs)}</dd>
       <dt>View presentation</dt><dd>{formatDuration(diagnostics.viewPresentationMs)} (next-frame observation)</dd>
       <dt>Total local run</dt><dd>{formatDuration(diagnostics.totalMs)}</dd>
-      <dt>Peak worker memory</dt><dd>Not captured in M0; no privileged system inspection or extra dependency is used.</dd>
+      <dt>Peak worker memory</dt><dd>Not captured; TRL does not inspect system processes.</dd>
       <dt>Responsiveness</dt><dd>Manual qualitative observation only; short runs may finish before interaction is possible.</dd>
     </dl>
   </CollapsibleSection>;

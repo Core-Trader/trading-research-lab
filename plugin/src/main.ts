@@ -5,8 +5,8 @@ import { ALL_PAGES, NavigationStore, type WorkspacePage } from "./application/na
 import { WorkerClient } from "./worker-client";
 import type { MarkdownResult } from "./types";
 
-type TradingResearchSettings = { pythonExecutable: string };
-const DEFAULT_SETTINGS: TradingResearchSettings = { pythonExecutable: "" };
+type TradingResearchSettings = { pythonExecutable: string; showDeveloperDiagnostics: boolean };
+const DEFAULT_SETTINGS: TradingResearchSettings = { pythonExecutable: "", showDeveloperDiagnostics: false };
 
 export default class TradingResearchLabPlugin extends Plugin {
   settings: TradingResearchSettings = DEFAULT_SETTINGS;
@@ -111,6 +111,13 @@ class TradingResearchSettingsTab extends PluginSettingTab {
       .addText((text) => text.setPlaceholder("C:\\path\\to\\.venv\\Scripts\\python.exe").setValue(this.plugin.settings.pythonExecutable).onChange(async (value) => {
         this.plugin.settings.pythonExecutable = value.trim();
         await this.plugin.saveSettings();
+      }));
+    new Setting(containerEl)
+      .setName("Show developer diagnostics")
+      .setDesc("Shows local timing details (worker start, import, analysis) on the Data page. Off by default; nothing is sent anywhere.")
+      .addToggle((toggle) => toggle.setValue(this.plugin.settings.showDeveloperDiagnostics).onChange(async (value) => {
+        this.plugin.settings.showDeveloperDiagnostics = value;
+        await this.plugin.saveData(this.plugin.settings);
       }));
   }
 }

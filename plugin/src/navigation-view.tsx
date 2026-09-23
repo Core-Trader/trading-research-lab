@@ -3,6 +3,7 @@ import React, { useSyncExternalStore } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { PAGE_GROUPS, type WorkspacePage } from "./application/navigation";
 import type TradingResearchLabPlugin from "./main";
+import { ObsidianIcon } from "./components/obsidian-icon";
 
 export const NAVIGATION_VIEW_TYPE = "trading-research-lab-navigation";
 
@@ -41,7 +42,7 @@ function NavigationSidebar({ plugin }: { plugin: TradingResearchLabPlugin }): Re
 
     <section className="trl-sidenav__report" aria-label="Current report">
       {report ? <>
-        <strong title={report.name}>{report.name}</strong>
+        <strong title={report.name}><ObsidianIcon id="file-check" />{report.name}</strong>
         <span className="trl-sidenav__market">{report.market}</span>
         <ul className="trl-sidenav__badges">
           <li className={report.analysed ? "is-ok" : "is-pending"}>{report.analysed ? "Analysed" : "Not analysed yet"}</li>
@@ -62,7 +63,7 @@ function NavigationSidebar({ plugin }: { plugin: TradingResearchLabPlugin }): Re
     {PAGE_GROUPS.map((group) => <section key={group.label} className="trl-sidenav__group">
       <h6>{group.label}</h6>
       <ul>{group.pages.map((page) => <li key={page.id}>
-        <button type="button" className={snapshot.workspaceOpen && snapshot.page === page.id ? "is-active" : undefined} aria-current={snapshot.workspaceOpen && snapshot.page === page.id ? "page" : undefined} title={page.description} onClick={() => open(page.id)}>{page.label}</button>
+        <button type="button" className={snapshot.workspaceOpen && snapshot.page === page.id ? "is-active" : undefined} aria-current={snapshot.workspaceOpen && snapshot.page === page.id ? "page" : undefined} title={page.description} onClick={() => open(page.id)}><ObsidianIcon id={page.icon} />{page.label}</button>
       </li>)}</ul>
     </section>)}
   </nav>;

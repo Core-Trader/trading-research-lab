@@ -8,7 +8,8 @@ export type SnapshotVerification = {
 };
 
 export function Evidence({ evidence, intakeStatus, snapshotVerification, onVerify }: { evidence: DatasetEvidence; intakeStatus: string | null; snapshotVerification: SnapshotVerification | null; onVerify: () => void }): React.ReactElement {
-  return <CollapsibleSection title="Technical source evidence">
+  return <CollapsibleSection title="Technical details · audit trail">
+    <p className="trl-m0__note">Provenance of the selected report: how TRL stored it and how to verify it. Not needed day to day.</p>
     <dl className="trl-m0__diagnostic-grid">
       <dt>Dataset</dt><dd><code>{evidence.dataset_ref}</code></dd>
       <dt>Source SHA-256</dt><dd><code>{evidence.source_sha256}</code></dd>

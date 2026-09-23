@@ -6,20 +6,20 @@
  */
 export type WorkspacePage = "overview" | "data" | "portfolio" | "parameters" | "analysis" | "research" | "advanced" | "help";
 
-export type PageInfo = { id: WorkspacePage; label: string; description: string };
+export type PageInfo = { id: WorkspacePage; label: string; description: string; icon: string };
 export type PageGroup = { label: string; pages: PageInfo[] };
 
 export const PAGE_GROUPS: PageGroup[] = [
-  { label: "Home", pages: [{ id: "overview", label: "Overview", description: "Dashboard of the analysed report" }] },
-  { label: "Data", pages: [{ id: "data", label: "Data & import", description: "Validate reports and companion files" }] },
+  { label: "Home", pages: [{ id: "overview", label: "Overview", description: "Dashboard of the analysed report", icon: "layout-dashboard" }] },
+  { label: "Data", pages: [{ id: "data", label: "Data & import", description: "Validate reports and companion files", icon: "file-input" }] },
   { label: "Research", pages: [
-    { id: "analysis", label: "Analysis", description: "Verified results, risk and equity" },
-    { id: "portfolio", label: "Portfolio", description: "Combine EA backtests on one account" },
-    { id: "parameters", label: "Parameters", description: "Optimisation trade-offs and neighbourhoods" },
-    { id: "advanced", label: "Advanced", description: "Scenarios, simulation and evidence" },
+    { id: "analysis", label: "Analysis", description: "Verified results, risk and equity", icon: "line-chart" },
+    { id: "portfolio", label: "Portfolio", description: "Combine EA backtests on one account", icon: "layers" },
+    { id: "parameters", label: "Parameters", description: "Optimisation trade-offs and neighbourhoods", icon: "sliders-horizontal" },
+    { id: "advanced", label: "Advanced", description: "Scenarios, simulation and evidence", icon: "flask-conical" },
   ] },
-  { label: "Documents", pages: [{ id: "research", label: "Research notes", description: "Strategies, experiments and reports" }] },
-  { label: "Help", pages: [{ id: "help", label: "Help & downloads", description: "Equity logger, MT5 exports" }] },
+  { label: "Documents", pages: [{ id: "research", label: "Research notes", description: "Strategies, experiments and reports", icon: "notebook-pen" }] },
+  { label: "Help", pages: [{ id: "help", label: "Help & downloads", description: "Equity logger, MT5 exports", icon: "life-buoy" }] },
 ];
 
 export const ALL_PAGES: PageInfo[] = PAGE_GROUPS.flatMap((group) => group.pages);
