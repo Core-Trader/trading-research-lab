@@ -25,6 +25,8 @@ from .performance_metrics import performance_metrics
 from .r_metrics import r_multiple_metrics
 from .portfolio_lab import combine as portfolio_combine, explore as portfolio_explore
 from .pareto import evaluate as pareto_evaluate
+from .mt5_set import intake_parameter_schema
+from .parameter_exploration import create_study, evaluate as exploration_evaluate
 from .mt5_optimisation import intake_parameter_grid, intake_paired_forward_grid
 
 
@@ -60,6 +62,9 @@ class Worker:
                     "portfolio.combine",
                     "portfolio.explore",
                     "analysis.pareto_evaluate",
+                    "exploration.intake_parameter_schema",
+                    "exploration.create_study",
+                    "exploration.evaluate",
                     "analysis.reconstruct_lifecycles",
                     "analysis.lifecycle_summary",
                     "time.validate_profile",
@@ -112,6 +117,19 @@ class Worker:
             if not isinstance(tracks, list):
                 raise CoreError("E_REQUEST_INVALID", "params.tracks must be a list of dataset-reference lists.")
             return portfolio_explore(self.workspace_root, tracks, _required_string(params, "starting_capital"), str(params.get("window", "UNION")), params.get("objectives"), params.get("constraints"))
+        if method == "exploration.intake_parameter_schema":
+            return intake_parameter_schema(self.workspace_root, _required_string(params, "source_path"))
+        if method == "exploration.create_study":
+            schema_ref = params.get("schema_ref")
+            if schema_ref is not None and not isinstance(schema_ref, str):
+                raise CoreError("E_REQUEST_INVALID", "params.schema_ref must be a string when supplied.")
+            return create_study(self.workspace_root, _required_string(params, "optimisation_ref"), schema_ref or None)
+        if method == "exploration.evaluate":
+            objectives = params.get("objectives")
+            constraints = params.get("constraints") or []
+            if not isinstance(objectives, list) or not isinstance(constraints, list):
+                raise CoreError("E_REQUEST_INVALID", "params.objectives and params.constraints must be lists.")
+            return exploration_evaluate(self.workspace_root, _required_string(params, "study_ref"), objectives, constraints)
         if method == "analysis.pareto_evaluate":
             candidates = params.get("candidates")
             objectives = params.get("objectives")
