@@ -75,6 +75,15 @@ them produce an error, all of them produce a normal-looking "successfully
 finished" report with wrong data behind it. **Always verify, never assume.**
 
 ### 3.1 Only one instance per data folder
+
+> **TRL correction (2026-09-23, found by the TRL backtest agent):** on Windows
+> Git Bash, `ps aux` lists only processes started from Git Bash itself, not
+> normal Windows programs. A terminal the owner opened from the desktop is
+> **invisible** to `ps aux | grep "[t]erminal64"`; the check prints "not
+> running" while it is running. Use `ps -W | grep -qi "[t]erminal64"`, or in
+> PowerShell `Get-Process terminal64 -ErrorAction SilentlyContinue`, and treat
+> any match as "running, do not launch".
+
 MT5 allows only one running instance per data folder. If the terminal (or a
 previous headless run) is already open/running, a second launch **silently
 does nothing** — exits fast, no report, no error. Check for a running

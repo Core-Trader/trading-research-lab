@@ -24,6 +24,11 @@ Reports you no longer need can be **archived** in the report library. They
 disappear from the lists but are not deleted, and anything that uses them
 keeps working. Restore them any time from **Archived reports**.
 
+**Delete…** removes TRL's copy of a report permanently. TRL first shows
+everything that uses it (saved combinations, study attachments, linked notes)
+and asks whether to keep those or delete them too. Deleted notes go to
+Obsidian's trash. Your original report file on disk is never touched.
+
 Use the same account currency for every report you plan to combine. Portfolio
 Lab refuses to mix currencies.
 

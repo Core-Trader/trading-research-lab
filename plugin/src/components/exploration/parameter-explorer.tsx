@@ -8,6 +8,7 @@ import { NeighbourhoodPanel } from "./neighbourhood-panel";
 import { defaultSettings } from "./neighbourhood-model";
 import { axisOptions, betterHint, candidateLabel, compareTable, defaultObjectives, FORWARD_PREFIX, frontierMatchesAxes, scatterPoints, statusText } from "./exploration-model";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT } from "../../application/report-files";
+import { DismissButton } from "../dismiss-button";
 
 type Props = {
   service: ResearchService;
@@ -204,8 +205,8 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
         <button type="button" className="mod-cta" disabled={busy !== null || !xmlPath.trim().toLowerCase().endsWith(".xml") || !modellingMode.trim()} onClick={() => void createStudy()}>Create study</button>
       </div>
       {busy && <p className="trl-dashboard__progress" role="status">{busy}</p>}
-      {error && <p className="trl-m0__inline-error" role="alert">{error}</p>}
-      {notice && <p className="trl-exploration__notice" role="status">{notice}</p>}
+      {error && <p className="trl-m0__inline-error" role="alert">{error}<DismissButton onDismiss={() => setError(null)} /></p>}
+      {notice && <p className="trl-exploration__notice" role="status">{notice}<DismissButton onDismiss={() => setNotice(null)} /></p>}
     </section>
 
     {study && <section className="trl-page__surface">
@@ -228,6 +229,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
         <span className="trl-m0__note">Run your default (or any setting) as a single MT5 test with the same symbol, period and dates, then attach its report (.xlsx or .html) to place it on the field. All of its inputs are checked against the .set file.</span>
       </div>
       {attachments.length > 0 && <ul className="trl-batch__findings">{attachments.map((item) => <li key={item.candidate_id}>
+        <DismissButton onDismiss={() => setAttachments((current) => current.filter((other) => other.candidate_id !== item.candidate_id))} />
         <strong className={item.status === "READY" ? "is-note" : "is-blocked"}>{item.label}: {item.status === "READY" ? (item.is_default ? "placed on the field as ★ your default" : "placed on the field") : "not placed"}</strong>
         {item.findings.map((finding) => <span key={finding.code}>{finding.severity === "BLOCKED" ? "Blocked" : finding.severity === "WARNING" ? "Warning" : "Note"}: {finding.message}</span>)}
       </li>)}</ul>}
@@ -237,6 +239,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
         <span className="trl-m0__note">The MT5 forward-test export for a later period. Passes are paired by identical inputs, so you can see how each setting did on data it was not optimised on.</span>
       </div>
       {forward && <ul className="trl-batch__findings"><li>
+        {forward.status !== "READY" && <DismissButton onDismiss={() => setForward(null)} />}
         <strong className={forward.status === "READY" ? "is-note" : "is-blocked"}>Forward results{forward.period ? ` ${forward.period.forward[0]}–${forward.period.forward[1]}` : ""}: {forward.status === "READY" ? `${forward.matched_count} of the tested sets paired` : "not attached"}</strong>
         {forward.status === "READY" && <span>{forward.in_sample_only_count} in-sample sets have no forward run; {forward.forward_only_count} forward sets were not in the in-sample results.</span>}
         {forward.findings.map((finding) => <span key={finding.code}>{SEVERITY[finding.severity]}: {finding.message}</span>)}

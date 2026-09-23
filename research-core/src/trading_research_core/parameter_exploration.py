@@ -224,8 +224,13 @@ def add_single_test(workspace_root: Path, study_ref: str, dataset_ref: str) -> d
         "notes": summary["notes"],
     }
     target = _bounded(workspace_root.resolve(), "parameter-studies", study["study_id"], "single-tests")
-    target.mkdir(parents=True, exist_ok=True)
-    (target / f"{dataset_ref.removeprefix('mt5:')}.json").write_text(json.dumps(attachment, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    stored = target / f"{dataset_ref.removeprefix('mt5:')}.json"
+    if attachment["status"] == "READY":
+        target.mkdir(parents=True, exist_ok=True)
+        stored.write_text(json.dumps(attachment, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    else:
+        # A blocked attempt is reported but never stored, and it clears an earlier stored copy of the same report.
+        stored.unlink(missing_ok=True)
     return attachment
 
 

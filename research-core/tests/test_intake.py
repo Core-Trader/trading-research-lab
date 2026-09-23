@@ -177,3 +177,64 @@ def test_archive_hides_restores_and_keeps_everything(tmp_path: Path) -> None:
     with pytest.raises(CoreError) as error:
         set_archived(workspace, "mt5:" + "0" * 64, True)
     assert error.value.code == "E_DATASET_NOT_FOUND"
+
+
+def _two_reports(tmp_path: Path) -> tuple[Path, str, str]:
+    workspace = tmp_path / "workspace"
+    first, second = tmp_path / "a.xlsx", tmp_path / "b.xlsx"
+    _write_supported_report(first)
+    _write_supported_report(second, close_comment="Other")
+    a = str(intake_mt5_excel(workspace, str(first))["dataset_ref"])
+    b = str(intake_mt5_excel(workspace, str(second))["dataset_ref"])
+    (workspace / "portfolio-combinations").mkdir()
+    (workspace / "portfolio-combinations" / "k.json").write_text(json.dumps({"name": "Both", "tracks": [[a], [b]]}), encoding="utf-8")
+    single = workspace / "parameter-studies" / "S1" / "single-tests"
+    single.mkdir(parents=True)
+    (single / f"{a.removeprefix('mt5:')}.json").write_text("{}", encoding="utf-8")
+    return workspace, a, b
+
+
+def test_deletion_preview_lists_dependents_and_changes_nothing(tmp_path: Path) -> None:
+    from trading_research_core.intake import deletion_preview
+
+    workspace, a, _ = _two_reports(tmp_path)
+    before = sorted(str(path) for path in workspace.rglob("*"))
+    preview = deletion_preview(workspace, a)
+    assert preview["dependents"] == [{"kind": "SAVED_COMBINATION", "name": "Both"}, {"kind": "PARAMETER_STUDY_SINGLE_TEST", "name": "S1"}]
+    assert preview["bytes"] > 0 and preview["original_filename"] == "a.xlsx"
+    assert sorted(str(path) for path in workspace.rglob("*")) == before
+
+
+@pytest.mark.parametrize("mode", ["KEEP", "DELETE"])
+def test_delete_removes_report_data_and_optionally_dependents(tmp_path: Path, mode: str) -> None:
+    from trading_research_core.intake import delete_dataset
+
+    workspace, a, b = _two_reports(tmp_path)
+    source_hash = get_evidence(workspace, a)["source_sha256"]
+    result = delete_dataset(workspace, a, mode)
+    assert not (workspace / "raw" / str(source_hash)).exists() and not (workspace / "datasets" / str(source_hash)).exists()
+    assert [entry["dataset_ref"] for entry in list_registry(workspace)["entries"]] == [b]
+    assert verify_raw_snapshot(workspace, b)["verified"] is True  # other reports untouched
+    assert (tmp_path / "a.xlsx").is_file()  # the original file is never touched
+    kept = (workspace / "portfolio-combinations" / "k.json").exists()
+    assert kept is (mode == "KEEP") and (workspace / "parameter-studies" / "S1" / "single-tests" / f"{a.removeprefix('mt5:')}.json").exists() is (mode == "KEEP")
+    assert len(result["kept_dependents"]) == (2 if mode == "KEEP" else 0)
+    log = [json.loads(line) for line in (workspace / "registry" / "deletions.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert log[-1]["dataset_ref"] == a and log[-1]["dependents_mode"] == mode and log[-1]["deleted_at_utc"].endswith("Z")
+    with pytest.raises(CoreError) as error:
+        delete_dataset(workspace, a, mode)
+    assert error.value.code == "E_DATASET_NOT_FOUND"
+
+
+def test_delete_validates_mode_and_worker_exposes_it(tmp_path: Path) -> None:
+    from trading_research_core.intake import delete_dataset
+    from trading_research_core.worker import Worker
+
+    workspace, a, _ = _two_reports(tmp_path)
+    with pytest.raises(CoreError):
+        delete_dataset(workspace, a, "MAYBE")
+    worker = Worker(workspace)
+    assert {"dataset.deletion_preview", "dataset.delete"} <= set(worker.dispatch({"method": "core.capabilities", "params": {}})["methods"])
+    assert worker.dispatch({"method": "dataset.delete", "params": {"dataset_ref": a, "dependents": "DELETE"}})["dataset_ref"] == a
+    intake_mt5_excel(workspace, str(tmp_path / "a.xlsx"))  # can be imported again afterwards
+    assert a in [entry["dataset_ref"] for entry in list_registry(workspace)["entries"]]

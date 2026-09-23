@@ -4,6 +4,7 @@ import { LatestRun } from "../../application/latest-run";
 import { localPathForSelectedFile } from "../../services/local-file-path";
 import type { NeighbourPoint, NeighbourhoodResult, NeighbourhoodRole, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSettings, Objective, ParameterStudy } from "../../types";
 import { canBeOrdinal, coverageText, heatmapCells, ordinalNames, statisticsNote, suggestedSetPath } from "./neighbourhood-model";
+import { DismissButton } from "../dismiss-button";
 
 type Props = {
   service: ResearchService;
@@ -116,7 +117,7 @@ export function NeighbourhoodPanel({ service, study, candidateId, objectives, se
       <p className="trl-m0__note">"Hold fixed" suits inputs that mainly rescale risk, such as a lot size.</p>
     </details>
 
-    {error && <p className="trl-m0__inline-error" role="alert">{error}</p>}
+    {error && <p className="trl-m0__inline-error" role="alert">{error}<DismissButton onDismiss={() => setError(null)} /></p>}
     {busy && <p className="trl-dashboard__progress" role="status">{busy}</p>}
 
     {result && <>
@@ -166,8 +167,9 @@ export function NeighbourhoodPanel({ service, study, candidateId, objectives, se
         <label className="trl-m0__field"><span>Save as (full path; the folder must exist)</span><input value={target} onChange={(event) => setTarget(event.currentTarget.value)} /></label>
         <button type="button" className="mod-cta" disabled={busy !== null || !target.trim().toLowerCase().endsWith(".set")} onClick={() => void save()}>Save .set</button>
       </div>}
-      {written && <p className="trl-exploration__notice" role="status">{written}</p>}
+      {written && <p className="trl-exploration__notice" role="status">{written}<DismissButton onDismiss={() => setWritten(null)} /></p>}
       {attachment && <ul className="trl-batch__findings"><li>
+        <DismissButton onDismiss={() => setAttachment(null)} />
         <strong className={attachment.status === "READY" ? "is-note" : "is-blocked"}>Neighbourhood run: {attachment.status === "READY" ? `${attachment.run_count} settings added as tested neighbours` : "not attached"}</strong>
         {attachment.findings.map((finding) => <span key={finding.code}>{finding.severity === "BLOCKED" ? "Blocked" : finding.severity === "WARNING" ? "Warning" : "Note"}: {finding.message}</span>)}
       </li></ul>}

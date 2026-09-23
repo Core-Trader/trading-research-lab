@@ -194,6 +194,12 @@
 .trl-portfolio__tracks > li { padding: 0.6rem; border: 1px solid var(--background-modifier-border); border-radius: 0.4rem; background: var(--background-primary); }
 .trl-portfolio__tracks ol { margin: 0.4rem 0; font-size: var(--font-ui-smaller); }
 .trl-portfolio__track-number { display: inline-grid; place-items: center; min-width: 1.5rem; height: 1.5rem; margin-right: 0.5rem; padding: 0 0.3rem; border-radius: 0.75rem; background: var(--interactive-accent); color: var(--text-on-accent); font-size: var(--font-ui-smaller); font-weight: 700; font-variant-numeric: tabular-nums; }
+.trl-link-button.is-danger { color: var(--text-error); }
+.trl-deletion { display: grid; gap: 0.4rem; margin: 0.75rem 0; padding: 0.75rem; border: 1px solid var(--text-error); border-radius: 0.4rem; background: color-mix(in srgb, var(--text-error) 7%, transparent); }
+.trl-deletion p { margin: 0; }
+.trl-deletion ul { margin: 0; padding-left: 1.2rem; font-size: var(--font-ui-smaller); }
+.trl-deletion__warning { font-weight: 600; }
+.trl-deletion__choice { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0; padding: 0; border: 0; }
 .trl-portfolio__archived { margin-top: 0.75rem; }
 .trl-portfolio__archived summary { cursor: pointer; color: var(--text-muted); font-size: var(--font-ui-smaller); }
 .trl-portfolio__include { margin-right: 0.6rem; font-size: var(--font-ui-smaller); }
@@ -267,3 +273,9 @@
 .trl-exploration__default.is-single_test { border-left-color: var(--color-green); }
 @media (max-width: 58rem) { .trl-dashboard__workflow, .trl-dashboard__grid { grid-template-columns: 1fr; } .trl-dashboard__card--chart, .trl-dashboard__card--wide { grid-column: auto; } }
 @media (max-width: 42rem) { .trl-m0 { padding: 1rem; } .trl-m0__workspace-header, .trl-dashboard__header { display: block; } .trl-m0__workspace-header > span, .trl-dashboard__status { display: inline-block; margin-top: 0.5rem; } .trl-dashboard__card--chart { grid-column: span 1; } .trl-balance-chart__plot { height: 11rem; } .trl-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.trl-dismiss { float: right; margin: -0.15rem -0.2rem 0 0.5rem; padding: 0 0.35rem; border: 0; background: transparent; box-shadow: none; color: var(--text-muted); font-size: 1rem; line-height: 1.2; cursor: pointer; }
+.trl-dismiss:hover { color: var(--text-normal); }
+.trl-batch__findings li { position: relative; }
+.trl-m0__error-wrap { position: relative; }
+.trl-m0__error-wrap .trl-dismiss { position: absolute; top: 0.3rem; right: 0.4rem; }

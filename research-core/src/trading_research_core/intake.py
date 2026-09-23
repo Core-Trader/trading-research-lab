@@ -84,18 +84,108 @@ def set_archived(workspace_root: Path, dataset_ref: str, archived: bool) -> dict
 
 
 def dataset_usages(workspace_root: Path, dataset_ref: str) -> list[dict[str, str]]:
-    """Saved combinations and parameter studies that reference a report."""
+    """TRL-managed items that reference a report (saved combinations, study
+    single tests, sequential batches, report revisions). Vault notes are found
+    by the plugin through their `trl_dataset_id`.
+    """
+
+    return [{key: item[key] for key in ("kind", "name")} for item in _dependents(workspace_root.resolve(), dataset_ref)]
+
+
+DELETION_LOG_VERSION = "dataset-deletion-1"
+DEPENDENT_MODES = {"DELETE", "KEEP"}
+
+
+def deletion_preview(workspace_root: Path, dataset_ref: str) -> dict[str, object]:
+    """What a permanent deletion would remove, before anything is removed."""
 
     root = workspace_root.resolve()
-    usages: list[dict[str, str]] = []
+    entry = get_evidence(root, dataset_ref)
+    source_hash = str(entry["source_sha256"])
+    owned = [path for path in (_bounded(root, "raw", source_hash), _bounded(root, "datasets", source_hash)) if path.exists()]
+    return {
+        "dataset_ref": dataset_ref,
+        "dataset_id": entry.get("dataset_id"),
+        "original_filename": entry.get("original_filename"),
+        "archived": bool(entry.get("archived")),
+        "bytes": sum(_size(path) for path in owned),
+        "dependents": [{key: item[key] for key in ("kind", "name")} for item in _dependents(root, dataset_ref)],
+        "notes": [
+            "Deletes TRL's copy of the report and everything derived from it. Your original file is not touched.",
+            "Keeping dependents leaves them in place; saved combinations then show as unavailable and study attachments keep their recorded values.",
+        ],
+    }
+
+
+def delete_dataset(workspace_root: Path, dataset_ref: str, dependents: str) -> dict[str, object]:
+    """Permanently delete a report's TRL copy and derived data (DS-003).
+
+    `dependents` is DELETE (also remove TRL-managed items that use it) or KEEP.
+    The registry entry, raw snapshot, and canonical/derived tables are always
+    removed; the original source file is never touched. Every deletion is
+    appended to `registry/deletions.jsonl` for provenance.
+    """
+
+    if dependents not in DEPENDENT_MODES:
+        raise CoreError("E_REQUEST_INVALID", "dependents must be DELETE or KEEP.")
+    root = workspace_root.resolve()
+    entry = get_evidence(root, dataset_ref)
+    source_hash = str(entry["source_sha256"])
+    found = _dependents(root, dataset_ref)
+    removed: list[str] = []
+    for path in (_bounded(root, "raw", source_hash), _bounded(root, "datasets", source_hash)):
+        if path.exists():
+            shutil.rmtree(path)
+            removed.append(path.relative_to(root).as_posix())
+    if dependents == "DELETE":
+        for item in found:
+            path = item["path"]
+            if path.is_dir():
+                shutil.rmtree(path)
+            elif path.exists():
+                path.unlink()
+            removed.append(path.relative_to(root).as_posix())
+    registry = _load_registry(root)
+    payload = {"registry_schema_version": REGISTRY_SCHEMA_VERSION, "entries": sorted((item for item in registry["entries"] if item.get("dataset_ref") != dataset_ref), key=lambda item: str(item["dataset_ref"]))}
+    _atomic_json(_registry_path(root), payload)
+    from datetime import datetime, timezone
+
+    record = {
+        "log_version": DELETION_LOG_VERSION,
+        "deleted_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "dataset_ref": dataset_ref,
+        "dataset_id": entry.get("dataset_id"),
+        "source_sha256": source_hash,
+        "original_filename": entry.get("original_filename"),
+        "dependents_mode": dependents,
+        "dependents": [{key: item[key] for key in ("kind", "name")} for item in found],
+        "removed": removed,
+    }
+    with _bounded(root, "registry", "deletions.jsonl").open("a", encoding="utf-8") as log:
+        log.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+    return {key: value for key, value in record.items() if key != "log_version"} | {"kept_dependents": [] if dependents == "DELETE" else record["dependents"]}
+
+
+def _dependents(root: Path, dataset_ref: str) -> list[dict[str, Any]]:
+    found: list[dict[str, Any]] = []
     for path in sorted((root / "portfolio-combinations").glob("*.json")):
         record = json.loads(path.read_text(encoding="utf-8"))
         if any(dataset_ref in track for track in record.get("tracks", [])):
-            usages.append({"kind": "SAVED_COMBINATION", "name": str(record.get("name", path.stem))})
+            found.append({"kind": "SAVED_COMBINATION", "name": str(record.get("name", path.stem)), "path": path})
     single = f"{dataset_ref.removeprefix('mt5:')}.json"
     for path in sorted((root / "parameter-studies").glob(f"*/single-tests/{single}")):
-        usages.append({"kind": "PARAMETER_STUDY_SINGLE_TEST", "name": path.parent.parent.name})
-    return usages
+        found.append({"kind": "PARAMETER_STUDY_SINGLE_TEST", "name": path.parent.parent.name, "path": path})
+    for folder in sorted(path for path in (root / "batches").glob("*") if path.is_dir()):
+        if any(dataset_ref in path.read_text(encoding="utf-8", errors="replace") for path in folder.glob("*.json")):
+            found.append({"kind": "SEQUENTIAL_BATCH", "name": folder.name, "path": folder})
+    for folder in sorted(path for path in (root / "reports").glob("*") if path.is_dir()):
+        if any(dataset_ref in path.read_text(encoding="utf-8", errors="replace") for path in folder.rglob("*.json")):
+            found.append({"kind": "REPORT_REVISIONS", "name": folder.name, "path": folder})
+    return found
+
+
+def _size(path: Path) -> int:
+    return path.stat().st_size if path.is_file() else sum(item.stat().st_size for item in path.rglob("*") if item.is_file())
 
 
 def get_evidence(workspace_root: Path, dataset_ref: str) -> dict[str, object]:

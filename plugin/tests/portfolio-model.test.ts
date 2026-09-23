@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addToTrack, addTrack, combinationRequest, removeReport, removeTrack, renameTrack, spanTimeline, toggleIncluded } from "../src/components/portfolio/portfolio-model.ts";
+import { addToTrack, addTrack, combinationRequest, deletionConsequence, removeReport, removeTrack, renameTrack, spanTimeline, toggleIncluded } from "../src/components/portfolio/portfolio-model.ts";
 
 test("a report can belong to only one track, and chains keep their order", () => {
   let tracks = addTrack([], "r1", "DCA_EA");
@@ -32,4 +32,11 @@ test("span timeline shares one axis", () => {
   assert.equal(Math.round(timeline.rows[1]!.left), 25);
   assert.equal(Math.round(timeline.rows[0]!.width), 50);
   assert.equal(spanTimeline([{ key: "x", label: "X", first: "bad", last: "2026-01-01T00:00:00" }]), null);
+});
+
+test("deletion wording states what happens to linked items", () => {
+  const preview = { dependents: [{ kind: "SAVED_COMBINATION", name: "Both" }] };
+  assert.equal(deletionConsequence({ dependents: [] }, [], false), "Nothing else uses this report.");
+  assert.match(deletionConsequence(preview, ["Notes/a.md"], false), /^2 linked item\(s\) will be kept/);
+  assert.equal(deletionConsequence(preview, ["Notes/a.md"], true), "2 linked item(s) will also be removed; 1 note(s) go to Obsidian's trash, where you can recover them.");
 });

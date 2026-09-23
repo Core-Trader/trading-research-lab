@@ -22,6 +22,7 @@ import { PortfolioLab } from "./components/portfolio/portfolio-lab";
 import { ParameterExplorer } from "./components/exploration/parameter-explorer";
 import { upsertChoiceBlock } from "./vault/choice-block";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT, MT5_REPORT_HINT } from "./application/report-files";
+import { DismissButton } from "./components/dismiss-button";
 
 export { writeGeneratedNote } from "./vault/research-vault";
 
@@ -50,6 +51,18 @@ export class ResearchView extends ItemView {
 }
 
 function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.ReactElement {
+  // Notes linked to a report by trl_dataset_id; deletion moves them to Obsidian's trash (recoverable).
+  const linkedNotes = useMemo(() => ({
+    find: (datasetId: string): string[] => plugin.app.vault.getMarkdownFiles().filter((file) => plugin.app.metadataCache.getFileCache(file)?.frontmatter?.trl_dataset_id === datasetId).map((file) => file.path).sort(),
+    trash: async (paths: string[]): Promise<number> => {
+      let moved = 0;
+      for (const notePath of paths) {
+        const file = plugin.app.vault.getAbstractFileByPath(notePath);
+        if (file) { await plugin.app.vault.trash(file, false); moved += 1; }
+      }
+      return moved;
+    },
+  }), [plugin]);
   const [sourcePath, setSourcePath] = useState("");
   const [status, setStatus] = useState("Ready. Select an MT5 Strategy Tester report (.xlsx or .html).");
   const [error, setError] = useState<string | null>(null);
@@ -646,7 +659,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     </header>
     <WorkspaceNavigation activePage={activePage} onChange={setActivePage} />
     <input ref={fileInputRef} className="trl-m0__file-input" type="file" accept={MT5_REPORT_ACCEPT} onChange={selectSourceFile} />
-    {error && <pre className="trl-m0__error" role="alert">{error}</pre>}
+    {error && <div className="trl-m0__error-wrap"><pre className="trl-m0__error" role="alert">{error}</pre><DismissButton onDismiss={() => setError(null)} /></div>}
     {activePage === "overview" && <DashboardSummary
       statistics={statistics}
       evidence={evidence}
@@ -716,7 +729,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
         onSelectReport={() => void selectReport()}
       />
     </section>}
-    {activePage === "portfolio" && <PortfolioLab service={service} />}
+    {activePage === "portfolio" && <PortfolioLab service={service} linkedNotes={linkedNotes} />}
     {activePage === "parameters" && <ParameterExplorer service={service} experiment={experiment} onRecordChoice={recordParameterChoice} />}
     {activePage === "advanced" && <section className="trl-page" aria-label="Advanced research">
       <header className="trl-page__header"><div><h3>Advanced research</h3><p>Optional, qualified studies. Results are research evidence, not trading recommendations.</p></div></header>

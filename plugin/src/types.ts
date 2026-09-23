@@ -364,6 +364,8 @@ export type PortfolioTrackResult = {
   standalone_metrics: PerformanceMetrics["close_event_metrics"] & { maximum_drawdown_percent: string | null; return_to_drawdown: string | null };
 };
 
+export type DatasetDeletionPreview = { dataset_ref: string; dataset_id: string | null; original_filename: string; archived: boolean; bytes: number; dependents: Array<{ kind: "SAVED_COMBINATION" | "PARAMETER_STUDY_SINGLE_TEST" | "SEQUENTIAL_BATCH" | "REPORT_REVISIONS"; name: string }>; notes: string[] };
+export type DatasetDeletionResult = { dataset_ref: string; dataset_id: string | null; dependents_mode: "DELETE" | "KEEP"; dependents: Array<{ kind: string; name: string }>; kept_dependents: Array<{ kind: string; name: string }>; removed: string[]; deleted_at_utc: string };
 export type DatasetArchiveResult = { dataset_ref: string; archived: boolean; used_by: Array<{ kind: "SAVED_COMBINATION" | "PARAMETER_STUDY_SINGLE_TEST"; name: string }> };
 /** A saved combination setup; its result is always recalculated by the Core. */
 export type SavedCombinationEntry = {

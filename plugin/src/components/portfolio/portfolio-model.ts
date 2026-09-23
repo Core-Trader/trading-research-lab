@@ -55,3 +55,11 @@ export function spanTimeline(spans: Span[]): { rows: SpanRow[]; start: string; e
     rows: parsed.map(({ span, from, to }) => ({ ...span, left: ((from - start) / range) * 100, width: Math.max(0.8, ((to - from) / range) * 100) })),
   };
 }
+
+/** What a permanent report deletion will do to its linked items (DS-003). */
+export function deletionConsequence(preview: { dependents: unknown[] }, notes: string[], deleteLinked: boolean): string {
+  const linked = preview.dependents.length + notes.length;
+  if (linked === 0) return "Nothing else uses this report.";
+  if (deleteLinked) return `${linked} linked item(s) will also be removed${notes.length ? `; ${notes.length} note(s) go to Obsidian's trash, where you can recover them` : ""}.`;
+  return `${linked} linked item(s) will be kept. Saved combinations will show as unavailable; notes and study values stay as they are.`;
+}

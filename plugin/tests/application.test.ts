@@ -87,7 +87,9 @@ test("archive and restore send only the dataset reference", async () => {
   const service = new ResearchService(worker);
   await service.archiveDataset("mt5:A");
   await service.restoreDataset("mt5:A");
-  assert.deepEqual(calls.map((call) => [call.method, call.params]), [["dataset.archive", { dataset_ref: "mt5:A" }], ["dataset.restore", { dataset_ref: "mt5:A" }]]);
+  await service.datasetDeletionPreview("mt5:A");
+  await service.deleteDataset("mt5:A", "KEEP");
+  assert.deepEqual(calls.map((call) => [call.method, call.params]), [["dataset.archive", { dataset_ref: "mt5:A" }], ["dataset.restore", { dataset_ref: "mt5:A" }], ["dataset.deletion_preview", { dataset_ref: "mt5:A" }], ["dataset.delete", { dataset_ref: "mt5:A", dependents: "KEEP" }]]);
 });
 
 test("R-multiple requests send an amount only for a declared 1R", async () => {

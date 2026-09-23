@@ -12,7 +12,7 @@ from .analysis import basic_statistics, markdown_summary
 from .dataset_store import read_dataset, write_dataset
 from .errors import CoreError
 from .mt5_excel import import_mt5_excel
-from .intake import get_evidence, intake_mt5_excel, intake_mt5_report, list_registry, set_archived, verify_raw_snapshot
+from .intake import delete_dataset, deletion_preview, get_evidence, intake_mt5_excel, intake_mt5_report, list_registry, set_archived, verify_raw_snapshot
 from .protocol import encode, failure, parse_request, success
 from .reporting import prepare_report_payload, write_report_revision_manifest
 from .trade_analysis import close_event_summary, reconstruct_lifecycles, write_trade_artifact
@@ -53,6 +53,8 @@ class Worker:
                     "dataset.list_registry",
                     "dataset.archive",
                     "dataset.restore",
+                    "dataset.deletion_preview",
+                    "dataset.delete",
                     "dataset.get_evidence",
                     "dataset.verify_raw_snapshot",
                     "portfolio.preflight_mt5_excel_batch",
@@ -106,6 +108,10 @@ class Worker:
             return intake_mt5_excel(self.workspace_root, _required_string(params, "source_path"))
         if method == "dataset.list_registry":
             return list_registry(self.workspace_root)
+        if method == "dataset.deletion_preview":
+            return deletion_preview(self.workspace_root, _required_string(params, "dataset_ref"))
+        if method == "dataset.delete":
+            return delete_dataset(self.workspace_root, _required_string(params, "dataset_ref"), _required_string(params, "dependents"))
         if method in {"dataset.archive", "dataset.restore"}:
             return set_archived(self.workspace_root, _required_string(params, "dataset_ref"), method == "dataset.archive")
         if method == "dataset.get_evidence":

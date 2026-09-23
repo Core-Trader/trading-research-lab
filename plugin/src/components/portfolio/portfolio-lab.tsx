@@ -3,22 +3,25 @@ import { Notice } from "obsidian";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
 import { localPathForSelectedFile } from "../../services/local-file-path";
-import type { DatasetEvidence, ParetoEvaluation, PortfolioCombination, PortfolioExploration, SavedCombinationEntry } from "../../types";
+import type { DatasetDeletionPreview, DatasetEvidence, ParetoEvaluation, PortfolioCombination, PortfolioExploration, SavedCombinationEntry } from "../../types";
 import { CombinationExplorer } from "./combination-explorer";
 import { CombinedDashboard } from "./combined-dashboard";
 import { SavedCombinations, type SavedCombination } from "./saved-combinations";
+import { ReportDeletion, type LinkedNotes } from "./report-deletion";
 import { addToTrack, addTrack, combinationRequest, removeReport, removeTrack, renameTrack, toggleIncluded, type TrackDraft } from "./portfolio-model";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT, reportBaseName } from "../../application/report-files";
+import { DismissButton } from "../dismiss-button";
 
-type Props = { service: ResearchService };
+type Props = { service: ResearchService; linkedNotes?: LinkedNotes };
 
 /**
  * Portfolio Lab v1: build strategy tracks from imported reports and combine
  * them on one account (as reported). All results come from portfolio.combine.
  */
-export function PortfolioLab({ service }: Props): React.ReactElement {
+export function PortfolioLab({ service, linkedNotes }: Props): React.ReactElement {
   const [library, setLibrary] = useState<DatasetEvidence[]>([]);
   const [archived, setArchived] = useState<DatasetEvidence[]>([]);
+  const [deleting, setDeleting] = useState<{ preview: DatasetDeletionPreview; notes: string[] } | null>(null);
   const [tracks, setTracks] = useState<TrackDraft[]>([]);
   const [capital, setCapital] = useState("");
   const [period, setPeriod] = useState<"UNION" | "COMMON">("UNION");
@@ -80,6 +83,30 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
     } finally {
       setBusy(null);
     }
+  };
+
+  const askDelete = async (entry: DatasetEvidence): Promise<void> => {
+    setError(null);
+    try {
+      const preview = await service.datasetDeletionPreview(entry.dataset_ref);
+      setDeleting({ preview, notes: preview.dataset_id && linkedNotes ? linkedNotes.find(preview.dataset_id) : [] });
+    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
+  };
+
+  const confirmDelete = async (deleteLinked: boolean): Promise<void> => {
+    if (!deleting) return;
+    const { preview, notes } = deleting;
+    setBusy(`Deleting ${preview.original_filename}…`);
+    setError(null);
+    try {
+      await service.deleteDataset(preview.dataset_ref, deleteLinked ? "DELETE" : "KEEP");
+      const trashed = deleteLinked && notes.length && linkedNotes ? await linkedNotes.trash(notes) : 0;
+      setDeleting(null);
+      await refreshLibrary();
+      const listed = await service.listSavedCombinations();
+      applySaved(listed.entries);
+      new Notice(`${preview.original_filename} deleted permanently.${trashed ? ` ${trashed} note(s) moved to Obsidian's trash.` : ""}`);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); } finally { setBusy(null); }
   };
 
   const archive = async (entry: DatasetEvidence, restore: boolean): Promise<void> => {
@@ -192,6 +219,7 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
             ? <span className="trl-m0__note">{(() => { const index = tracks.findIndex((track) => track.refs.includes(entry.dataset_ref)); return `In track ${index + 1}${tracks[index]?.label ? ` · ${tracks[index]!.label}` : ""}`; })()}</span>
             : <span className="trl-portfolio__assign">
               <button type="button" className="trl-link-button" disabled={busy !== null} title="Hide from the library. Nothing is deleted; restore it any time from Archived reports." onClick={() => void archive(entry, false)}>Archive</button>
+              <button type="button" className="trl-link-button is-danger" disabled={busy !== null} title="Delete TRL's copy permanently (asks first and shows what uses it)." onClick={() => void askDelete(entry)}>Delete…</button>
               <button type="button" disabled={busy !== null} onClick={() => change(addTrack(tracks, entry.dataset_ref, reportBaseName(entry.original_filename)))}>New track</button>
               {tracks.length > 0 && <select value="" disabled={busy !== null} onChange={(event) => { if (event.currentTarget.value) change(addToTrack(tracks, event.currentTarget.value, entry.dataset_ref)); }}>
                 <option value="">Chain onto…</option>
@@ -200,6 +228,7 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
             </span>}</td>
         </tr>)}</tbody>
       </table>}
+      {deleting && <ReportDeletion preview={deleting.preview} notes={deleting.notes} busy={busy !== null} onConfirm={(deleteLinked) => void confirmDelete(deleteLinked)} onCancel={() => setDeleting(null)} />}
       {archived.length > 0 && <details className="trl-portfolio__archived">
         <summary>Archived reports ({archived.length})</summary>
         <p className="trl-m0__note">Archived reports are hidden from the library but not deleted; saved combinations and studies that use them keep working.</p>
@@ -207,7 +236,7 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
           <tbody>{archived.map((entry) => <tr key={entry.dataset_ref}>
             <td>{describe(entry, entry.dataset_ref)}</td>
             <td>{entry.event_count}</td>
-            <td><button type="button" disabled={busy !== null} onClick={() => void archive(entry, true)}>Restore</button></td>
+            <td><button type="button" disabled={busy !== null} onClick={() => void archive(entry, true)}>Restore</button> <button type="button" className="trl-link-button is-danger" disabled={busy !== null} onClick={() => void askDelete(entry)}>Delete…</button></td>
           </tr>)}</tbody>
         </table>
       </details>}
@@ -240,7 +269,7 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
       </div>
       {!capital.trim() && suggestedCapital && <span className="trl-m0__note"> Uses {suggestedCapital} (largest initial deposit) unless you enter another amount.</span>}
       {busy && <p className="trl-dashboard__progress" role="status">{busy}</p>}
-      {error && <p className="trl-m0__inline-error" role="alert">{error}</p>}
+      {error && <p className="trl-m0__inline-error" role="alert">{error}<DismissButton onDismiss={() => setError(null)} /></p>}
     </section>
 
     {result && <section className="trl-portfolio__save">

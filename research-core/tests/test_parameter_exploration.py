@@ -276,6 +276,7 @@ def test_context_mismatch_blocks_the_single_test(tmp_path: Path) -> None:
     assert finding["subjects"] == ["start", "end"]
     result = evaluate(workspace, str(study["study_ref"]), [{"metric": "net_profit", "direction": "MAX"}])
     assert all(candidate["source"] == "OPTIMISATION" for candidate in result["candidates"])
+    assert not list((workspace / "parameter-studies").rglob("single-tests/*.json"))  # blocked attempts are not stored
 
 
 def test_missing_optimised_input_blocks(tmp_path: Path) -> None:
