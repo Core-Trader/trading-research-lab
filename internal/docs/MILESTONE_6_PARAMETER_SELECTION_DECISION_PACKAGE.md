@@ -61,3 +61,10 @@ On 2026-09-22, the owner selected **defer automatic selection**. Continue
 collecting like-for-like paired runs and use the accepted side-by-side evidence
 viewer for human inspection. Revisit this package only when the owner is ready
 to choose a research objective and explicit evidence thresholds.
+
+## Amendment (2026-09-23)
+
+The owner approved descriptive, owner-led parameter exploration (PX-001): TRL
+may mark constraint status and Pareto rank for parameter sets, and the owner
+chooses. Automatic selection of a single winner remains deferred. See
+`PARAMETER_EXPLORATION_ARCHITECTURE.md`.

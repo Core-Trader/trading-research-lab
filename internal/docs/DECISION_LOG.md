@@ -31,6 +31,13 @@
 | PL-004 | Combined starting capital is declared by the user per combination (`USER_SUPPLIED`) | Approved 2026-09-22 |
 | PL-005 | v1 combines trades as reported: no weights, lot rescaling, or margin simulation | Approved 2026-09-22 |
 | PL-006 | An equity evidence source (MQL5 tester logger + adapter) precedes the prop-firm module; any realised-balance-only prop check is labelled an optimistic preview | Approved 2026-09-22 |
+| PX-001 | Parameter sets may carry descriptive Pareto status (feasibility, rank, dominated-by); the owner chooses; no automatic winner. Amends the 2026-09-22 selection deferral along its option 3 | Approved 2026-09-23 |
+| PX-002 | Parameter exploration is an Experiment type under a Strategy, with a Core module and a shared `pareto` layer (also used by Portfolio Lab) | Approved 2026-09-23 |
+| PX-003 | MVP objectives use MT5-reported metrics (Profit, Equity DD %, Profit Factor, Recovery Factor, Expected Payoff, MT5 Sharpe, Trades); default axes Equity DD % × Profit | Approved 2026-09-23 |
+| PX-004 | `.set` files are the MT5-verified parameter schema and default; a single-test Results-summary parser follows | Approved 2026-09-23 |
+| PX-005 | Ordinal is inferred from `.set` steps; the owner may mark parameters categorical for neighbourhood purposes | Approved 2026-09-23 |
+| PX-006 | Build order: shared Pareto core and scatter, then Portfolio slices 3–4, then parameter exploration | Approved 2026-09-23 |
+| PX-007 | The chosen candidate is recorded in the Experiment note only; `.set` export needs a separate decision | Approved 2026-09-23 |
 
 Historical decisions in `journal/` remain evidence but do not override this
 reset. Valid domain decisions—such as decimal precision, broker-time provenance,

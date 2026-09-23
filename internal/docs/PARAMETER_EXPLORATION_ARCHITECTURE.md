@@ -1,7 +1,7 @@
 # Parameter Exploration (Pareto) — Architecture Evaluation
 
-**Status:** Architecture proposal for owner review, 2026-09-23. **No
-implementation is authorised.** Decisions X1–X7 (§15) are needed first.
+**Status:** Approved 2026-09-23. The owner accepted X1–X7 as recommended
+(decision log PX-001–PX-007). Implementation follows the §14 sequence.
 **Question:** how should TRL let the owner explore EA parameter trade-offs
 (many parameter sets, several objectives, hard constraints, a visible default,
 and owner-chosen trade-offs) without becoming an overfitting machine or
