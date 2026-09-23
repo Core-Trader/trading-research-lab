@@ -176,6 +176,9 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
   const metricOptions = metrics.map((metric) => <option key={metric.id} value={metric.id}>{metric.label}</option>);
   const plotOptions = plottable.map((option) => <option key={option.id} value={option.id}>{option.label}</option>);
   const forwardAxis = [axes.x, axes.y, axes.size ?? ""].some((id) => id.startsWith(FORWARD_PREFIX));
+  // The hover card shows forward profit and drawdown plus the plotted metrics, not the whole catalogue.
+  const forwardCardIds = new Set(["net_profit", "equity_drawdown_pct", ...[axes.x, axes.y].map((id) => id.replace(FORWARD_PREFIX, ""))]);
+  const forwardCardMetrics = evaluation?.forward?.metrics.filter((metric) => forwardCardIds.has(metric.id)) ?? [];
   const overlap = evaluation?.forward?.findings.some((finding) => finding.code === "PERIODS_OVERLAP") ?? false;
 
   return <section className="trl-page" aria-label="Parameter exploration">
@@ -288,7 +291,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
         details={(point) => {
           const candidate = evaluation.candidates.find((item) => item.id === point.id);
           if (!candidate) return null;
-          return <>{Object.entries(candidate.parameters).map(([name, value]) => <span key={name}>{name} = {value}</span>)}{evaluation.forward && <span>{candidate.forward ? `Forward: ${evaluation.forward.metrics.map((metric) => `${metric.label} ${candidate.forward!.metrics[metric.id] ?? "—"}`).join(" · ")}` : "No forward match"}</span>}{candidate.pareto.violations.map((violation) => <span key={violation.metric}>✗ {labelOf(violation.metric)} {violation.operator} {violation.threshold} (is {violation.value ?? "missing"})</span>)}</>;
+          return <>{Object.entries(candidate.parameters).map(([name, value]) => <span key={name}>{name} = {value}</span>)}{evaluation.forward && <span>{candidate.forward ? `Forward: ${forwardCardMetrics.map((metric) => `${metric.label} ${candidate.forward!.metrics[metric.id] ?? "—"}`).join(" · ")}` : "No forward match"}</span>}{candidate.pareto.violations.map((violation) => <span key={violation.metric}>✗ {labelOf(violation.metric)} {violation.operator} {violation.threshold} (is {violation.value ?? "missing"})</span>)}</>;
         }}
       />
       {!frontierMatchesAxes(JSON.parse(evaluatedConfig).objectives as Objective[], axes.x, axes.y) && <p className="trl-m0__note">The frontier line is shown only when the two axes are exactly the two objectives; frontier points are still highlighted.</p>}
