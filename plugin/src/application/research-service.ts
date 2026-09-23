@@ -29,8 +29,9 @@ export class ResearchService {
     this.worker = worker;
   }
 
-  intakeMt5Excel(sourcePath: string): Promise<IntakeResult> {
-    return this.worker.request("dataset.intake_mt5_excel", { source_path: sourcePath });
+  /** Imports an MT5 Strategy Tester report, either the .xlsx export or the HTML report. */
+  intakeMt5Report(sourcePath: string): Promise<IntakeResult> {
+    return this.worker.request("dataset.intake_mt5_report", { source_path: sourcePath });
   }
 
   /** Active reports in `entries`; archived ones in `archived_entries`. */

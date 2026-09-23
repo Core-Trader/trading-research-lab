@@ -5,7 +5,7 @@ import { readDocumentReference } from "../research-documents";
 import type { MarkdownResult } from "../types";
 
 export async function writeGeneratedNote(plugin: TradingResearchLabPlugin, sourcePath: string, rendered: MarkdownResult): Promise<string> {
-  const baseName = (sourcePath.split(/[\\/]/).pop()?.replace(/\.xlsx$/i, "") || "mt5-report").replace(/[<>:"/\\|?*]/g, "_");
+  const baseName = (sourcePath.split(/[\\/]/).pop()?.replace(/\.(xlsx|html?)$/i, "") || "mt5-report").replace(/[<>:"/\\|?*]/g, "_");
   const folder = "Trading Research Lab/M0";
   await ensureFolder(plugin, "Trading Research Lab");
   await ensureFolder(plugin, folder);

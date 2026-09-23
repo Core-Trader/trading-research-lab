@@ -8,6 +8,7 @@ import { CombinationExplorer } from "./combination-explorer";
 import { CombinedDashboard } from "./combined-dashboard";
 import { SavedCombinations, type SavedCombination } from "./saved-combinations";
 import { addToTrack, addTrack, combinationRequest, removeReport, removeTrack, renameTrack, toggleIncluded, type TrackDraft } from "./portfolio-model";
+import { isMt5ReportPath, MT5_REPORT_ACCEPT, reportBaseName } from "../../application/report-files";
 
 type Props = { service: ResearchService };
 
@@ -67,10 +68,10 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
     setError(null);
     try {
       const paths = files.map(localPathForSelectedFile);
-      if (paths.some((path) => !path.toLowerCase().endsWith(".xlsx"))) throw new Error("Select MT5 Strategy Tester .xlsx reports.");
+      if (paths.some((path) => !isMt5ReportPath(path))) throw new Error("Select MT5 Strategy Tester reports (.xlsx or .html).");
       for (const [index, path] of paths.entries()) {
         setBusy(`Importing and verifying report ${index + 1} of ${paths.length}…`);
-        await service.intakeMt5Excel(path);
+        await service.intakeMt5Report(path);
       }
       await refreshLibrary();
       new Notice(`${paths.length} report(s) imported into the library.`);
@@ -177,7 +178,7 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
 
     <section className="trl-page__surface">
       <h4>1. Report library</h4>
-      <input ref={inputRef} className="trl-m0__file-input" type="file" multiple accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => void importFiles(event)} />
+      <input ref={inputRef} className="trl-m0__file-input" type="file" multiple accept={MT5_REPORT_ACCEPT} onChange={(event) => void importFiles(event)} />
       <div className="trl-m0__actions">
         <button type="button" className="mod-cta" disabled={busy !== null} onClick={() => inputRef.current?.click()}>Import backtest reports…</button>
         <button type="button" disabled={busy !== null} onClick={() => void refreshLibrary()}>Refresh</button>
@@ -191,7 +192,7 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
             ? <span className="trl-m0__note">{(() => { const index = tracks.findIndex((track) => track.refs.includes(entry.dataset_ref)); return `In track ${index + 1}${tracks[index]?.label ? ` · ${tracks[index]!.label}` : ""}`; })()}</span>
             : <span className="trl-portfolio__assign">
               <button type="button" className="trl-link-button" disabled={busy !== null} title="Hide from the library. Nothing is deleted; restore it any time from Archived reports." onClick={() => void archive(entry, false)}>Archive</button>
-              <button type="button" disabled={busy !== null} onClick={() => change(addTrack(tracks, entry.dataset_ref, entry.original_filename.replace(/\.xlsx$/i, "")))}>New track</button>
+              <button type="button" disabled={busy !== null} onClick={() => change(addTrack(tracks, entry.dataset_ref, reportBaseName(entry.original_filename)))}>New track</button>
               {tracks.length > 0 && <select value="" disabled={busy !== null} onChange={(event) => { if (event.currentTarget.value) change(addToTrack(tracks, event.currentTarget.value, entry.dataset_ref)); }}>
                 <option value="">Chain onto…</option>
                 {tracks.map((track, index) => <option key={track.key} value={track.key}>{index + 1}. {track.label || track.key}</option>)}

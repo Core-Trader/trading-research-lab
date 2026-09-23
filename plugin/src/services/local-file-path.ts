@@ -15,5 +15,5 @@ export function localPathForSelectedFile(file: File): string {
   const legacyPath = (file as File & { path?: unknown }).path;
   if (typeof legacyPath === "string" && legacyPath.length > 0) return legacyPath;
 
-  throw new Error("Obsidian could not obtain the local path for the selected file. Paste the full .xlsx path instead, then report this compatibility issue.");
+  throw new Error("Obsidian could not obtain the local path for the selected file. Paste the full file path instead, then report this compatibility issue.");
 }

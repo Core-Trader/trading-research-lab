@@ -19,7 +19,7 @@ function recordingWorker(): { worker: WorkerTransport; calls: Array<{ method: st
 test("service maps application calls to the versioned worker method names and params", async () => {
   const { worker, calls } = recordingWorker();
   const service = new ResearchService(worker);
-  await service.intakeMt5Excel("C:\\reports\\a.xlsx");
+  await service.intakeMt5Report("C:\\reports\\a.xlsx");
   await service.basicStatistics("ds-1");
   await service.closeEventSummary("ds-1");
   await service.reconstructLifecycles("ds-1", "HEDGING");
@@ -32,7 +32,7 @@ test("service maps application calls to the versioned worker method names and pa
   await service.performanceMetrics("ds-1");
   await service.prepareReportPayload("ds-1", "run-1", "report-1");
   assert.deepEqual(calls.map((call) => call.method), [
-    "dataset.intake_mt5_excel",
+    "dataset.intake_mt5_report",
     "analysis.basic_statistics",
     "analysis.close_event_summary",
     "analysis.reconstruct_lifecycles",

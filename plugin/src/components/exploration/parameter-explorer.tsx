@@ -7,6 +7,7 @@ import { TradeOffScatter } from "../tradeoff/trade-off-scatter";
 import { NeighbourhoodPanel } from "./neighbourhood-panel";
 import { defaultSettings } from "./neighbourhood-model";
 import { axisOptions, betterHint, candidateLabel, compareTable, defaultObjectives, FORWARD_PREFIX, frontierMatchesAxes, scatterPoints, statusText } from "./exploration-model";
+import { isMt5ReportPath, MT5_REPORT_ACCEPT } from "../../application/report-files";
 
 type Props = {
   service: ResearchService;
@@ -126,8 +127,8 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
     setBusy("Importing the single-test report and checking it against the study…");
     try {
       const path = localPathForSelectedFile(file);
-      if (!path.toLowerCase().endsWith(".xlsx")) throw new Error("Select an MT5 Strategy Tester .xlsx report.");
-      const intake = await service.intakeMt5Excel(path);
+      if (!isMt5ReportPath(path)) throw new Error("Select an MT5 Strategy Tester report (.xlsx or .html).");
+      const intake = await service.intakeMt5Report(path);
       const attached = await service.addSingleTest(study.study_ref, intake.dataset_ref);
       setAttachments((current) => [...current.filter((item) => item.candidate_id !== attached.candidate_id), attached]);
       setBusy(null);
@@ -222,9 +223,9 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
         </tr>)}</tbody>
       </table></div>
       <div className="trl-exploration__single">
-        <input ref={singleInput} className="trl-m0__file-input" type="file" accept=".xlsx" onChange={(event) => void attachSingleTest(event)} />
+        <input ref={singleInput} className="trl-m0__file-input" type="file" accept={MT5_REPORT_ACCEPT} onChange={(event) => void attachSingleTest(event)} />
         <button type="button" disabled={busy !== null || study.status !== "READY"} onClick={() => singleInput.current?.click()}>Attach a single-test report…</button>
-        <span className="trl-m0__note">Run your default (or any setting) as a single MT5 test with the same symbol, period and dates, then attach its .xlsx report to place it on the field. All of its inputs are checked against the .set file.</span>
+        <span className="trl-m0__note">Run your default (or any setting) as a single MT5 test with the same symbol, period and dates, then attach its report (.xlsx or .html) to place it on the field. All of its inputs are checked against the .set file.</span>
       </div>
       {attachments.length > 0 && <ul className="trl-batch__findings">{attachments.map((item) => <li key={item.candidate_id}>
         <strong className={item.status === "READY" ? "is-note" : "is-blocked"}>{item.label}: {item.status === "READY" ? (item.is_default ? "placed on the field as ★ your default" : "placed on the field") : "not placed"}</strong>

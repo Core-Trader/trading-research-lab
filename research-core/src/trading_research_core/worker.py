@@ -12,7 +12,7 @@ from .analysis import basic_statistics, markdown_summary
 from .dataset_store import read_dataset, write_dataset
 from .errors import CoreError
 from .mt5_excel import import_mt5_excel
-from .intake import get_evidence, intake_mt5_excel, list_registry, set_archived, verify_raw_snapshot
+from .intake import get_evidence, intake_mt5_excel, intake_mt5_report, list_registry, set_archived, verify_raw_snapshot
 from .protocol import encode, failure, parse_request, success
 from .reporting import prepare_report_payload, write_report_revision_manifest
 from .trade_analysis import close_event_summary, reconstruct_lifecycles, write_trade_artifact
@@ -49,6 +49,7 @@ class Worker:
                     "core.capabilities",
                     "dataset.import_mt5_excel",
                     "dataset.intake_mt5_excel",
+                    "dataset.intake_mt5_report",
                     "dataset.list_registry",
                     "dataset.archive",
                     "dataset.restore",
@@ -99,6 +100,8 @@ class Worker:
             source_path = _required_string(params, "source_path")
             imported = import_mt5_excel(source_path)
             return write_dataset(self.workspace_root, imported)
+        if method == "dataset.intake_mt5_report":
+            return intake_mt5_report(self.workspace_root, _required_string(params, "source_path"))
         if method == "dataset.intake_mt5_excel":
             return intake_mt5_excel(self.workspace_root, _required_string(params, "source_path"))
         if method == "dataset.list_registry":

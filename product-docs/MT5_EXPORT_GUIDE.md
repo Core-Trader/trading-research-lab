@@ -6,17 +6,23 @@ originals.
 
 | What you want to do in TRL | Export from MT5 | File |
 | --- | --- | --- |
-| Analyse one backtest; combine EAs in Portfolio Lab | Backtest report | `.xlsx` |
+| Analyse one backtest; combine EAs in Portfolio Lab | Backtest report | `.xlsx` or `.html` |
 | Parameter exploration | Optimisation results | `.xml` |
 | Show your default settings and parameter ranges | EA inputs | `.set` |
 | Place your default settings on the field | A single test of the default settings | `.xlsx` |
 | Out-of-sample (forward) check | Forward optimisation results | `.xml` |
 
-## Backtest report (`.xlsx`)
+## Backtest report (`.xlsx` or `.html`)
 
 1. Run a single test in the Strategy Tester.
 2. On the **Backtest** tab, right-click and save the report as an Excel
-   (`.xlsx`) report.
+   (`.xlsx`) report or an HTML report. TRL reads both the same way. For HTML
+   it also checks that the totals row at the end of the Deals table matches
+   the deals.
+
+Reports you no longer need can be **archived** in the report library. They
+disappear from the lists but are not deleted, and anything that uses them
+keeps working. Restore them any time from **Archived reports**.
 
 Use the same account currency for every report you plan to combine. Portfolio
 Lab refuses to mix currencies.

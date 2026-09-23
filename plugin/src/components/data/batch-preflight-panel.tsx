@@ -4,6 +4,7 @@ import { BalanceChart } from "../balance-chart";
 import { CollapsibleSection } from "../collapsible-section";
 import { formatPercent, formatTimestamp } from "../display-format";
 import { batchTimeline } from "./batch-timeline";
+import { MT5_REPORT_ACCEPT } from "../../application/report-files";
 
 const NEXT_STEP: Record<string, string> = {
   COVERAGE_OVERLAP: "Remove one of the overlapping reports. Sequential batches continue one account over consecutive, non-overlapping periods.",
@@ -41,7 +42,7 @@ export function M5Preflight({ paths, result, combined, daily, busy, error, input
       <p><strong>What this does:</strong> joins consecutive MT5 reports from the <em>same account</em> into one continuous realised-balance history, for example January–April followed by May–September.</p>
       <p><strong>What it does not do:</strong> combine different EAs that traded <em>at the same time</em> into a portfolio (FXOptimize-style). That is a separate proposal awaiting a scope decision; overlapping reports are blocked here.</p>
     </div>
-    <input ref={inputRef} className="trl-m0__file-input" type="file" multiple accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onSelect} />
+    <input ref={inputRef} className="trl-m0__file-input" type="file" multiple accept={MT5_REPORT_ACCEPT} onChange={onSelect} />
     <div className="trl-m0__actions">
       <button type="button" disabled={working} onClick={() => inputRef.current?.click()}>Add report(s)…</button>
       <button type="button" disabled={working || paths.length === 0} onClick={onClear}>Clear list</button>

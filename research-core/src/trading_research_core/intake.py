@@ -14,32 +14,41 @@ from . import CORE_VERSION
 from .dataset_store import CANONICAL_SCHEMA_VERSION, write_dataset
 from .errors import CoreError
 from .mt5_excel import file_sha256, import_mt5_excel
+from .mt5_html import HTML_SUFFIXES, import_mt5_html
 
 
 ADAPTER_ID = "mt5-strategy-tester-excel"
 ADAPTER_VERSION = "1"
+HTML_ADAPTER_ID = "mt5-strategy-tester-html"
+HTML_ADAPTER_VERSION = "1"
 REGISTRY_SCHEMA_VERSION = "1.0"
 INTAKE_RECEIPT_SCHEMA_VERSION = "1.0"
 
 
-def intake_mt5_excel(workspace_root: Path, source_path: str) -> dict[str, object]:
-    """Validate, snapshot, canonicalize, and register one MT5 Excel source."""
+def intake_mt5_report(workspace_root: Path, source_path: str) -> dict[str, object]:
+    """Validate, snapshot, canonicalize, and register one MT5 report (.xlsx or HTML)."""
 
     root = workspace_root.resolve()
-    imported = import_mt5_excel(source_path)  # Validate before creating writes.
+    original = Path(source_path).expanduser().resolve()
+    html = original.suffix.lower() in HTML_SUFFIXES
+    imported = import_mt5_html(source_path) if html else import_mt5_excel(source_path)  # Validate before creating writes.
     source = _mapping(imported, "source")
     source_hash = _string(source, "sha256")
-    original = Path(source_path).expanduser().resolve()
-    snapshot, created = _ensure_snapshot(root, original, source_hash)
+    snapshot, created = _ensure_snapshot(root, original, source_hash, ".htm" if html else ".xlsx")
     try:
         dataset = write_dataset(root, imported)
-        receipt = _receipt(source, _mapping(imported, "settings"), _events(imported), original, snapshot, dataset)
+        adapter = (HTML_ADAPTER_ID, HTML_ADAPTER_VERSION) if html else (ADAPTER_ID, ADAPTER_VERSION)
+        receipt = _receipt(source, _mapping(imported, "settings"), _events(imported), original, snapshot, dataset, adapter, list(imported.get("source_checks", [])))
         _upsert_registry(root, receipt)
         return {**dataset, "intake_receipt": receipt, "intake_status": "SNAPSHOT_CREATED" if created else "REUSED_IDENTICAL_SOURCE"}
     except Exception:
         if created:
             snapshot.unlink(missing_ok=True)
         raise
+
+
+# Kept for existing callers and the original IPC method; accepts HTML too.
+intake_mt5_excel = intake_mt5_report
 
 
 def list_registry(workspace_root: Path) -> dict[str, object]:
@@ -106,8 +115,8 @@ def verify_raw_snapshot(workspace_root: Path, dataset_ref: str) -> dict[str, obj
     return {"dataset_ref": dataset_ref, "expected_sha256": expected, "observed_sha256": observed, "verified": observed == expected}
 
 
-def _ensure_snapshot(root: Path, original: Path, source_hash: str) -> tuple[Path, bool]:
-    target = _bounded(root, "raw", source_hash, "source.xlsx")
+def _ensure_snapshot(root: Path, original: Path, source_hash: str, suffix: str = ".xlsx") -> tuple[Path, bool]:
+    target = _bounded(root, "raw", source_hash, f"source{suffix}")
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.is_file():
         if file_sha256(target) != source_hash:
@@ -132,8 +141,10 @@ def _receipt(
     original: Path,
     snapshot: Path,
     dataset: dict[str, object],
+    adapter: tuple[str, str] = (ADAPTER_ID, ADAPTER_VERSION),
+    source_checks: list[str] | None = None,
 ) -> dict[str, object]:
-    configuration = {"adapter_id": ADAPTER_ID, "adapter_version": ADAPTER_VERSION, "intake_mode": "MANAGED_SNAPSHOT"}
+    configuration = {"adapter_id": adapter[0], "adapter_version": adapter[1], "intake_mode": "MANAGED_SNAPSHOT"}
     configuration_hash = sha256(json.dumps(configuration, sort_keys=True, separators=(",", ":")).encode()).hexdigest().upper()
     return {
         "receipt_schema_version": INTAKE_RECEIPT_SCHEMA_VERSION,
@@ -148,7 +159,8 @@ def _receipt(
             "period": settings.get("Period"), "initial_deposit": settings.get("Initial Deposit"),
             "leverage": settings.get("Leverage"),
         },
-        "source_layout": {"worksheet_name": source["worksheet_name"], "section_name": "Deals", "adapter_schema_version": ADAPTER_VERSION},
+        "source_layout": {"worksheet_name": source["worksheet_name"], "section_name": "Deals", "adapter_schema_version": adapter[1]},
+        "source_checks": source_checks or [],
         "observed_price_scales": sorted({scale for event in events if (scale := event.get("source_price_scale")) is not None}),
         "artifacts": dataset["artifacts"],
         "limitations": ["Source timestamps are preserved as reported; broker timezone is not inferred in Milestone 1."],

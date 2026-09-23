@@ -49,7 +49,7 @@ On macOS or Linux, use `research-core/.venv/bin/python` instead of
 ## 3. Check it works
 
 Open the Trading Research Lab view and import one MT5 Strategy Tester report
-(`.xlsx`). If the engine cannot start, the view shows the reason, which is
+(`.xlsx` or `.html`). If the engine cannot start, the view shows the reason, which is
 usually a wrong Python path or a Python version other than 3.14.
 
 ## Where your data goes

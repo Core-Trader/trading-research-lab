@@ -129,7 +129,12 @@ stagnation band has a legend. Multi-XML studies (PX-008), the release
 decisions R-D1 to R-D4, and the clean-machine install check are deferred.
 Neighbourhood analysis (PX-010, N1–N7) is implemented; see
 `internal/development-journal/2026-09-23-neighbourhood-analysis.md`.
-**Next exact task:** the owner reviews the Neighbourhood panel in Obsidian:
+Report archive (DS-001) and MT5 HTML import (DS-002) are done; see
+`internal/development-journal/2026-09-23-archive-and-html-import.md`.
+**Next exact task:** the owner reviews in Obsidian:
+- archive and restore in the Portfolio report library
+- importing an MT5 `.html` report
+- the Neighbourhood panel, as follows:
 1. Select a frontier pass and check the coverage, statistics, and map.
 2. Save a neighbourhood `.set`.
 3. Optionally run it in MT5 with the "Slow complete algorithm" and attach
@@ -214,8 +219,8 @@ Set-Location C:\DEV\Trading_Research_Lab\plugin
 | Area | Status | Evidence / limit |
 | --- | --- | --- |
 | Environment | Pass | Python/Node/npm/Git versions and core imports verified on 2026-09-20. |
-| Research Core unit tests | Pass | 188 `pytest` tests passed on 2026-09-23 (plus 4 release-script tests in `scripts/tests`), including neighbourhood analysis, saved-combination persistence, parameter exploration (single tests, forward pairing), including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
-| Plugin automated tests | Pass | 68 Node tests passed on 2026-09-23 (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
+| Research Core unit tests | Pass | 197 `pytest` tests passed on 2026-09-23 (plus 4 release-script tests in `scripts/tests`), including MT5 HTML import, report archive, neighbourhood analysis, saved-combination persistence, parameter exploration (single tests, forward pairing), including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
+| Plugin automated tests | Pass | 70 Node tests passed on 2026-09-23 (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
 | Plugin build | Pass | TypeScript check and esbuild production bundle passed. |
 | Live M0 path | Pass, owner-confirmed | EURUSD import, verified balance curve, generated note, Browse workflow, and diagnostics panel were manually exercised. |
 | Integration/negative coverage | Partial | Live structured unknown-method response was verified; a broader formal integration suite is not yet present. |

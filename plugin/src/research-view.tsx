@@ -21,6 +21,7 @@ import { Diagnostics, type RunDiagnostics } from "./components/advanced/diagnost
 import { PortfolioLab } from "./components/portfolio/portfolio-lab";
 import { ParameterExplorer } from "./components/exploration/parameter-explorer";
 import { upsertChoiceBlock } from "./vault/choice-block";
+import { isMt5ReportPath, MT5_REPORT_ACCEPT, MT5_REPORT_HINT } from "./application/report-files";
 
 export { writeGeneratedNote } from "./vault/research-vault";
 
@@ -50,7 +51,7 @@ export class ResearchView extends ItemView {
 
 function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.ReactElement {
   const [sourcePath, setSourcePath] = useState("");
-  const [status, setStatus] = useState("Ready. Select an MT5 Strategy Tester .xlsx report.");
+  const [status, setStatus] = useState("Ready. Select an MT5 Strategy Tester report (.xlsx or .html).");
   const [error, setError] = useState<string | null>(null);
   const [statistics, setStatistics] = useState<StatisticsResult | null>(null);
   const [evidence, setEvidence] = useState<DatasetEvidence | null>(null);
@@ -104,7 +105,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const forwardInputRef = useRef<HTMLInputElement>(null);
   const batchInputRef = useRef<HTMLInputElement>(null);
 
-  const canRun = useMemo(() => sourcePath.trim().toLowerCase().endsWith(".xlsx"), [sourcePath]);
+  const canRun = useMemo(() => isMt5ReportPath(sourcePath), [sourcePath]);
   const canRunOptimisation = useMemo(() => optimisationPath.trim().toLowerCase().endsWith(".xml") && optimisationMode.trim().length > 0, [optimisationPath, optimisationMode]);
   const [batchBusy, setBatchBusy] = useState<string | null>(null);
   const [batchError, setBatchError] = useState<string | null>(null);
@@ -120,7 +121,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     event.currentTarget.value = "";
     try {
       const paths = files.map(localPathForSelectedFile);
-      if (paths.length === 0 || paths.some((path) => !path.toLowerCase().endsWith(".xlsx"))) throw new Error("Select MT5 Strategy Tester .xlsx reports.");
+      if (paths.length === 0 || paths.some((path) => !isMt5ReportPath(path))) throw new Error("Select MT5 Strategy Tester reports (.xlsx or .html).");
       setBatchPaths((current) => [...current, ...paths.filter((path) => !current.includes(path))]);
       resetBatchResults();
     } catch (caught) { setBatchError(reasonText(caught)); }
@@ -143,8 +144,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const runCombinedDaily = (): Promise<void> => batchStep("Calculating combined daily realised drawdown…", async () => { setCombinedDaily(await service.combinedDailyDrawdown(batchPaths)); });
   const run = async (requestedSourcePath = sourcePath.trim()): Promise<void> => {
     const sourceToAnalyse = requestedSourcePath.trim();
-    if (!sourceToAnalyse.toLowerCase().endsWith(".xlsx")) {
-      setError("Select an MT5 Strategy Tester Excel report with the .xlsx extension.");
+    if (!isMt5ReportPath(sourceToAnalyse)) {
+      setError("Select an MT5 Strategy Tester report (.xlsx or .html).");
       return;
     }
     // A newer import supersedes this one; its late results must never be shown.
@@ -174,7 +175,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       const runStartedAt = performance.now();
       const workerWasReady = plugin.worker.isReady;
       const readiness = await measure(() => plugin.worker.ensureReady());
-      const imported = await measure(() => service.intakeMt5Excel(sourceToAnalyse));
+      const imported = await measure(() => service.intakeMt5Report(sourceToAnalyse));
       if (!isCurrent()) return;
       setStatus(`Calculating verified balance statistics for ${imported.result.event_count} source events…`);
       const datasetRef = imported.result.dataset_ref;
@@ -595,8 +596,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     if (file === undefined) return;
     try {
       const selectedPath = localPathForSelectedFile(file);
-      if (!selectedPath.toLowerCase().endsWith(".xlsx")) {
-        throw new Error("Select an MT5 Strategy Tester Excel report with the .xlsx extension.");
+      if (!isMt5ReportPath(selectedPath)) {
+        throw new Error("Select an MT5 Strategy Tester report (.xlsx or .html).");
       }
       setSourcePath(selectedPath);
       setError(null);
@@ -644,7 +645,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       <span>Desktop research canvas</span>
     </header>
     <WorkspaceNavigation activePage={activePage} onChange={setActivePage} />
-    <input ref={fileInputRef} className="trl-m0__file-input" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={selectSourceFile} />
+    <input ref={fileInputRef} className="trl-m0__file-input" type="file" accept={MT5_REPORT_ACCEPT} onChange={selectSourceFile} />
     {error && <pre className="trl-m0__error" role="alert">{error}</pre>}
     {activePage === "overview" && <DashboardSummary
       statistics={statistics}
@@ -668,7 +669,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       <section className="trl-page__surface">
       <p className="trl-m0__note">Select one MT5 Strategy Tester Excel report to preserve its source, create canonical evidence, and populate the dashboard.</p>
       <label className="trl-m0__field">
-        <span>MT5 Strategy Tester Excel report (.xlsx)</span>
+        <span>{MT5_REPORT_HINT}</span>
         <input value={sourcePath} onChange={(event) => setSourcePath(event.currentTarget.value)} placeholder="C:\\path\\to\\report.xlsx" />
       </label>
       <div className="trl-m0__actions">

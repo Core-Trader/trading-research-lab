@@ -1,6 +1,6 @@
 """MT5 Strategy Tester single-test report: header, inputs, and Results summary.
 
-Reads the sections MT5 writes above the Deals table of an `.xlsx` report:
+Reads the sections MT5 writes above the Deals table of an `.xlsx` or HTML report:
 Settings (Expert, Symbol, Period, Inputs, Company, Currency, Initial Deposit,
 Leverage) and Results (MT5-computed statistics). Values are preserved as
 strings; nothing is recomputed. Used to place a single test (for example the
@@ -33,8 +33,12 @@ _LEADING_PERCENT = re.compile(r"^\s*(-?\d+(?:\.\d+)?)%")
 
 
 def read_report_summary(path: Path) -> dict[str, Any]:
-    """Parse the header, inputs, and Results of one MT5 `.xlsx` report."""
+    """Parse the header, inputs, and Results of one MT5 `.xlsx` or HTML report."""
 
+    if path.suffix.lower() in {".htm", ".html"}:
+        from .mt5_html import read_html_rows, row_values
+
+        return summarise_rows(row_values(read_html_rows(path)))
     try:
         import openpyxl
     except ImportError as error:
