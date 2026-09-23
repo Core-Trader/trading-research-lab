@@ -40,6 +40,7 @@ terms. Every actual reuse remains subject to the mandatory provenance process in
 ## Analysis records
 
 - [Journalit architecture map](JOURNALIT_ARCHITECTURE_MAP.md)
+- Journalit import pipeline concept review (2026-09-23, pinned commit `098d277`; parsing is server-side, so there is no reusable local code; concepts only): see `../docs/MT5_AUTOMATION_AND_IMPORT_REVIEW.md` §2
 - [Strategy Factory architecture map](STRATEGY_FACTORY_ARCHITECTURE_MAP.md)
 - [Trading Research Lab comparison and findings](TRL_REFERENCE_FINDINGS.md)
 - [Authoritative code-usage register](EXTERNAL_CODE_USAGE_REGISTER.md)
