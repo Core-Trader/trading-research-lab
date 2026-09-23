@@ -77,7 +77,8 @@ export function BalanceChart({ points, currency, band }: { points: BalancePoint[
         </>}
       </div>
     </div>
+    {bandBox && band && <p className="trl-balance-chart__legend"><span className="trl-balance-chart__swatch" aria-hidden="true" /> Shaded: {band.label}, the longest stretch without a new balance high</p>}
     <div className="trl-balance-chart__x-axis" aria-hidden="true"><span>{formatTimestamp(first.timestamp)}</span><span>{formatTimestamp(last.timestamp)}</span></div>
-    <figcaption className="trl-m0__note">Reported balance ({unit}) in source event order; dashed line = opening balance {first.balance}. Hover or use arrow keys for values. Realised balance only, not intratrade equity.{bandBox && band ? ` Shaded: ${band.label}.` : ""}</figcaption>
+    <figcaption className="trl-m0__note">Reported balance ({unit}) in source event order; dashed line = opening balance {first.balance}. Hover or use arrow keys for values. Realised balance only, not intratrade equity.</figcaption>
   </figure>;
 }

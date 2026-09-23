@@ -33,9 +33,10 @@ export function toggleIncluded(tracks: TrackDraft[], key: string): TrackDraft[] 
 }
 
 /** The tracks sent to the Core, in display order, plus their labels in the same order. */
+/** Included tracks in panel order. Labels carry the panel number, so "3" means the same track everywhere. */
 export function combinationRequest(tracks: TrackDraft[]): { tracks: string[][]; labels: string[] } {
-  const included = tracks.filter((track) => track.included && track.refs.length > 0);
-  return { tracks: included.map((track) => track.refs), labels: included.map((track) => track.label || track.key) };
+  const included = tracks.map((track, index) => ({ track, number: index + 1 })).filter(({ track }) => track.included && track.refs.length > 0);
+  return { tracks: included.map(({ track }) => track.refs), labels: included.map(({ track, number }) => track.label.trim() ? `${number}. ${track.label.trim()}` : `Track ${number}`) };
 }
 
 export type Span = { key: string; label: string; first: string; last: string; flagged?: boolean };

@@ -177,12 +177,12 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
           <td>{describe(entry, entry.dataset_ref)}</td>
           <td>{entry.event_count}</td>
           <td>{assigned.has(entry.dataset_ref)
-            ? <span className="trl-m0__note">In {tracks.find((track) => track.refs.includes(entry.dataset_ref))?.label || "a track"}</span>
+            ? <span className="trl-m0__note">{(() => { const index = tracks.findIndex((track) => track.refs.includes(entry.dataset_ref)); return `In track ${index + 1}${tracks[index]?.label ? ` · ${tracks[index]!.label}` : ""}`; })()}</span>
             : <span className="trl-portfolio__assign">
               <button type="button" disabled={busy !== null} onClick={() => change(addTrack(tracks, entry.dataset_ref, entry.original_filename.replace(/\.xlsx$/i, "")))}>New track</button>
               {tracks.length > 0 && <select value="" disabled={busy !== null} onChange={(event) => { if (event.currentTarget.value) change(addToTrack(tracks, event.currentTarget.value, entry.dataset_ref)); }}>
                 <option value="">Chain onto…</option>
-                {tracks.map((track) => <option key={track.key} value={track.key}>{track.label || track.key}</option>)}
+                {tracks.map((track, index) => <option key={track.key} value={track.key}>{index + 1}. {track.label || track.key}</option>)}
               </select>}
             </span>}</td>
         </tr>)}</tbody>
@@ -192,7 +192,8 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
     <section className="trl-page__surface">
       <h4>2. Tracks</h4>
       <p className="trl-m0__note">A track is one strategy's history: one report, or consecutive reports of the same EA chained together (checked by the Core).</p>
-      {tracks.length === 0 ? <p className="trl-m0__note">Create a track from a report above.</p> : <ul className="trl-portfolio__tracks">{tracks.map((track) => <li key={track.key}>
+      {tracks.length === 0 ? <p className="trl-m0__note">Create a track from a report above.</p> : <ul className="trl-portfolio__tracks">{tracks.map((track, index) => <li key={track.key}>
+        <span className="trl-portfolio__track-number" aria-label={`Track ${index + 1}`}>{index + 1}</span>
         <label className="trl-portfolio__include"><input type="checkbox" checked={track.included} onChange={() => change(toggleIncluded(tracks, track.key))} /> Include</label>
         <input className="trl-portfolio__label" value={track.label} aria-label="Track name" onChange={(event) => change(renameTrack(tracks, track.key, event.currentTarget.value))} />
         <ol>{track.refs.map((ref) => <li key={ref}>{describe(byRef.get(ref), ref)} <button type="button" onClick={() => change(removeReport(tracks, ref))}>Remove</button></li>)}</ol>

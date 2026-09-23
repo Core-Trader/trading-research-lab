@@ -23,7 +23,7 @@ test("removing the last report removes its track; keys are never reused", () => 
 test("only included tracks are sent, with labels in the same order", () => {
   let tracks = addTrack(addTrack(addTrack([], "r1", "A"), "r2", "B"), "r3", "");
   tracks = toggleIncluded(renameTrack(tracks, "t1", "Alpha"), "t2");
-  assert.deepEqual(combinationRequest(tracks), { tracks: [["r1"], ["r3"]], labels: ["Alpha", "t3"] });
+  assert.deepEqual(combinationRequest(tracks), { tracks: [["r1"], ["r3"]], labels: ["1. Alpha", "Track 3"] });
 });
 
 test("span timeline shares one axis", () => {

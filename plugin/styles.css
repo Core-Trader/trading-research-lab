@@ -145,6 +145,8 @@
 .trl-mc-fan__key { display: inline-block; width: 1rem; height: 0.2rem; margin-right: 0.25rem; vertical-align: middle; background: var(--interactive-accent); opacity: 0.5; }
 .trl-mc-fan__key.is-historical { background: var(--text-normal); opacity: 1; }
 .trl-balance-chart__band { fill: var(--text-faint); opacity: 0.14; }
+.trl-balance-chart__legend { display: flex; align-items: center; gap: 0.4rem; margin: 0.35rem 0 0; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.trl-balance-chart__swatch { flex: none; width: 1rem; height: 0.7rem; border: 1px solid var(--background-modifier-border); background: color-mix(in srgb, var(--text-faint) 14%, transparent); }
 .trl-drawdown-chart { margin: 0.4rem 0 0; }
 .trl-drawdown-chart__plot { height: 6rem; }
 .trl-drawdown-chart__area { fill: var(--color-red); opacity: 0.18; }
@@ -191,6 +193,7 @@
 .trl-portfolio__tracks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
 .trl-portfolio__tracks > li { padding: 0.6rem; border: 1px solid var(--background-modifier-border); border-radius: 0.4rem; background: var(--background-primary); }
 .trl-portfolio__tracks ol { margin: 0.4rem 0; font-size: var(--font-ui-smaller); }
+.trl-portfolio__track-number { display: inline-grid; place-items: center; min-width: 1.5rem; height: 1.5rem; margin-right: 0.5rem; padding: 0 0.3rem; border-radius: 0.75rem; background: var(--interactive-accent); color: var(--text-on-accent); font-size: var(--font-ui-smaller); font-weight: 700; font-variant-numeric: tabular-nums; }
 .trl-portfolio__include { margin-right: 0.6rem; font-size: var(--font-ui-smaller); }
 .trl-portfolio__label { min-width: min(14rem, 100%); max-width: 100%; font-weight: 600; }
 .trl-portfolio__overlap { margin: 0.6rem 0 0; font-size: var(--font-ui-smaller); color: var(--text-muted); }
