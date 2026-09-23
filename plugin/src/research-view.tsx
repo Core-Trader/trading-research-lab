@@ -18,6 +18,7 @@ import { M4Documents } from "./components/research/documents-panel";
 import { MonteCarloAnalysis, WhatIfAnalysis } from "./components/advanced/scenario-panels";
 import { OptimisationEvidence, PairedForwardEvidence } from "./components/advanced/optimisation-panels";
 import { Diagnostics, type RunDiagnostics } from "./components/advanced/diagnostics-panel";
+import { PortfolioLab } from "./components/portfolio/portfolio-lab";
 
 export { writeGeneratedNote } from "./vault/research-vault";
 
@@ -701,6 +702,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
         onSelectReport={() => void selectReport()}
       />
     </section>}
+    {activePage === "portfolio" && <PortfolioLab service={service} />}
     {activePage === "advanced" && <section className="trl-page" aria-label="Advanced research">
       <header className="trl-page__header"><div><h3>Advanced research</h3><p>Optional, qualified studies. Results are research evidence, not trading recommendations.</p></div></header>
       <OptimisationEvidence path={optimisationPath} mode={optimisationMode} result={optimisationResult} filter={optimisationFilter} sort={optimisationSort} inputRef={optimisationInputRef} enabled={canRunOptimisation} onPathChange={setOptimisationPath} onModeChange={setOptimisationMode} onSelect={selectOptimisationFile} onRun={() => void runOptimisationIntake()} onFilterChange={setOptimisationFilter} onSortChange={setOptimisationSort} />

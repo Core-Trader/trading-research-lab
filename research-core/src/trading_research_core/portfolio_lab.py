@@ -24,7 +24,7 @@ from .trade_analysis import close_event_summary
 
 
 TRACK_VERSION = "portfolio-track-1"
-CALCULATION_VERSION = "mvp-portfolio-combine-1"
+CALCULATION_VERSION = "mvp-portfolio-combine-2"
 MAX_TRACKS = 10
 WINDOWS = {"UNION", "COMMON"}
 DAY_BOUNDARIES = {"REPORT_CLOCK_MIDNIGHT"}
@@ -110,7 +110,7 @@ def combine(workspace_root: Path, tracks: list[list[str]], starting_capital: str
         "warnings": [
             "Combined result is realised balance from verified close events only; intratrade equity and floating drawdown are unavailable.",
             "Lots are as reported in each backtest. Each backtest ran on its own balance, so compounding and margin interaction between EAs are not modelled.",
-            "Tracks on the same symbol are usually highly correlated; check the correlation matrix.",
+            "Correlation between tracks is not assumed; check the daily correlation matrix before reading the drawdown offset as diversification.",
             "Starting capital is user-supplied.",
         ],
     }

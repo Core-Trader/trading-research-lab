@@ -42,3 +42,27 @@ comes first.
 Slice 2 (plugin Portfolio section: track builder, track comparison, combined
 dashboard). The Portfolio Lab analysis also needs an explicit on-screen
 realised-balance caveat for DCA-style EAs.
+
+## Slice 2 (2026-09-23): plugin Portfolio section
+
+- New **Portfolio** workspace page (`components/portfolio/`):
+  - `portfolio-lab.tsx`: report library (multi-file import through M1 intake,
+    then registry refresh), track builder ("New track" / "Chain onto…",
+    rename, include toggle, remove), starting capital (placeholder suggests
+    the largest initial deposit), window (union/common), and combine with a
+    stale-run guard.
+  - `combined-dashboard.tsx`: KPI tiles, active-track bars, combined balance
+    with stagnation band, drawdown chart, contribution table with standalone
+    results, drawdown-overlap sentence, and a correlation matrix on a neutral
+    colour scale (no good/bad colouring).
+  - `portfolio-model.ts`: pure track operations and `spanTimeline`, with tests.
+  - A permanent realised-balance caveat for DCA/grid/martingale EAs.
+- Core `mvp-portfolio-combine-2`: a neutral correlation warning. The owner's
+  real tracks correlate only 0.03–0.13, so "usually highly correlated" was
+  wrong.
+- Checked with the owner's real reports (three tracks including one chain) in
+  the harness: net 2828.44, realised maximum drawdown 48.74 (0.45%), and a
+  drawdown offset of 43.39 against standalone drawdowns summing to 92.13.
+- Suites: Core 107/107, plugin 44/44, build passes. **Not validated in
+  Obsidian**. The track-builder view was not rendered in the harness because
+  it depends on the Obsidian runtime.

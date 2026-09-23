@@ -348,3 +348,39 @@ export type RMultipleMetrics = {
   histogram: { binning: "FIXED_HALF_R_V1"; underflow_count: number; overflow_count: number; buckets: Array<{ lower_r: string; upper_r: string; count: number }> };
   warnings: string[];
 };
+
+export type PortfolioTrackResult = {
+  track_id: string;
+  index: number;
+  dataset_refs: string[];
+  filenames: string[];
+  currency: string | null;
+  active_start: string;
+  active_end: string;
+  close_events_in_window: number;
+  net_pnl: string;
+  share_of_combined_net_percent: string | null;
+  standalone_maximum_drawdown: string;
+  standalone_metrics: PerformanceMetrics["close_event_metrics"] & { maximum_drawdown_percent: string | null; return_to_drawdown: string | null };
+};
+
+export type PortfolioCombination = {
+  combination_id: string;
+  calculation_version: string;
+  analysis_basis: string;
+  configuration: { track_ids: string[]; starting_capital: string; starting_capital_source: "USER_SUPPLIED"; window: "UNION" | "COMMON"; day_boundary: string; sizing: "AS_REPORTED" };
+  currency: string | null;
+  window_start: string;
+  window_end: string;
+  close_event_count: number;
+  net_pnl: string;
+  combined_balance: Array<{ index: number; timestamp: string; balance: string; track_index: number | null }>;
+  metrics: Pick<PerformanceMetrics, "balance_metrics" | "stagnation" | "close_event_metrics">;
+  drawdown_series: PerformanceMetrics["drawdown_series"];
+  tracks: PortfolioTrackResult[];
+  drawdown_overlap: { combined_maximum_drawdown: string; sum_of_standalone_maximum_drawdowns: string; offset: string };
+  correlation: Array<{ left_index: number; right_index: number; days: number; pearson: string | null; reason: string | null }>;
+  daily: Array<{ date: string; net_pnl: string; close_event_count: number }>;
+  active_tracks: Array<{ index: number; track_id: string; start: string; end: string }>;
+  warnings: string[];
+};

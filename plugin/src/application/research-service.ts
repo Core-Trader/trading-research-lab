@@ -1,4 +1,4 @@
-import type { CloseEventDisplaySeries, PerformanceMetrics, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CloseEventDisplaySeries, PerformanceMetrics, PortfolioCombination, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -59,6 +59,10 @@ export class ResearchService {
 
   rMultipleMetrics(datasetRef: string, source: "DECLARED" | "AVERAGE_LOSS", amount?: string): Promise<RMultipleMetrics> {
     return this.worker.request("analysis.r_multiple_metrics", source === "DECLARED" ? { dataset_ref: datasetRef, r_source: source, r_amount: amount } : { dataset_ref: datasetRef, r_source: source });
+  }
+
+  portfolioCombine(tracks: string[][], startingCapital: string, window: "UNION" | "COMMON"): Promise<PortfolioCombination> {
+    return this.worker.request("portfolio.combine", { tracks, starting_capital: startingCapital, window }, LONG_RUNNING_MS);
   }
 
   reconstructLifecycles(datasetRef: string, accountMode: string): Promise<TradeAnalysisResult> {
