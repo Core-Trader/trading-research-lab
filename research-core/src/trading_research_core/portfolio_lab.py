@@ -338,3 +338,77 @@ def _fmt(value: Decimal) -> str:
 
 def _hash(configuration: dict[str, object]) -> str:
     return sha256(json.dumps(configuration, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest().upper()
+
+
+SAVED_VERSION = "portfolio-saved-1"
+SAVED_FOLDER = "portfolio-combinations"
+MAX_SAVED_NAME = 120
+_SAVED_KEY = __import__("re").compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def save_combination(workspace_root: Path, name: str, labels: list[str], tracks: list[list[str]], starting_capital: str, window: str = "UNION", day_boundary: str = "REPORT_CLOCK_MIDNIGHT") -> dict[str, object]:
+    """Save a named combination setup (never its numbers) and return it with its fresh result.
+
+    Only the inputs are stored; results are always recalculated by `combine`,
+    so a saved combination cannot drift from the current calculation. Saving
+    the same setup again replaces the earlier entry (for example, a rename).
+    """
+
+    name = str(name).strip()
+    if not 1 <= len(name) <= MAX_SAVED_NAME:
+        raise CoreError("E_PORTFOLIO_CONFIG_INVALID", f"A saved combination needs a name of 1 to {MAX_SAVED_NAME} characters.")
+    if not isinstance(labels, list) or len(labels) != len(tracks) or not all(isinstance(label, str) for label in labels):
+        raise CoreError("E_PORTFOLIO_CONFIG_INVALID", "labels must give one name per track.")
+    result = combine(workspace_root, tracks, starting_capital, window, day_boundary)
+    setup = {"tracks": tracks, "starting_capital": result["configuration"]["starting_capital"], "window": window, "day_boundary": day_boundary}
+    record = {"saved_version": SAVED_VERSION, "key": result["combination_id"], "name": name, "labels": labels, **setup, "saved_calculation_version": CALCULATION_VERSION}
+    folder = _saved_folder(workspace_root)
+    folder.mkdir(parents=True, exist_ok=True)
+    for existing in _saved_records(workspace_root):
+        if existing["key"] != record["key"] and {key: existing[key] for key in setup} == setup:
+            (folder / f"{existing['key']}.json").unlink()
+    (folder / f"{record['key']}.json").write_text(json.dumps(record, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {"saved": record, "combination": result, "error": None, "recalculated": False}
+
+
+def list_saved_combinations(workspace_root: Path) -> dict[str, object]:
+    """Every saved combination, recalculated now, ordered by name.
+
+    An entry whose reports are missing or no longer combine keeps its setup and
+    carries the error instead of a result.
+    """
+
+    entries = []
+    for record in sorted(_saved_records(workspace_root), key=lambda item: (item["name"].casefold(), item["key"])):
+        try:
+            result = combine(workspace_root, record["tracks"], record["starting_capital"], record["window"], record["day_boundary"])
+            entries.append({"saved": record, "combination": result, "error": None, "recalculated": record["saved_calculation_version"] != CALCULATION_VERSION})
+        except CoreError as error:
+            entries.append({"saved": record, "combination": None, "error": {"code": error.code, "message": error.message}, "recalculated": False})
+    return {"saved_version": SAVED_VERSION, "entries": entries}
+
+
+def delete_saved_combination(workspace_root: Path, key: str) -> dict[str, object]:
+    if not isinstance(key, str) or not _SAVED_KEY.match(key):
+        raise CoreError("E_PORTFOLIO_CONFIG_INVALID", "Unknown saved combination key.")
+    path = _saved_folder(workspace_root) / f"{key}.json"
+    existed = path.is_file()
+    if existed:
+        path.unlink()
+    return {"key": key, "deleted": existed}
+
+
+def _saved_folder(workspace_root: Path) -> Path:
+    return workspace_root.resolve() / SAVED_FOLDER
+
+
+def _saved_records(workspace_root: Path) -> list[dict[str, Any]]:
+    folder = _saved_folder(workspace_root)
+    if not folder.is_dir():
+        return []
+    records = []
+    for path in sorted(folder.glob("*.json")):
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if record.get("saved_version") == SAVED_VERSION and _SAVED_KEY.match(str(record.get("key", ""))):
+            records.append(record)
+    return records

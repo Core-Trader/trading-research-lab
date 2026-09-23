@@ -244,3 +244,59 @@ def test_worker_exposes_explore_and_pareto(tmp_path: Path) -> None:
     assert worker.dispatch({"method": "portfolio.explore", "params": {"tracks": [[a], [b]], "starting_capital": "1000"}})["subset_count"] == 3
     evaluated = worker.dispatch({"method": "analysis.pareto_evaluate", "params": {"candidates": [{"id": "x", "values": {"p": "1"}}, {"id": "y", "values": {"p": "2"}}], "objectives": [{"metric": "p", "direction": "MAX"}]}})
     assert [row["status"] for row in evaluated["candidates"]] == ["DOMINATED", "PARETO"]
+
+
+def test_saved_combinations_store_setup_only_and_recalculate(tmp_path: Path) -> None:
+    from trading_research_core.portfolio_lab import delete_saved_combination, list_saved_combinations, save_combination
+    a, b = _ab(tmp_path)
+    saved = save_combination(tmp_path, "  Both  ", ["A", "B"], [[a], [b]], "1000")
+    key = saved["saved"]["key"]
+    assert saved["saved"]["name"] == "Both" and key == combine(tmp_path, [[a], [b]], "1000")["combination_id"]
+    stored = json.loads((tmp_path / "portfolio-combinations" / f"{key}.json").read_text(encoding="utf-8"))
+    assert "net_pnl" not in json.dumps(stored) and stored["tracks"] == [[a], [b]]
+    save_combination(tmp_path, "Alpha only", ["A"], [[a]], "1000")
+    listed = list_saved_combinations(tmp_path)["entries"]
+    assert [entry["saved"]["name"] for entry in listed] == ["Alpha only", "Both"]
+    assert listed[1]["combination"] == combine(tmp_path, [[a], [b]], "1000") and listed[1]["error"] is None
+    renamed = save_combination(tmp_path, "Both, renamed", ["A", "B"], [[a], [b]], "1000")
+    assert renamed["saved"]["key"] == key and len(list_saved_combinations(tmp_path)["entries"]) == 2
+    assert delete_saved_combination(tmp_path, key) == {"key": key, "deleted": True}
+    assert [entry["saved"]["name"] for entry in list_saved_combinations(tmp_path)["entries"]] == ["Alpha only"]
+    assert delete_saved_combination(tmp_path, key)["deleted"] is False
+
+
+def test_saved_combination_setup_replaces_older_version_and_reports_missing_data(tmp_path: Path) -> None:
+    from trading_research_core.portfolio_lab import SAVED_VERSION, list_saved_combinations, save_combination
+    a, b = _ab(tmp_path)
+    folder = tmp_path / "portfolio-combinations"
+    folder.mkdir()
+    old_key = "00000000-0000-4000-8000-000000000001"
+    old = {"saved_version": SAVED_VERSION, "key": old_key, "name": "Old", "labels": ["A", "B"], "tracks": [[a], [b]], "starting_capital": "1000", "window": "UNION", "day_boundary": "REPORT_CLOCK_MIDNIGHT", "saved_calculation_version": "mvp-portfolio-combine-1"}
+    (folder / f"{old_key}.json").write_text(json.dumps(old), encoding="utf-8")
+    listed = list_saved_combinations(tmp_path)["entries"]
+    assert listed[0]["recalculated"] is True and listed[0]["combination"]["net_pnl"] == "130"
+    save_combination(tmp_path, "New", ["A", "B"], [[a], [b]], "1000")
+    assert [entry["saved"]["name"] for entry in list_saved_combinations(tmp_path)["entries"]] == ["New"]
+    missing_key = "00000000-0000-4000-8000-000000000002"
+    (folder / f"{missing_key}.json").write_text(json.dumps({**old, "key": missing_key, "name": "Gone", "tracks": [["mt5:" + "F" * 64]], "labels": ["F"]}), encoding="utf-8")
+    gone = next(entry for entry in list_saved_combinations(tmp_path)["entries"] if entry["saved"]["name"] == "Gone")
+    assert gone["combination"] is None and gone["error"]["code"].startswith("E_")
+
+
+@pytest.mark.parametrize("name,labels", [("", ["A"]), ("x" * 121, ["A"]), ("ok", ["A", "B"])])
+def test_saved_combination_rejects_bad_names_and_labels(tmp_path: Path, name: str, labels: list[str]) -> None:
+    from trading_research_core.portfolio_lab import delete_saved_combination, save_combination
+    a, _ = _ab(tmp_path)
+    with pytest.raises(CoreError):
+        save_combination(tmp_path, name, labels, [[a]], "1000")
+    with pytest.raises(CoreError):
+        delete_saved_combination(tmp_path, "../escape")
+
+
+def test_worker_exposes_saved_combinations(tmp_path: Path) -> None:
+    a, b = _ab(tmp_path)
+    worker = Worker(tmp_path)
+    methods = worker.dispatch({"method": "core.capabilities", "params": {}})["methods"]
+    assert {"portfolio.save_combination", "portfolio.list_saved_combinations", "portfolio.delete_saved_combination"} <= set(methods)
+    saved = worker.dispatch({"method": "portfolio.save_combination", "params": {"name": "Both", "labels": ["A", "B"], "tracks": [[a], [b]], "starting_capital": "1000"}})
+    assert worker.dispatch({"method": "portfolio.list_saved_combinations", "params": {}})["entries"][0]["saved"]["key"] == saved["saved"]["key"]

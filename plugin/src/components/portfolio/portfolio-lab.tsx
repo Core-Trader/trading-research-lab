@@ -3,7 +3,7 @@ import { Notice } from "obsidian";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
 import { localPathForSelectedFile } from "../../services/local-file-path";
-import type { DatasetEvidence, ParetoEvaluation, PortfolioCombination, PortfolioExploration } from "../../types";
+import type { DatasetEvidence, ParetoEvaluation, PortfolioCombination, PortfolioExploration, SavedCombinationEntry } from "../../types";
 import { CombinationExplorer } from "./combination-explorer";
 import { CombinedDashboard } from "./combined-dashboard";
 import { SavedCombinations, type SavedCombination } from "./saved-combinations";
@@ -26,6 +26,7 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
   const inputRef = useRef<HTMLInputElement>(null);
   const runs = useRef(new LatestRun()).current;
   const [saved, setSaved] = useState<SavedCombination[]>([]);
+  const [unavailable, setUnavailable] = useState<SavedCombinationEntry[]>([]);
   const [evaluation, setEvaluation] = useState<ParetoEvaluation | null>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [saveName, setSaveName] = useState("");
@@ -37,6 +38,16 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
     try { setLibrary((await service.listRegistry()).entries); } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
   }, [service]);
   useEffect(() => { void refreshLibrary(); }, [refreshLibrary]);
+
+  const applySaved = (entries: SavedCombinationEntry[]): void => {
+    setSaved(entries.filter((entry) => entry.combination !== null).map((entry) => ({ key: entry.saved.key, name: entry.saved.name, labels: entry.saved.labels, combination: entry.combination! })));
+    setUnavailable(entries.filter((entry) => entry.combination === null));
+  };
+  // Saved setups live in the worker workspace; their numbers are recalculated on load.
+  useEffect(() => {
+    service.listSavedCombinations().then((listed) => applySaved(listed.entries)).catch((caught) => setError(caught instanceof Error ? caught.message : String(caught)));
+  }, [service]);
+  const savedKeyOf = (combination: PortfolioCombination): string | null => saved.find((item) => item.combination.combination_id === combination.combination_id)?.key ?? null;
 
   const byRef = useMemo(() => new Map(library.map((entry) => [entry.dataset_ref, entry])), [library]);
   const assigned = useMemo(() => new Set(tracks.flatMap((track) => track.refs)), [tracks]);
@@ -85,13 +96,31 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
       .catch((caught) => { if (evaluations.isCurrent(token)) setError(caught instanceof Error ? caught.message : String(caught)); });
   }, [saved, service, evaluations]);
 
-  const saveCurrent = (): void => {
+  const saveCurrent = async (): Promise<void> => {
     if (!result) return;
     const name = saveName.trim() || result.labels.join(" + ");
-    const key = result.combination.combination_id;
-    setSaved((current) => [...current.filter((item) => item.key !== key), { key, name, labels: result.labels, combination: result.combination }]);
-    setActiveKey(key);
-    setSaveName("");
+    const combination = result.combination;
+    setError(null);
+    try {
+      const stored = await service.saveCombination(name, result.labels, combination.tracks.map((track) => track.dataset_refs), combination.configuration.starting_capital, combination.configuration.window);
+      applySaved((await service.listSavedCombinations()).entries);
+      setActiveKey(stored.saved.key);
+      setSaveName("");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
+  };
+
+  const removeSaved = async (key: string): Promise<void> => {
+    setError(null);
+    try {
+      await service.deleteSavedCombination(key);
+      setSaved((current) => current.filter((item) => item.key !== key));
+      setUnavailable((current) => current.filter((entry) => entry.saved.key !== key));
+      if (activeKey === key) setActiveKey(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
   };
 
   const runExplore = async (): Promise<void> => {
@@ -120,7 +149,7 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
       const combination = await service.portfolioCombine(tracksToCombine, amount, periodOverride ?? period);
       if (runs.isCurrent(token)) {
         setResult({ combination, labels: labelsToUse });
-        setActiveKey(saved.some((item) => item.key === combination.combination_id) ? combination.combination_id : null);
+        setActiveKey(savedKeyOf(combination));
       }
     } catch (caught) {
       if (runs.isCurrent(token)) { setResult(null); setError(caught instanceof Error ? caught.message : String(caught)); }
@@ -191,10 +220,15 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
 
     {result && <section className="trl-portfolio__save">
       <input value={saveName} placeholder={result.labels.join(" + ")} aria-label="Combination name" onChange={(event) => setSaveName(event.currentTarget.value)} />
-      <button type="button" onClick={saveCurrent}>{saved.some((item) => item.key === result.combination.combination_id) ? "Update saved combination" : "Save combination for comparison"}</button>
+      <button type="button" disabled={busy !== null} onClick={() => void saveCurrent()}>{savedKeyOf(result.combination) ? "Rename saved combination" : "Save combination for comparison"}</button>
     </section>}
     {result && <CombinedDashboard combination={result.combination} labels={result.labels} />}
-    <SavedCombinations saved={saved} evaluation={evaluation} activeKey={activeKey} onOpen={(key) => { const item = saved.find((entry) => entry.key === key); if (item) { setResult({ combination: item.combination, labels: item.labels }); setActiveKey(key); } }} onRemove={(key) => { setSaved((current) => current.filter((item) => item.key !== key)); if (activeKey === key) setActiveKey(null); }} />
+    <SavedCombinations saved={saved} evaluation={evaluation} activeKey={activeKey} onOpen={(key) => { const item = saved.find((entry) => entry.key === key); if (item) { setResult({ combination: item.combination, labels: item.labels }); setActiveKey(key); } }} onRemove={(key) => void removeSaved(key)} />
+    {unavailable.length > 0 && <ul className="trl-batch__findings">{unavailable.map((entry) => <li key={entry.saved.key}>
+      <strong className="is-blocked">Saved combination "{entry.saved.name}" cannot be recalculated</strong>
+      <span>{entry.error?.message ?? "Unknown error."} Its reports may have been removed from the workspace.</span>
+      <button type="button" onClick={() => void removeSaved(entry.saved.key)}>Remove</button>
+    </li>)}</ul>}
     {exploration && <CombinationExplorer exploration={exploration.result} labels={exploration.labels} selectedId={explorerSelected} onPick={(members, id) => { setExplorerSelected(id); void runCombine(members.map((index) => exploration.tracks[index]!), members.map((index) => exploration.labels[index]!), exploration.capital, exploration.period); }} />}
   </section>;
 }

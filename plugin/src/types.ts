@@ -364,6 +364,13 @@ export type PortfolioTrackResult = {
   standalone_metrics: PerformanceMetrics["close_event_metrics"] & { maximum_drawdown_percent: string | null; return_to_drawdown: string | null };
 };
 
+/** A saved combination setup; its result is always recalculated by the Core. */
+export type SavedCombinationEntry = {
+  saved: { key: string; name: string; labels: string[]; tracks: string[][]; starting_capital: string; window: "UNION" | "COMMON"; day_boundary: string; saved_calculation_version: string; saved_version: string };
+  combination: PortfolioCombination | null;
+  error: { code: string; message: string } | null;
+  recalculated: boolean;
+};
 export type PortfolioCombination = {
   combination_id: string;
   calculation_version: string;

@@ -56,6 +56,17 @@ test("service maps application calls to the versioned worker method names and pa
   assert.deepEqual(calls[11]?.params, { dataset_ref: "ds-1", analysis_run_id: "run-1", report_id: "report-1" });
 });
 
+test("saved combinations send the setup only", async () => {
+  const { worker, calls } = recordingWorker();
+  const service = new ResearchService(worker);
+  await service.saveCombination("Both", ["A", "B"], [["mt5:A"], ["mt5:B"]], "1000", "COMMON");
+  await service.listSavedCombinations();
+  await service.deleteSavedCombination("k");
+  assert.deepEqual(calls.map((call) => call.method), ["portfolio.save_combination", "portfolio.list_saved_combinations", "portfolio.delete_saved_combination"]);
+  assert.deepEqual(calls[0]?.params, { name: "Both", labels: ["A", "B"], tracks: [["mt5:A"], ["mt5:B"]], starting_capital: "1000", window: "COMMON" });
+  assert.deepEqual(calls[2]?.params, { key: "k" });
+});
+
 test("R-multiple requests send an amount only for a declared 1R", async () => {
   const { worker, calls } = recordingWorker();
   const service = new ResearchService(worker);

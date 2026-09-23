@@ -1,4 +1,4 @@
-import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, SavedCombinationEntry, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -63,6 +63,19 @@ export class ResearchService {
 
   portfolioCombine(tracks: string[][], startingCapital: string, window: "UNION" | "COMMON"): Promise<PortfolioCombination> {
     return this.worker.request("portfolio.combine", { tracks, starting_capital: startingCapital, window }, LONG_RUNNING_MS);
+  }
+
+  /** Saves the setup only (never numbers); the Core recalculates on every list. */
+  saveCombination(name: string, labels: string[], tracks: string[][], startingCapital: string, window: "UNION" | "COMMON"): Promise<SavedCombinationEntry> {
+    return this.worker.request("portfolio.save_combination", { name, labels, tracks, starting_capital: startingCapital, window }, LONG_RUNNING_MS);
+  }
+
+  listSavedCombinations(): Promise<{ saved_version: string; entries: SavedCombinationEntry[] }> {
+    return this.worker.request("portfolio.list_saved_combinations", {}, LONG_RUNNING_MS);
+  }
+
+  deleteSavedCombination(key: string): Promise<{ key: string; deleted: boolean }> {
+    return this.worker.request("portfolio.delete_saved_combination", { key });
   }
 
   portfolioExplore(tracks: string[][], startingCapital: string, window: "UNION" | "COMMON"): Promise<PortfolioExploration> {

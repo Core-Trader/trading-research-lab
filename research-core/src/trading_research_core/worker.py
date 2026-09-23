@@ -23,7 +23,7 @@ from .monte_carlo import order_permutation_scenario
 from .display_series import close_event_display_series
 from .performance_metrics import performance_metrics
 from .r_metrics import r_multiple_metrics
-from .portfolio_lab import combine as portfolio_combine, explore as portfolio_explore
+from .portfolio_lab import combine as portfolio_combine, delete_saved_combination, explore as portfolio_explore, list_saved_combinations, save_combination
 from .pareto import evaluate as pareto_evaluate
 from .mt5_set import intake_parameter_schema
 from .parameter_exploration import add_single_test, attach_forward, create_study, evaluate as exploration_evaluate, render_choice
@@ -61,6 +61,9 @@ class Worker:
                     "analysis.r_multiple_metrics",
                     "portfolio.combine",
                     "portfolio.explore",
+                    "portfolio.save_combination",
+                    "portfolio.list_saved_combinations",
+                    "portfolio.delete_saved_combination",
                     "analysis.pareto_evaluate",
                     "exploration.intake_parameter_schema",
                     "exploration.create_study",
@@ -115,6 +118,16 @@ class Worker:
         if method == "analysis.basic_statistics":
             dataset_ref = _required_string(params, "dataset_ref")
             return basic_statistics(read_dataset(self.workspace_root, dataset_ref))
+        if method == "portfolio.save_combination":
+            tracks = params.get("tracks")
+            labels = params.get("labels")
+            if not isinstance(tracks, list) or not isinstance(labels, list):
+                raise CoreError("E_REQUEST_INVALID", "params.tracks and params.labels must be lists.")
+            return save_combination(self.workspace_root, _required_string(params, "name"), labels, tracks, _required_string(params, "starting_capital"), str(params.get("window", "UNION")), str(params.get("day_boundary", "REPORT_CLOCK_MIDNIGHT")))
+        if method == "portfolio.list_saved_combinations":
+            return list_saved_combinations(self.workspace_root)
+        if method == "portfolio.delete_saved_combination":
+            return delete_saved_combination(self.workspace_root, _required_string(params, "key"))
         if method == "portfolio.explore":
             tracks = params.get("tracks")
             if not isinstance(tracks, list):
