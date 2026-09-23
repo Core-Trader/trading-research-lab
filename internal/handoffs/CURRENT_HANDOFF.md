@@ -118,11 +118,18 @@ done; see `internal/development-journal/2026-09-23-parameter-exploration-mvp.md`
 pages. Step 6 follow-ups are done: single-test attach (untested default) and
 forward (out-of-sample) pairing with forward axes, hover lines, and compare
 rows; see `internal/development-journal/2026-09-23-forward-pairing.md`.
-**Next exact task:** owner review in Obsidian of the Portfolio and Parameters
-pages; owner decisions pending on multi-XML studies and a neighbourhood
-analysis spec. V2/V3 visuals remain on hold. After that come MVP-C
-narrow-width review and MVP-D release-allowlist preparation per
-`MVP_FAST_TRACK.md`.
+Independent MVP work done on 2026-09-23 (see
+`internal/development-journal/2026-09-23-mvp-c-d-hardening.md`):
+- saved combinations persist as setups that the Core recalculates (PL-007)
+- narrow-width fixes (MVP-C)
+- the release allowlist tool and check (`scripts/build_release.py`), product
+  help in `product-docs/`, and a release-folder worker smoke check (MVP-D)
+**Next exact task:** the owner runs
+`internal/docs/MVP_OWNER_REVIEW_CHECKLIST.md` in Obsidian and answers:
+1. multi-XML studies: defer or build
+2. the neighbourhood-analysis spec
+3. release decisions R-D1 to R-D4 in `MVP_D_RELEASE_READINESS.md`
+Fix the review findings first. V2/V3 visuals remain on hold.
 
 Use `MILESTONE_6_PAIRED_EVIDENCE_COLLECTION_PROTOCOL.md` only when collecting
 future like-for-like optimisation/forward pairs. Automatic selection,
@@ -200,8 +207,8 @@ Set-Location C:\DEV\Trading_Research_Lab\plugin
 | Area | Status | Evidence / limit |
 | --- | --- | --- |
 | Environment | Pass | Python/Node/npm/Git versions and core imports verified on 2026-09-20. |
-| Research Core unit tests | Pass | 167 `pytest` tests passed on 2026-09-23, including parameter exploration (single tests, forward pairing), including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
-| Plugin automated tests | Pass | 62 Node tests passed on 2026-09-23 (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
+| Research Core unit tests | Pass | 173 `pytest` tests passed on 2026-09-23 (plus 4 release-script tests in `scripts/tests`), including saved-combination persistence, parameter exploration (single tests, forward pairing), including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
+| Plugin automated tests | Pass | 63 Node tests passed on 2026-09-23 (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
 | Plugin build | Pass | TypeScript check and esbuild production bundle passed. |
 | Live M0 path | Pass, owner-confirmed | EURUSD import, verified balance curve, generated note, Browse workflow, and diagnostics panel were manually exercised. |
 | Integration/negative coverage | Partial | Live structured unknown-method response was verified; a broader formal integration suite is not yet present. |

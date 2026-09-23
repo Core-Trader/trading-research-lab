@@ -72,7 +72,8 @@ export default class TradingResearchLabPlugin extends Plugin {
 
   private workerWorkspacePath(): string {
     const adapter = this.app.vault.adapter as unknown as { getBasePath(): string };
-    return `${adapter.getBasePath()}\\.trl-data`;
+    // A forward slash also works on Windows; a backslash is a filename character on macOS and Linux.
+    return `${adapter.getBasePath()}/.trl-data`;
   }
 }
 

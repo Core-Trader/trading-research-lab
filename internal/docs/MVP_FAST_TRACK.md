@@ -54,6 +54,14 @@ financial results.
 4. **MVP-D — release readiness:** release allowlists, internal-material
    exclusion, dependency/licence review, and local installation smoke checks.
 
+Status 2026-09-23:
+- MVP-C: the Portfolio and Parameters pages pass the 320 px harness check,
+  and product help exists in `product-docs/`. The owner visual review is
+  pending (`MVP_OWNER_REVIEW_CHECKLIST.md`).
+- MVP-D: the allowlist tooling, release check, and release-folder worker
+  smoke check are done. Licence, Python distribution, notices, and channel
+  decisions are pending (`MVP_D_RELEASE_READINESS.md`).
+
 Dashboard tiers A and B are implemented (2026-09-22). Tier C performance
 metrics are specified in `MVP_TIER_C_PERFORMANCE_METRICS.md` (draft, awaiting
 owner decisions D1–D7; no implementation authorised yet).

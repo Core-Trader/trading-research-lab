@@ -1,4 +1,4 @@
-"""Portfolio Lab v1 combination engine (internal/docs/PORTFOLIO_LAB_SPEC.md).
+"""Portfolio Lab v1 combination engine.
 
 Combines verified close events of several strategy tracks as if they had traded
 concurrently on one account with a user-declared starting capital. Lots are as

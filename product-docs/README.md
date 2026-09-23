@@ -1,6 +1,7 @@
-# Product Documentation
+# Trading Research Lab help
 
-Reserved for user-facing help that may later ship with Trading Research Lab.
+- [INSTALL.md](INSTALL.md): installing the engine and the Obsidian plugin.
+- [MT5_EXPORT_GUIDE.md](MT5_EXPORT_GUIDE.md): which MetaTrader 5 files TRL
+  reads and how to export them.
 
-Do not place private architecture records, development journals, agent handoffs,
-or internal implementation notes here.
+<!-- Maintainers: this folder ships with releases. Keep it to user help only. -->
