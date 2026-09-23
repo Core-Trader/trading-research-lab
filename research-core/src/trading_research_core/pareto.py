@@ -19,7 +19,7 @@ Rules (PARAMETER_EXPLORATION_ARCHITECTURE.md §5–§6):
 
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 from hashlib import sha256
 import json
 from typing import Any
@@ -27,7 +27,7 @@ from typing import Any
 from .errors import CoreError
 
 
-CALCULATION_VERSION = "shared-pareto-1"
+CALCULATION_VERSION = "shared-pareto-2"
 DIRECTIONS = {"MAX", "MIN"}
 OPERATORS = {">=", "<="}
 MAX_OBJECTIVES = 6
@@ -69,11 +69,42 @@ def evaluate(candidates: list[dict[str, Any]], objectives: list[dict[str, str]],
         "candidate_count": len(records),
         "counts": counts,
         "front_count": rank,
+        "frontier_steps": _frontier_steps(candidates, records, objectives),
         "candidates": [
             {"id": record["id"], "status": record["status"], "rank": record["rank"], "dominated_by_count": record["dominated_by_count"], "dominated_by_example": record["dominated_by_example"], "violations": record["violations"]}
             for record in records
         ],
     }
+
+
+def _frontier_steps(candidates: list[dict[str, Any]], records: list[dict[str, Any]], objectives: list[dict[str, str]]) -> dict[str, object] | None:
+    """For one gain objective (MAX) and one cost objective (MIN): frontier points ordered by
+    cost, with each step's extra gain, extra cost, their ratio, and whether the ratio fell
+    compared with the previous step (diminishing returns). None for other objective sets.
+    """
+
+    directions = [objective["direction"] for objective in objectives]
+    if len(objectives) != 2 or sorted(directions) != ["MAX", "MIN"]:
+        return None
+    gain = next(objective["metric"] for objective in objectives if objective["direction"] == "MAX")
+    cost = next(objective["metric"] for objective in objectives if objective["direction"] == "MIN")
+    values = {str(candidate["id"]): candidate["values"] for candidate in candidates}
+    frontier = sorted(
+        ((record["id"], _decimal(values[record["id"]].get(gain)), _decimal(values[record["id"]].get(cost))) for record in records if record["status"] == "PARETO"),
+        key=lambda item: (item[2], -item[1], item[0]),  # type: ignore[operator]
+    )
+    steps: list[dict[str, object]] = []
+    previous_ratio: Decimal | None = None
+    for (from_id, from_gain, from_cost), (to_id, to_gain, to_cost) in zip(frontier, frontier[1:]):
+        step_gain, step_cost = to_gain - from_gain, to_cost - from_cost  # type: ignore[operator]
+        ratio = (step_gain / step_cost).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_EVEN) if step_cost > 0 else None
+        steps.append({
+            "from_id": from_id, "to_id": to_id, "step_gain": format(step_gain, "f"), "step_cost": format(step_cost, "f"),
+            "ratio": None if ratio is None else format(ratio, "f"),
+            "diminishing": None if ratio is None or previous_ratio is None else ratio < previous_ratio,
+        })
+        previous_ratio = ratio
+    return {"gain_metric": gain, "cost_metric": cost, "points": [item[0] for item in frontier], "steps": steps}
 
 
 def _validate(candidates: list[dict[str, Any]], objectives: list[dict[str, str]], constraints: list[dict[str, str]]) -> None:

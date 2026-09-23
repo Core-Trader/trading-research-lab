@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -133,3 +134,51 @@ def test_path_drawdowns_match_values_pinned_from_calculation_version_2(tmp_path:
     import pyarrow.parquet as pq
     table = next((tmp_path / "datasets").rglob("order-permutation-paths.parquet"))
     assert [row["maximum_drawdown"] for row in pq.read_table(table).to_pylist()] == ["4", "5", "9", "7", "5", "5", "7", "4", "7", "4", "7", "4"]
+
+
+def _stored_path_drawdowns(workspace: Path, result: dict[str, object]) -> list[Decimal]:
+    import pyarrow.parquet as pq
+    source = str(result["dataset_ref"]).removeprefix("mt5:")
+    table = workspace / "datasets" / source / "analysis" / str(result["analysis_id"]) / "order-permutation-paths.parquet"
+    return [Decimal(row["maximum_drawdown"]) for row in pq.read_table(table).to_pylist()]
+
+
+def test_historical_order_is_ranked_against_the_stored_paths(tmp_path: Path) -> None:
+    # Historical order 10, -30, 20: the running total goes 10, -20, 0, so the maximum drawdown is 30.
+    dataset_ref = str(write_dataset(tmp_path, _imported(["10", "-30", "20"]))["dataset_ref"])
+    result = order_permutation_scenario(tmp_path, dataset_ref, "7", 400)
+    historical = result["historical"]
+    assert historical["maximum_drawdown"] == "30"
+    stored = _stored_path_drawdowns(tmp_path, result)
+    assert Decimal(historical["rank_percent"]) == Decimal(sum(1 for value in stored if value < 30)) / Decimal(len(stored)) * 100
+    median = Decimal(result["drawdown_summary"]["p50"])
+    assert historical["vs_median"] == ("DEEPER" if Decimal(30) > median else "SHALLOWER" if Decimal(30) < median else "EQUAL")
+
+
+def test_fan_bands_are_ordered_start_at_zero_and_end_at_the_total(tmp_path: Path) -> None:
+    dataset_ref = str(write_dataset(tmp_path, _imported())["dataset_ref"])
+    result = order_permutation_scenario(tmp_path, dataset_ref, "20260921", 300)
+    bands = result["fan_bands"]
+    assert len(bands["p05"]) == len(bands["p50"]) == len(bands["p95"]) == len(bands["event_indices"])
+    assert all(Decimal(low) <= Decimal(mid) <= Decimal(high) for low, mid, high in zip(bands["p05"], bands["p50"], bands["p95"]))
+    assert (bands["p05"][0], bands["p95"][0]) == ("0", "0")
+    total = Decimal(result["invariant_final_pnl"])
+    assert Decimal(bands["p05"][-1]) == Decimal(bands["p95"][-1]) == total  # every path ends at the same total
+    widths = [Decimal(high) - Decimal(low) for low, high in zip(bands["p05"], bands["p95"])]
+    assert Decimal(bands["widest_band"]) == max(widths)
+    assert bands["widest_at_event"] == bands["event_indices"][widths.index(max(widths))]
+
+
+def test_drawdowns_as_a_share_of_the_opening_balance(tmp_path: Path) -> None:
+    without = order_permutation_scenario(tmp_path / "a", str(write_dataset(tmp_path / "a", _imported())["dataset_ref"]), "5", 50)
+    assert without["account"] == {"opening_balance": None, "p50_percent_of_opening": None, "p95_percent_of_opening": None}
+    imported = _imported()
+    opening_event = {"source_sequence": 0, "source_timestamp": "2026-01-01T00:00:00", "event_type": "OPENING_BALANCE", "side": None, "symbol": None, "volume": None, "source_profit": "1000", "source_commission": "0", "source_swap": "0", "reported_balance": "1000", "source_deal_id": "0"}
+    imported["events"] = [opening_event, *imported["events"]]  # type: ignore[index]
+    dataset_ref = str(write_dataset(tmp_path / "b", imported)["dataset_ref"])
+    result = order_permutation_scenario(tmp_path / "b", dataset_ref, "5", 200)
+    account = result["account"]
+    opening = Decimal(account["opening_balance"])
+    assert opening == 1000
+    expected = (Decimal(result["drawdown_summary"]["p95"]) / opening * 100).quantize(Decimal("0.00000001"))
+    assert Decimal(account["p95_percent_of_opening"]) == expected

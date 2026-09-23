@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from decimal import Decimal, ROUND_CEILING
+from array import array
+from decimal import Decimal, ROUND_CEILING, ROUND_HALF_EVEN
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -15,7 +16,7 @@ from .trade_analysis import close_event_summary, write_trade_artifact
 
 
 POLICY_ID = "monte-carlo-close-event-order-permutation-v1"
-CALCULATION_VERSION = "m6-monte-carlo-order-permutation-3"
+CALCULATION_VERSION = "m6-monte-carlo-order-permutation-4"
 PRNG_ID = "PCG32-v1"
 MAX_PATH_COUNT = 10_000
 MAX_DRAWDOWN_HISTOGRAM_BINS = 20
@@ -58,10 +59,16 @@ def order_permutation_scenario(workspace_root: Path, dataset_ref: str, seed: str
         "drawdown": "maximum decline from cumulative path high-water mark",
         "quantiles": "nearest-rank p05, p50, p95; percentile table p50, p80, p90, p95, p99",
         "path_fan": f"historical path plus first {MAX_FAN_PATHS} generated paths; EVEN_INDEX_SAMPLE_V1 above {MAX_FAN_POINTS} points",
+        "fan_bands": "nearest-rank p05, p50, p95 of cumulative P/L across all paths at each sampled point",
+        "historical_rank": "share of generated paths with a strictly smaller maximum drawdown than the historical order",
     }
     configuration_hash = _configuration_hash(configuration)
     rng = _Pcg32(normalized_seed)
     sample_indices = _fan_sample_indices(len(population) + 1)
+    # Exact scaled integers (not Decimal objects) keep every path's sampled points compact for the bands.
+    scale = 10 ** max(0, max(-int(value.as_tuple().exponent) for value in population))
+    band_columns = [array("q") for _ in sample_indices]
+    sample_position = {index: position for position, index in enumerate(sample_indices)}
     fan_paths: list[dict[str, object]] = []
     rows: list[dict[str, object]] = []
     for path_index in range(1, path_count + 1):
@@ -76,6 +83,8 @@ def order_permutation_scenario(workspace_root: Path, dataset_ref: str, seed: str
             high_water = max(high_water, running)
             maximum_drawdown = max(maximum_drawdown, high_water - running)
             cumulative.append(running)
+        for index, position in sample_position.items():
+            band_columns[position].append(int(cumulative[index] * scale))
         if path_index <= MAX_FAN_PATHS:
             fan_paths.append({"path_index": path_index, "values": [_format(cumulative[index]) for index in sample_indices]})
         if running != source_total:
@@ -88,6 +97,21 @@ def order_permutation_scenario(workspace_root: Path, dataset_ref: str, seed: str
 
     drawdowns = sorted(_decimal(row["maximum_drawdown"]) for row in rows)
     drawdown_histogram = _drawdown_histogram(drawdowns)
+    median = _nearest_rank(drawdowns, Decimal("0.50"))
+    p95 = _nearest_rank(drawdowns, Decimal("0.95"))
+    historical_drawdown = _maximum_drawdown(population)
+    shallower = sum(1 for value in drawdowns if value < historical_drawdown)
+    bands = {"p05": [], "p50": [], "p95": []}
+    widest_band, widest_at_event = Decimal("-1"), 0
+    for position, column in enumerate(band_columns):
+        ordered = sorted(column)
+        low, middle, high = (Decimal(_nearest_rank_int(ordered, level)) / scale for level in (Decimal("0.05"), Decimal("0.50"), Decimal("0.95")))
+        bands["p05"].append(_format(low))
+        bands["p50"].append(_format(middle))
+        bands["p95"].append(_format(high))
+        if high - low > widest_band:
+            widest_band, widest_at_event = high - low, sample_indices[position]
+    opening = _opening_balance(dataset)
     analysis_id = stable_uuid("m6-monte-carlo", dataset_ref, POLICY_ID, configuration_hash, CALCULATION_VERSION, CORE_VERSION)
     root = workspace_root.resolve()
     source_sha256 = _source_sha256(dataset_ref)
@@ -137,6 +161,17 @@ def order_permutation_scenario(workspace_root: Path, dataset_ref: str, seed: str
             "event_indices": sample_indices,
             "historical": [_format(value) for value in _sampled_cumulative(population, sample_indices)],
             "paths": fan_paths,
+        },
+        "historical": {
+            "maximum_drawdown": _format(historical_drawdown),
+            "rank_percent": _q8(Decimal(shallower) / Decimal(len(drawdowns)) * 100),
+            "vs_median": "DEEPER" if historical_drawdown > median else "SHALLOWER" if historical_drawdown < median else "EQUAL",
+        },
+        "fan_bands": {**bands, "event_indices": sample_indices, "widest_band": _format(widest_band), "widest_at_event": widest_at_event},
+        "account": {
+            "opening_balance": None if opening is None else _format(opening),
+            "p50_percent_of_opening": None if opening is None else _q8(median / opening * 100),
+            "p95_percent_of_opening": None if opening is None else _q8(p95 / opening * 100),
         },
         "least_drawdown_path": {"path_index": int(lowest["path_index"]), "maximum_drawdown": str(lowest["maximum_drawdown"])},
         "worst_drawdown_path": {"path_index": int(highest["path_index"]), "maximum_drawdown": str(highest["maximum_drawdown"])},
@@ -220,6 +255,34 @@ def _sampled_cumulative(values: list[Decimal], sample_indices: list[int]) -> lis
     for value in values:
         cumulative.append(cumulative[-1] + value)
     return [cumulative[index] for index in sample_indices]
+
+
+def _maximum_drawdown(values: list[Decimal]) -> Decimal:
+    running = high_water = maximum = Decimal("0")
+    for value in values:
+        running += value
+        high_water = max(high_water, running)
+        maximum = max(maximum, high_water - running)
+    return maximum
+
+
+def _nearest_rank_int(values: list[int], percentile: Decimal) -> int:
+    rank = int((Decimal(len(values)) * percentile).to_integral_value(rounding=ROUND_CEILING))
+    return values[max(0, rank - 1)]
+
+
+def _opening_balance(dataset: dict[str, object]) -> Decimal | None:
+    """The report's opening balance (its first, balance event), used to express drawdowns as a share."""
+
+    events = dataset.get("events")
+    opening = next((event for event in events if isinstance(event, dict) and event.get("event_type") == "OPENING_BALANCE"), None) if isinstance(events, list) else None
+    raw = None if opening is None else opening.get("reported_balance")
+    value = None if raw in (None, "") else _decimal(raw)
+    return value if value is not None and value > 0 else None
+
+
+def _q8(value: Decimal) -> str:
+    return format(value.quantize(Decimal("0.00000001"), rounding=ROUND_HALF_EVEN), "f")
 
 
 def _nearest_rank(values: list[Decimal], percentile: Decimal) -> Decimal:

@@ -175,6 +175,7 @@ def explore(workspace_root: Path, tracks: list[list[str]], starting_capital: str
         "subset_count": len(subsets),
         "counts": analysis["counts"],
         "front_count": analysis["front_count"],
+        "frontier_steps": analysis["frontier_steps"],
         "subsets": [{**row, "pareto": {key: by_id[row["id"]][key] for key in ("status", "rank", "dominated_by_count", "dominated_by_example", "violations")}} for row in subsets],
         "warnings": [
             "Every subset is shown; the Pareto frontier marks trade-offs that no other subset beats on all chosen objectives. It is not a recommendation.",

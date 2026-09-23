@@ -171,3 +171,20 @@ def test_candidate_limit() -> None:
     with pytest.raises(CoreError) as error:
         evaluate([{"id": str(index), "values": {"profit": "1", "dd": "1"}} for index in range(pareto.MAX_CANDIDATES + 1)], PROFIT_UP_DD_DOWN)
     assert error.value.code == "E_PARETO_TOO_MANY_CANDIDATES"
+
+
+def test_frontier_steps_order_by_cost_with_ratios_and_diminishing_returns() -> None:
+    from trading_research_core.pareto import evaluate
+    candidates = [
+        {"id": "a", "values": {"pnl": "100", "dd": "10"}},
+        {"id": "b", "values": {"pnl": "300", "dd": "20"}},   # +200 for +10: ratio 20
+        {"id": "c", "values": {"pnl": "350", "dd": "30"}},   # +50 for +10: ratio 5 (diminishing)
+        {"id": "d", "values": {"pnl": "90", "dd": "25"}},    # dominated
+    ]
+    steps = evaluate(candidates, [{"metric": "pnl", "direction": "MAX"}, {"metric": "dd", "direction": "MIN"}])["frontier_steps"]
+    assert steps["points"] == ["a", "b", "c"] and (steps["gain_metric"], steps["cost_metric"]) == ("pnl", "dd")
+    assert [(step["from_id"], step["to_id"], step["step_gain"], step["step_cost"], step["ratio"], step["diminishing"]) for step in steps["steps"]] == [
+        ("a", "b", "200", "10", "20.00000000", None),
+        ("b", "c", "50", "10", "5.00000000", True),
+    ]
+    assert evaluate(candidates, [{"metric": "pnl", "direction": "MAX"}])["frontier_steps"] is None

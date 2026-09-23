@@ -26,7 +26,7 @@ from .errors import CoreError
 
 FORMAT = "trl-equity-log-1"
 ADAPTER_VERSION = "mt5-equity-log-adapter-1"
-METRICS_VERSION = "mvp-equity-metrics-1"
+METRICS_VERSION = "mvp-equity-metrics-2"
 COLUMNS = ["kind", "time", "balance", "equity_close", "equity_min", "equity_min_time", "equity_max", "margin_max", "positions_max", "deals_total"]
 KINDS = {"START", "INTERVAL", "BALANCE", "END"}
 MAX_LOG_BYTES = 500 * 1024 * 1024
@@ -206,9 +206,15 @@ def equity_metrics(workspace_root: Path, dataset_ref: str) -> dict[str, object]:
         if Decimal(item["loss"]) > Decimal(worst["loss"]):
             worst = item
     drawdown = equity_drawdown(rows)
+    from .performance_metrics import performance_metrics
+
+    balance_drawdown = Decimal(str(performance_metrics(read_dataset(root, dataset_ref))["balance_metrics"]["maximum_drawdown"]))
     return {
         "dataset_ref": dataset_ref,
         "calculation_version": METRICS_VERSION,
+        "balance_maximum_drawdown": _fmt(balance_drawdown),
+        "equity_to_balance_drawdown_ratio": _q(drawdown["maximum"] / balance_drawdown) if balance_drawdown > 0 else None,
+        "equity_deeper_than_balance": drawdown["maximum"] > balance_drawdown,
         "equity_source": "MT5_TESTER_LOGGED",
         "day_boundary": "REPORT_CLOCK_MIDNIGHT",
         "start_of_day_reference": "HIGHER_OF_BALANCE_AND_EQUITY_AT_PREVIOUS_ROW",

@@ -82,6 +82,9 @@ def test_equity_metrics_daily_loss_uses_previous_sample_reference(tmp_path: Path
     assert by_day["2026-01-03"]["loss"] == "100.00"  # a realised loss counts toward the daily loss too
     assert metrics["worst_day"]["date"] == "2026-01-02" and metrics["worst_day"]["loss_percent_of_initial"] == "1.00000000"  # ties: earliest day
     assert metrics["maximum_equity_drawdown"] == "150.00" and metrics["row_count"] == 8 and len(metrics["display_series"]) == 8
+    # The report's realised-balance drawdown is 10000 -> 9899.00 = 101.00; the ratio is computed here, not in the plugin.
+    assert metrics["balance_maximum_drawdown"] == "101.00"
+    assert metrics["equity_to_balance_drawdown_ratio"] == "1.48514851" and metrics["equity_deeper_than_balance"] is True
 
 
 def test_display_series_buckets_keep_extremes(tmp_path: Path) -> None:
