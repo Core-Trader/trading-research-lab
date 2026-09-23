@@ -124,12 +124,13 @@ Independent MVP work done on 2026-09-23 (see
 - narrow-width fixes (MVP-C)
 - the release allowlist tool and check (`scripts/build_release.py`), product
   help in `product-docs/`, and a release-folder worker smoke check (MVP-D)
-**Next exact task:** the owner runs
-`internal/docs/MVP_OWNER_REVIEW_CHECKLIST.md` in Obsidian and answers:
-1. multi-XML studies: defer or build
-2. the neighbourhood-analysis spec
-3. release decisions R-D1 to R-D4 in `MVP_D_RELEASE_READINESS.md`
-Fix the review findings first. V2/V3 visuals remain on hold.
+The owner review passed on 2026-09-23. Tracks are now numbered and the
+stagnation band has a legend. Multi-XML studies (PX-008), the release
+decisions R-D1 to R-D4, and the clean-machine install check are deferred.
+**Next exact task:** the owner decides N1–N7 in
+`internal/docs/PARAMETER_NEIGHBOURHOOD_SPEC.md`. Once approved, write its
+fixture plan and implement `neighbourhood.py` and the Parameters-page panel.
+V2/V3 visuals remain on hold.
 
 Use `MILESTONE_6_PAIRED_EVIDENCE_COLLECTION_PROTOCOL.md` only when collecting
 future like-for-like optimisation/forward pairs. Automatic selection,

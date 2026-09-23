@@ -32,6 +32,10 @@
 | PL-005 | v1 combines trades as reported: no weights, lot rescaling, or margin simulation | Approved 2026-09-22 |
 | PL-006 | An equity evidence source (MQL5 tester logger + adapter) precedes the prop-firm module; any realised-balance-only prop check is labelled an optimistic preview | Approved 2026-09-22 |
 | PL-007 | Saved Portfolio combinations persist as setups only (tracks, capital, period, name) in the worker workspace `portfolio-combinations/`; results are always recalculated by the Core on load, and an unrecalculable setup is shown with its error | Implemented 2026-09-23; owner review pending |
+| MVP-R1 | Owner review of the Portfolio and Parameters pages: OK. Follow-ups: numbered tracks (done); the stagnation shading explained with a visible legend (done) | Owner 2026-09-23 |
+| PX-008 | Multi-XML parameter studies are deferred (POST-MVP); collect forward data with MT5's built-in forward period instead | Owner 2026-09-23 |
+| PX-009 | Draft the neighbourhood-analysis spec (`PARAMETER_NEIGHBOURHOOD_SPEC.md`, decisions N1–N7 pending) | Owner 2026-09-23 |
+| R-D | Release decisions R-D1 to R-D4 (licence, Python distribution, notices, channel) and the clean-machine install check are deferred | Owner 2026-09-23 |
 | PX-001 | Parameter sets may carry descriptive Pareto status (feasibility, rank, dominated-by); the owner chooses; no automatic winner. Amends the 2026-09-22 selection deferral along its option 3 | Approved 2026-09-23 |
 | PX-002 | Parameter exploration is an Experiment type under a Strategy, with a Core module and a shared `pareto` layer (also used by Portfolio Lab) | Approved 2026-09-23 |
 | PX-003 | MVP objectives use MT5-reported metrics (Profit, Equity DD %, Profit Factor, Recovery Factor, Expected Payoff, MT5 Sharpe, Trades); default axes Equity DD % × Profit | Approved 2026-09-23 |

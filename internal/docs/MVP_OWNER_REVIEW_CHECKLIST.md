@@ -1,5 +1,17 @@
 # MVP owner review checklist: Portfolio and Parameters pages
 
+**Result (2026-09-23):**
+- The owner reviewed the pages: OK.
+- Feedback:
+  - Number the tracks in "2. Tracks" (done).
+  - Asked whether the shaded chart area is the longest stagnation. It is; a
+    visible legend was added.
+- Decisions:
+  - multi-XML studies: deferred
+  - neighbourhood analysis: spec drafted
+  - release decisions R-D1 to R-D4: deferred
+  - the clean-machine install check: deferred
+
 **Purpose:** a single guided review in Obsidian of the work only verified in
 the development harness so far:
 
