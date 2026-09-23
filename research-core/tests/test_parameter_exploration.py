@@ -333,3 +333,43 @@ def test_blocked_forward_is_not_used(tmp_path: Path) -> None:
     assert blocked["status"] == "BLOCKED" and blocked["findings"][0]["code"] == "CONTEXT_DIFFERS"
     result = evaluate(tmp_path / "workspace", str(study["study_ref"]), [{"metric": "net_profit", "direction": "MAX"}])
     assert result["forward"] is None and all(candidate["forward"] is None for candidate in result["candidates"])
+
+
+def _mt5_xml(title: str, header: list[str], rows: list[list[str]]) -> str:
+    cells = lambda values: "".join(f'<Cell><Data ss:Type="String">{value}</Data></Cell>' for value in values)
+    body = "".join(f"<Row>{cells(row)}</Row>" for row in [header, *rows])
+    return f'<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office"><o:DocumentProperties><o:Title>{title}</o:Title><o:Deposit>10000 USD</o:Deposit></o:DocumentProperties><Worksheet ss:Name="Tester Optimizator Results"><Table>{body}</Table></Worksheet></Workbook>'
+
+
+STATS = ["Pass", "Result", "Profit", "Expected Payoff", "Profit Factor", "Recovery Factor", "Sharpe Ratio", "Custom", "Equity DD %", "Trades"]
+MA_TITLE = "Moving Average EURUSD,H1 2022.01.01-2024.12.31"  # real corpus layout: EA name with a space
+
+
+def test_inputs_without_inp_prefix_and_spaced_ea_names(tmp_path: Path) -> None:
+    from trading_research_core.parameter_exploration import _TITLE
+    xml = tmp_path / "ma.xml"
+    xml.write_text(_mt5_xml(MA_TITLE, [*STATS, "MovingPeriod", "MovingShift"], [["1", "10010", "10", "0.1", "1.1", "0.2", "0.1", "0", "5", "100", "8", "1"]]), encoding="utf-8")
+    grid = intake_parameter_grid(tmp_path / "ws", str(xml), "Every tick based on real ticks")
+    assert grid["parameter_columns"] == ["MovingPeriod", "MovingShift"] and "Trades" in grid["metric_columns"]
+    title = _TITLE.match(MA_TITLE)
+    assert title and (title.group("expert"), title.group("symbol"), title.group("timeframe"), title.group("start")) == ("Moving Average", "EURUSD", "H1", "2022.01.01")
+    assert _TITLE.match("EA_DCA_CENT_V1 EURUSD,H4 2020.01.01-2024.12.31").group("expert") == "EA_DCA_CENT_V1"
+
+
+def test_built_in_forward_export_is_not_an_overlap(tmp_path: Path) -> None:
+    from trading_research_core.parameter_exploration import attach_forward
+    workspace = tmp_path / "ws"
+    rows = [["1", "10010", "10", "0.1", "1.1", "0.2", "0.1", "0", "5", "100", "8", "1"], ["2", "9990", "-10", "-0.1", "0.9", "-0.2", "-0.1", "0", "6", "90", "12", "3"]]
+    in_xml, fw_xml = tmp_path / "is.xml", tmp_path / "is.forward.xml"
+    in_xml.write_text(_mt5_xml(MA_TITLE, [*STATS, "MovingPeriod", "MovingShift"], rows), encoding="utf-8")
+    forward_header = ["Pass", "Forward Result", "Back Result", *STATS[2:], "MovingPeriod", "MovingShift"]
+    fw_xml.write_text(_mt5_xml(MA_TITLE, forward_header, [["7", "10005", "10010", "5", "0.1", "1.1", "0.2", "0.1", "0", "4", "40", "8", "1"]]), encoding="utf-8")
+    study = create_study(workspace, str(intake_parameter_grid(workspace, str(in_xml), "m")["optimisation_ref"]))
+    attached = attach_forward(workspace, str(study["study_ref"]), str(intake_parameter_grid(workspace, str(fw_xml), "m")["optimisation_ref"]))
+    assert attached["status"] == "READY" and [finding["code"] for finding in attached["findings"]] == ["BUILT_IN_FORWARD"]
+    assert attached["period"] == {"in_sample": None, "forward": None, "whole_range": ["2022.01.01", "2024.12.31"], "source": "MT5_BUILT_IN_FORWARD"}
+    assert attached["matched_count"] == 1
+    separate = tmp_path / "separate.xml"  # a separate export with the same title and no Forward Result column still warns
+    separate.write_text(_mt5_xml(MA_TITLE, [*STATS, "MovingPeriod", "MovingShift"], rows[:1]), encoding="utf-8")
+    again = attach_forward(workspace, str(study["study_ref"]), str(intake_parameter_grid(workspace, str(separate), "m")["optimisation_ref"]))
+    assert [finding["code"] for finding in again["findings"]] == ["PERIODS_OVERLAP"]

@@ -240,7 +240,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
       </div>
       {forward && <ul className="trl-batch__findings"><li>
         {forward.status !== "READY" && <DismissButton onDismiss={() => setForward(null)} />}
-        <strong className={forward.status === "READY" ? "is-note" : "is-blocked"}>Forward results{forward.period ? ` ${forward.period.forward[0]}–${forward.period.forward[1]}` : ""}: {forward.status === "READY" ? `${forward.matched_count} of the tested sets paired` : "not attached"}</strong>
+        <strong className={forward.status === "READY" ? "is-note" : "is-blocked"}>Forward results{forward.period?.source === "MT5_TITLE" ? ` ${forward.period.forward[0]}–${forward.period.forward[1]}` : forward.period?.source === "MT5_BUILT_IN_FORWARD" ? ` (MT5 built-in forward, ${forward.period.whole_range[0]}–${forward.period.whole_range[1]})` : ""}: {forward.status === "READY" ? `${forward.matched_count} of the tested sets paired` : "not attached"}</strong>
         {forward.status === "READY" && <span>{forward.in_sample_only_count} in-sample sets have no forward run; {forward.forward_only_count} forward sets were not in the in-sample results.</span>}
         {forward.findings.map((finding) => <span key={finding.code}>{SEVERITY[finding.severity]}: {finding.message}</span>)}
       </li></ul>}

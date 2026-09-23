@@ -155,7 +155,7 @@ def evaluate(workspace_root: Path, study_ref: str, objectives: list[dict[str, st
     }
 
 
-_TITLE = __import__("re").compile(r"^(?P<expert>\S+)\s+(?P<symbol>[^,\s]+),(?P<timeframe>\S+)\s+(?P<start>\d{4}\.\d{2}\.\d{2})-(?P<end>\d{4}\.\d{2}\.\d{2})")
+_TITLE = __import__("re").compile(r"^(?P<expert>.+?)\s+(?P<symbol>[^,\s]+),(?P<timeframe>\S+)\s+(?P<start>\d{4}\.\d{2}\.\d{2})-(?P<end>\d{4}\.\d{2}\.\d{2})")
 
 
 def add_single_test(workspace_root: Path, study_ref: str, dataset_ref: str) -> dict[str, object]:
@@ -251,7 +251,14 @@ def attach_forward(workspace_root: Path, study_ref: str, forward_optimisation_re
     in_title = _TITLE.match(study["context"].get("title") or "")
     out_title = _TITLE.match(manifest.get("report_metadata", {}).get("Title") or "")
     period = None
-    if in_title and out_title:
+    built_in = "Forward Result" in manifest.get("headers", manifest.get("metric_columns", []))
+    if in_title and out_title and built_in and (in_title.group("start"), in_title.group("end")) == (out_title.group("start"), out_title.group("end")):
+        differing = [key for key in ("expert", "symbol", "timeframe") if in_title.group(key) != out_title.group(key)]
+        if differing:
+            findings.append(_finding("BLOCKED", "CONTEXT_DIFFERS", "The forward export is for a different " + ", ".join(differing) + ".", differing))
+        period = {"in_sample": None, "forward": None, "whole_range": [in_title.group("start"), in_title.group("end")], "source": "MT5_BUILT_IN_FORWARD"}
+        findings.append(_finding("NOTE", "BUILT_IN_FORWARD", f"MT5 built-in forward test over {in_title.group('start')}–{in_title.group('end')}: MT5 split the period itself, so in-sample and forward do not overlap. The split date is not written in the exports.", []))
+    elif in_title and out_title:
         differing = [key for key in ("expert", "symbol", "timeframe") if in_title.group(key) != out_title.group(key)]
         if differing:
             findings.append(_finding("BLOCKED", "CONTEXT_DIFFERS", "The forward export is for a different " + ", ".join(differing) + ".", differing))

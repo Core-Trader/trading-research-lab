@@ -497,7 +497,8 @@ export type NeighbourhoodRunAttachment = { optimisation_ref: string; box_id: str
 export type ForwardSummary = {
   forward_optimisation_ref: string;
   forward_title: string | null;
-  period: { in_sample: [string, string]; forward: [string, string]; source: "MT5_TITLE" } | null;
+  /** From the two export titles, or MT5's built-in forward split (whole range only; the split date is not exported). */
+  period: { in_sample: [string, string]; forward: [string, string]; source: "MT5_TITLE" } | { in_sample: null; forward: null; whole_range: [string, string]; source: "MT5_BUILT_IN_FORWARD" } | null;
   metrics: StudyMetric[];
   matched_count: number;
   in_sample_only_count: number;

@@ -160,6 +160,14 @@ def _pair_limitations() -> list[str]:
     return ["Rows are paired source evidence only; TRL does not recompute MT5 metrics.", "No ranking, selection, threshold, robustness score, recommendation, or .set export is available.", "Date ranges and modelling mode are USER_SUPPLIED context; XML source values remain unchanged."]
 
 
+# Columns MT5 writes in optimisation and forward-results exports (English terminal).
+# Every other column is an EA input; input names follow no naming convention.
+MT5_STATISTIC_COLUMNS = frozenset({
+    "Pass", "Result", "Forward Result", "Back Result", "Profit", "Expected Payoff", "Profit Factor",
+    "Recovery Factor", "Sharpe Ratio", "Custom", "Equity DD %", "Trades", "Complex Criterion",
+})
+
+
 def _parse(source: Path, source_hash: str) -> dict[str, Any]:
     try:
         root = ET.fromstring(source.read_bytes())
@@ -175,7 +183,7 @@ def _parse(source: Path, source_hash: str) -> dict[str, Any]:
     headers = [_cell_text(cell, ns) for cell in rows[0].findall("./ss:Cell", ns)]
     if not headers or headers[0] != "Pass" or len(set(headers)) != len(headers):
         raise CoreError("E_OPTIMISATION_LAYOUT_UNSUPPORTED", "The MT5 optimisation header must begin with a unique Pass column.")
-    parameter_columns = [header for header in headers if header.startswith("Inp")]
+    parameter_columns = [header for header in headers if header not in MT5_STATISTIC_COLUMNS]
     if not parameter_columns:
         raise CoreError("E_OPTIMISATION_NOT_PARAMETER_GRID", "No MT5 EA input columns were found; this is not a parameter-grid export.")
     output_rows: list[dict[str, str]] = []
