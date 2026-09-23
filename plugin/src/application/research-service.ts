@@ -1,4 +1,4 @@
-import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -56,6 +56,10 @@ export class ResearchService {
   /** Permanently deletes TRL's copy of a report; `dependents` DELETE also removes TRL-managed items that use it. */
   deleteDataset(datasetRef: string, dependents: "DELETE" | "KEEP"): Promise<DatasetDeletionResult> {
     return this.worker.request("dataset.delete", { dataset_ref: datasetRef, dependents });
+  }
+
+  getEvidence(datasetRef: string): Promise<DatasetEvidence> {
+    return this.worker.request("dataset.get_evidence", { dataset_ref: datasetRef });
   }
 
   verifyRawSnapshot(datasetRef: string): Promise<{ verified: boolean; expected_sha256: string; observed_sha256: string }> {
@@ -160,6 +164,11 @@ export class ResearchService {
   /** Links a TRL tester equity log to a report; the Core refuses a log from another run. */
   attachEquityLog(datasetRef: string, sourcePath: string, modellingMode: string): Promise<EquityLogAttachment> {
     return this.worker.request("dataset.attach_equity_log", { dataset_ref: datasetRef, source_path: sourcePath, modelling_mode: modellingMode }, LONG_RUNNING_MS);
+  }
+
+  /** Compares a .set with the inputs the report actually ran with. */
+  checkSet(datasetRef: string, sourcePath: string): Promise<SetCheckResult> {
+    return this.worker.request("dataset.check_set", { dataset_ref: datasetRef, source_path: sourcePath }, LONG_RUNNING_MS);
   }
 
   equityMetrics(datasetRef: string): Promise<EquityMetrics> {

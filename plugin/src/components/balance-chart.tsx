@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import type { StatisticsResult } from "../types";
 import { lineGeometry, nearestIndex } from "./chart-geometry";
 import { formatTimestamp } from "./display-format";
+import { ChartFrame } from "./chart-frame";
 
 type BalancePoint = StatisticsResult["balance_curve"]["points"][number];
 
@@ -45,7 +46,8 @@ export function BalanceChart({ points, currency, band }: { points: BalancePoint[
     event.preventDefault();
   };
 
-  return <figure className="trl-balance-chart">
+  return <ChartFrame title="Balance">
+  <figure className="trl-balance-chart">
     <div className="trl-balance-chart__body">
       <div className="trl-balance-chart__y-axis" aria-hidden="true">
         <span>{high.balance}</span>
@@ -80,5 +82,6 @@ export function BalanceChart({ points, currency, band }: { points: BalancePoint[
     {bandBox && band && <p className="trl-balance-chart__legend"><span className="trl-balance-chart__swatch" aria-hidden="true" /> Shaded: {band.label}, the longest stretch without a new balance high</p>}
     <div className="trl-balance-chart__x-axis" aria-hidden="true"><span>{formatTimestamp(first.timestamp)}</span><span>{formatTimestamp(last.timestamp)}</span></div>
     <figcaption className="trl-m0__note">Reported balance ({unit}) in source event order; dashed line = opening balance {first.balance}. Hover or use arrow keys for values. Realised balance only, not intratrade equity.</figcaption>
-  </figure>;
+  </figure>
+  </ChartFrame>;
 }

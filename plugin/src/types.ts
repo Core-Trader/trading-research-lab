@@ -25,6 +25,11 @@ export type ImportResult = {
 };
 
 export type DatasetEvidence = {
+  /** Companion evidence recorded on the registry entry. */
+  source_checks?: string[];
+  equity?: EquityEvidence;
+  set_check?: { schema_ref: string; set_filename: string; status: "MATCH" | "DIFFERS"; compared: number; difference_count: number };
+  archived?: boolean;
   dataset_ref: string;
   dataset_id: string;
   source_import_id: string;
@@ -375,6 +380,8 @@ export type PortfolioTrackResult = {
 
 export type DatasetDeletionPreview = { dataset_ref: string; dataset_id: string | null; original_filename: string; archived: boolean; bytes: number; dependents: Array<{ kind: "SAVED_COMBINATION" | "PARAMETER_STUDY_SINGLE_TEST" | "SEQUENTIAL_BATCH" | "REPORT_REVISIONS"; name: string }>; notes: string[] };
 export type DatasetDeletionResult = { dataset_ref: string; dataset_id: string | null; dependents_mode: "DELETE" | "KEEP"; dependents: Array<{ kind: string; name: string }>; kept_dependents: Array<{ kind: string; name: string }>; removed: string[]; deleted_at_utc: string };
+/** A .set compared with the inputs the report actually ran with (playbook §3.2). */
+export type SetCheckResult = { dataset_ref: string; schema_ref: string; set_filename: string; status: "MATCH" | "DIFFERS"; compared: number; differences: Array<{ name: string; report_value: string; set_value: string }>; only_in_set: string[]; only_in_report: string[]; notes: string[] };
 export type DatasetArchiveResult = { dataset_ref: string; archived: boolean; used_by: Array<{ kind: "SAVED_COMBINATION" | "PARAMETER_STUDY_SINGLE_TEST"; name: string }> };
 /** A saved combination setup; its result is always recalculated by the Core. */
 export type SavedCombinationEntry = {

@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ItemView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import type TradingResearchLabPlugin from "./main";
-import type { CloseEventDisplaySeries, PerformanceMetrics, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "./types";
+import type { SetCheckResult, CloseEventDisplaySeries, PerformanceMetrics, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "./types";
 import { experimentDocumentText, inspectReportForRegeneration, regenerateReportText, reportDocumentText, strategyDocumentText, uuidv7 } from "./research-documents";
 import { ResearchService } from "./application/research-service";
 import { LatestRun } from "./application/latest-run";
@@ -19,6 +19,7 @@ import { MonteCarloAnalysis, WhatIfAnalysis } from "./components/advanced/scenar
 import { OptimisationEvidence, PairedForwardEvidence } from "./components/advanced/optimisation-panels";
 import { Diagnostics, type RunDiagnostics } from "./components/advanced/diagnostics-panel";
 import { PortfolioLab } from "./components/portfolio/portfolio-lab";
+import { EquityAttach, EquityHowTo } from "./components/analysis/equity-panel";
 import { ParameterExplorer } from "./components/exploration/parameter-explorer";
 import { upsertChoiceBlock } from "./vault/choice-block";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT, MT5_REPORT_HINT } from "./application/report-files";
@@ -64,7 +65,6 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       return moved;
     },
   }), [plugin]);
-  const [sourcePath, setSourcePath] = useState("");
   const [status, setStatus] = useState("Ready. Select an MT5 Strategy Tester report (.xlsx or .html).");
   const [error, setError] = useState<string | null>(null);
   const [statistics, setStatistics] = useState<StatisticsResult | null>(null);
@@ -107,6 +107,10 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const [activePage, setActivePage] = useState<WorkspacePage>("overview");
   const [forwardResult, setForwardResult] = useState<PairedForwardResult | null>(null);
   const [importBusy, setImportBusy] = useState(false);
+  const [validated, setValidated] = useState<{ datasetRef: string; eventCount: number; workerWasReady: boolean; readinessMs: number; importMs: number } | null>(null);
+  const [libraryEntries, setLibraryEntries] = useState<DatasetEvidence[]>([]);
+  const [setCheck, setSetCheck] = useState<SetCheckResult | null>(null);
+  const setInputRef = useRef<HTMLInputElement>(null);
   const [displaySeries, setDisplaySeries] = useState<CloseEventDisplaySeries | null>(null);
   const [performanceMetrics, setPerformance] = useState<PerformanceMetrics | null>(null);
   const [cardErrors, setCardErrors] = useState<{ closeEvents: string | null; dailyDrawdown: string | null; displaySeries: string | null; performance: string | null }>({ closeEvents: null, dailyDrawdown: null, displaySeries: null, performance: null });
@@ -119,7 +123,6 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const forwardInputRef = useRef<HTMLInputElement>(null);
   const batchInputRef = useRef<HTMLInputElement>(null);
 
-  const canRun = useMemo(() => isMt5ReportPath(sourcePath), [sourcePath]);
   const canRunOptimisation = useMemo(() => optimisationPath.trim().toLowerCase().endsWith(".xml") && optimisationMode.trim().length > 0, [optimisationPath, optimisationMode]);
   const [batchBusy, setBatchBusy] = useState<string | null>(null);
   const [batchError, setBatchError] = useState<string | null>(null);
@@ -156,18 +159,9 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     });
   };
   const runCombinedDaily = (): Promise<void> => batchStep("Calculating combined daily realised drawdown…", async () => { setCombinedDaily(await service.combinedDailyDrawdown(batchPaths)); });
-  const run = async (requestedSourcePath = sourcePath.trim()): Promise<void> => {
-    const sourceToAnalyse = requestedSourcePath.trim();
-    if (!isMt5ReportPath(sourceToAnalyse)) {
-      setError("Select an MT5 Strategy Tester report (.xlsx or .html).");
-      return;
-    }
-    // A newer import supersedes this one; its late results must never be shown.
-    const token = importRuns.begin();
-    const isCurrent = (): boolean => importRuns.isCurrent(token);
-    setImportBusy(true);
-    setError(null);
+  const resetAnalysisState = (): void => {
     setCardErrors({ closeEvents: null, dailyDrawdown: null, displaySeries: null, performance: null });
+    setStatistics(null);
     setDisplaySeries(null);
     setPerformance(null);
     setRResult(null);
@@ -184,15 +178,65 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     setExperiment(null);
     setReport(null);
     setDocumentStatus(null);
-    setStatus("Creating verified raw snapshot and canonical intake evidence…");
+  };
+
+  /** Step 1: preserve and validate the report. Nothing is analysed yet. */
+  const run = async (requestedSourcePath: string): Promise<void> => {
+    const sourceToValidate = requestedSourcePath.trim();
+    if (!isMt5ReportPath(sourceToValidate)) {
+      setError("Select an MT5 Strategy Tester report (.xlsx or .html).");
+      return;
+    }
+    const token = importRuns.begin();
+    const isCurrent = (): boolean => importRuns.isCurrent(token);
+    setImportBusy(true);
+    setError(null);
+    resetAnalysisState();
+    setValidated(null);
+    setStatus("Copying the report unchanged and checking it…");
     try {
-      const runStartedAt = performance.now();
       const workerWasReady = plugin.worker.isReady;
       const readiness = await measure(() => plugin.worker.ensureReady());
-      const imported = await measure(() => service.intakeMt5Report(sourceToAnalyse));
+      const imported = await measure(() => service.intakeMt5Report(sourceToValidate));
       if (!isCurrent()) return;
-      setStatus(`Calculating verified balance statistics for ${imported.result.event_count} source events…`);
-      const datasetRef = imported.result.dataset_ref;
+      setEvidence(imported.result.intake_receipt);
+      setIntakeStatus(imported.result.intake_status);
+      setSnapshotVerification({ state: "VERIFIED", message: "Verified during intake: the managed raw snapshot matches the selected source SHA-256." });
+      setValidated({ datasetRef: imported.result.dataset_ref, eventCount: imported.result.event_count, workerWasReady, readinessMs: readiness.elapsedMs, importMs: imported.elapsedMs });
+      setStatus(`Validated and stored: ${imported.result.event_count} source events. Nothing has been analysed yet.`);
+    } catch (caught) {
+      if (!isCurrent()) return;
+      setError(caught instanceof Error ? caught.message : String(caught));
+      setStatus("The report could not be validated.");
+    } finally {
+      if (isCurrent()) setImportBusy(false);
+    }
+  };
+
+  /** Uses a report already in the library as the validated report (no re-import). */
+  const useLibraryReport = (entry: DatasetEvidence): void => {
+    importRuns.begin();
+    resetAnalysisState();
+    setError(null);
+    setEvidence(entry);
+    setIntakeStatus(null);
+    setSnapshotVerification(null);
+    setValidated({ datasetRef: entry.dataset_ref, eventCount: entry.event_count, workerWasReady: plugin.worker.isReady, readinessMs: 0, importMs: 0 });
+    setStatus(`Using ${entry.original_filename} from the library. Nothing has been analysed yet.`);
+  };
+
+  /** Step 3: run TRL's calculations on the validated report. */
+  const analyse = async (): Promise<void> => {
+    if (!validated) return;
+    const token = importRuns.begin();
+    const isCurrent = (): boolean => importRuns.isCurrent(token);
+    const datasetRef = validated.datasetRef;
+    setImportBusy(true);
+    setError(null);
+    resetAnalysisState();
+    try {
+      const runStartedAt = performance.now();
+      setStatus(`Calculating verified balance statistics for ${validated.eventCount} source events…`);
       const calculated = await measure(() => service.basicStatistics(datasetRef));
       if (!isCurrent()) return;
       setStatus("Calculating verified close-event and realised daily-balance dashboard results…");
@@ -206,9 +250,9 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       if (!isCurrent()) return;
       const presentationStartedAt = performance.now();
       const measured: RunDiagnostics = {
-        workerWasReady,
-        workerReadinessMs: readiness.elapsedMs,
-        importMs: imported.elapsedMs,
+        workerWasReady: validated.workerWasReady,
+        workerReadinessMs: validated.readinessMs,
+        importMs: validated.importMs,
         analysisMs: calculated.elapsedMs,
         reportPayloadMs: 0,
         noteWriteMs: 0,
@@ -216,7 +260,6 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
         totalMs: 0,
       };
       setStatistics(calculated.result);
-      setEvidence(imported.result.intake_receipt);
       const [closeEventResult, dailyDrawdownResult, equityAvailabilityResult, displaySeriesResult, performanceResult] = automaticResults;
       if (performanceResult.status === "fulfilled") setPerformance(performanceResult.value);
       if (displaySeriesResult.status === "fulfilled") setDisplaySeries(displaySeriesResult.value);
@@ -229,32 +272,19 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
         performance: performanceResult.status === "rejected" ? reasonText(performanceResult.reason) : null,
       });
       if (equityAvailabilityResult.status === "fulfilled") setEquityAvailability(equityAvailabilityResult.value);
-      setIntakeStatus(imported.result.intake_status);
-      setSnapshotVerification({
-        state: "VERIFIED",
-        message: "Verified during intake: the managed raw snapshot matches the selected source SHA-256.",
-      });
       setDiagnostics(measured);
       await nextAnimationFrame();
       if (!isCurrent()) return;
-      setDiagnostics({
-        ...measured,
-        viewPresentationMs: performance.now() - presentationStartedAt,
-        totalMs: performance.now() - runStartedAt,
-      });
-      setActivePage("overview");
+      setDiagnostics({ ...measured, viewPresentationMs: performance.now() - presentationStartedAt, totalMs: performance.now() - runStartedAt });
       const unavailableCards = automaticResults.filter((result) => result.status === "rejected").length;
       setStatus(unavailableCards === 0
-        ? "Completed. Verified dashboard results are ready. No research document was created."
-        : `Completed. Basic dashboard results are ready; ${unavailableCards} optional card(s) could not be calculated.`);
-      new Notice(unavailableCards === 0
-        ? "Trading Research Lab analysis completed. No research document was created."
-        : "Trading Research Lab analysis completed with limited dashboard results. No research document was created.");
+        ? "Analysis complete. Results are on the Overview and Analysis pages. No research document was created."
+        : `Analysis complete with ${unavailableCards} optional result(s) unavailable. Results are on the Overview and Analysis pages.`);
+      new Notice("Trading Research Lab analysis completed. Open Overview or Analysis to see the results.");
     } catch (caught) {
       if (!isCurrent()) return;
-      const message = caught instanceof Error ? caught.message : String(caught);
-      setError(message);
-      setStatus("Research run did not complete.");
+      setError(caught instanceof Error ? caught.message : String(caught));
+      setStatus("The analysis did not complete.");
     } finally {
       if (isCurrent()) setImportBusy(false);
     }
@@ -532,20 +562,20 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     }
   };
 
-  const refreshEvidence = async (): Promise<void> => {
+  const refreshLibrary = async (): Promise<void> => {
+    try { setLibraryEntries((await service.listRegistry()).entries); } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
+  };
+
+  const checkSetFile = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file || !validated) return;
     setError(null);
     try {
-      const registry = await service.listRegistry();
-      const nextEvidence = registry.entries[0] ?? null;
-      if (nextEvidence?.dataset_ref !== evidence?.dataset_ref) {
-        setIntakeStatus(null);
-        setSnapshotVerification(null);
-      }
-      setEvidence(nextEvidence);
-      setStatus(`Registry contains ${registry.entries.length} dataset(s).`);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    }
+      const selected = localPathForSelectedFile(file);
+      if (!selected.toLowerCase().endsWith(".set")) throw new Error("Select the MT5 settings file (.set) used for this test.");
+      setSetCheck(await service.checkSet(validated.datasetRef, selected));
+    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
   };
 
   const runOptimisationIntake = async (): Promise<void> => {
@@ -613,9 +643,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       if (!isMt5ReportPath(selectedPath)) {
         throw new Error("Select an MT5 Strategy Tester report (.xlsx or .html).");
       }
-      setSourcePath(selectedPath);
       setError(null);
-      setStatus(`Selected ${selectedPath}. Preserving source evidence and preparing analysis…`);
+      setStatus(`Selected ${selectedPath}. Copying it unchanged and validating…`);
       void run(selectedPath);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -673,26 +702,65 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       displaySeries={displaySeries}
       performance={performanceMetrics}
       busyStatus={importBusy ? status : null}
-      onBrowseReport={() => fileInputRef.current?.click()}
+      onBrowseReport={() => setActivePage("data")}
       onFocusDocuments={() => setActivePage("research")}
       onRunTradeAnalysis={() => void runM2Analysis()}
       onRunDailyAnalysis={() => void runM3Analysis()}
     />}
     {activePage === "data" && <section className="trl-page" aria-label="Data and import">
       <header className="trl-page__header"><div><h3>Data & import</h3><p>Bring in one MT5 report at a time. TRL preserves the original source before any analysis.</p></div></header>
-      <section className="trl-page__surface">
-      <p className="trl-m0__note">Select one MT5 Strategy Tester Excel report to preserve its source, create canonical evidence, and populate the dashboard.</p>
-      <label className="trl-m0__field">
-        <span>{MT5_REPORT_HINT}</span>
-        <input value={sourcePath} onChange={(event) => setSourcePath(event.currentTarget.value)} placeholder="C:\\path\\to\\report.xlsx" />
-      </label>
-      <div className="trl-m0__actions">
-        <button type="button" className="mod-cta" disabled={importBusy} onClick={() => fileInputRef.current?.click()}>Browse report and analyse…</button>
-        <button type="button" disabled={!canRun || importBusy} onClick={() => void run()}>Analyse typed path</button>
-        <button type="button" onClick={() => void refreshEvidence()}>Refresh recent data</button>
-        <span role="status">{status}</span>
-      </div>
+      <section className="trl-page__surface trl-import__step" aria-label="Step 1: report">
+        <h4>1. Report</h4>
+        <p className="trl-m0__note">Choose one {MT5_REPORT_HINT}. TRL copies it unchanged, checks it, and stores it in the library. Nothing is analysed yet.</p>
+        <div className="trl-m0__actions">
+          <button type="button" className="mod-cta" disabled={importBusy} onClick={() => fileInputRef.current?.click()}>Browse and validate report…</button>
+          <select aria-label="Use a report already in the library" value="" disabled={importBusy} onFocus={() => void refreshLibrary()} onChange={(event) => { const entry = libraryEntries.find((item) => item.dataset_ref === event.currentTarget.value); if (entry) useLibraryReport(entry); }}>
+            <option value="">…or use a report already in the library</option>
+            {libraryEntries.map((entry) => <option key={entry.dataset_ref} value={entry.dataset_ref}>{entry.original_filename} · {entry.supplied_facts.symbol ?? "?"} {entry.supplied_facts.period ?? ""}</option>)}
+          </select>
+        </div>
+        {validated && evidence && <dl className="trl-import__facts">
+          <dt>Report</dt><dd><strong>{evidence.original_filename}</strong></dd>
+          <dt>Market</dt><dd>{evidence.supplied_facts.symbol ?? "—"} · {evidence.supplied_facts.period ?? "—"}</dd>
+          <dt>Account</dt><dd>{evidence.supplied_facts.initial_deposit ?? "—"} {evidence.supplied_facts.currency ?? ""} · leverage {evidence.supplied_facts.leverage ?? "—"}</dd>
+          <dt>Source events</dt><dd>{validated.eventCount}</dd>
+          <dt>Checks</dt><dd>Copied unchanged and hash-verified{evidence.source_checks?.includes("HTML_DEALS_TOTALS_MATCH") ? "; HTML deal totals match the deals" : ""}{evidence.equity ? "; equity log attached" : ""}</dd>
+        </dl>}
+        <p className="trl-m0__note" role="status">{status}</p>
       </section>
+      {validated && evidence && <section className="trl-page__surface trl-import__step" aria-label="Step 2: companion files">
+        <h4>2. Companion files <span className="trl-m0__note">(optional)</span></h4>
+        <p className="trl-m0__note">Add these if you have them. Each is checked against the report above; you can skip them and add them later.</p>
+        <div className="trl-import__companions">
+          <div className="trl-import__companion">
+            <h5>Equity log (.csv): floating drawdown</h5>
+            <EquityHowTo />
+            <EquityAttach service={service} datasetRef={validated.datasetRef} attached={Boolean(evidence.equity)} onAttached={() => { void service.getEvidence(validated.datasetRef).then(setEvidence); if (statistics?.dataset_ref === validated.datasetRef) void service.equityAvailability(validated.datasetRef).then(setEquityAvailability); }} />
+          </div>
+          <div className="trl-import__companion">
+            <h5>Settings file (.set): were the intended inputs used?</h5>
+            <p className="trl-m0__note">MT5 can silently run a test with the EA's defaults or an old preset. Choose the .set you meant to use and TRL compares it, input by input, with what the report shows actually ran.</p>
+            <input ref={setInputRef} className="trl-m0__file-input" type="file" accept=".set" onChange={(event) => void checkSetFile(event)} />
+            <button type="button" onClick={() => setInputRef.current?.click()}>Browse and check .set…</button>
+            {setCheck && setCheck.dataset_ref === validated.datasetRef && <div className="trl-companion">
+              <p className={setCheck.status === "MATCH" ? "trl-companion__ok" : "trl-m0__inline-error"}>{setCheck.status === "MATCH" ? `✓ All ${setCheck.compared} inputs in ${setCheck.set_filename} match the report.` : `${setCheck.differences.length} of ${setCheck.compared} inputs differ from ${setCheck.set_filename}.`}<DismissButton onDismiss={() => setSetCheck(null)} /></p>
+              {setCheck.differences.length > 0 && <div className="trl-monthly"><table><thead><tr><th scope="col">Input</th><th scope="col">Report (ran with)</th><th scope="col">.set (intended)</th></tr></thead><tbody>{setCheck.differences.map((item) => <tr key={item.name}><th scope="row">{item.name}</th><td>{item.report_value}</td><td>{item.set_value}</td></tr>)}</tbody></table></div>}
+              {setCheck.notes.map((note) => <p key={note} className="trl-m0__note">{note}</p>)}
+            </div>}
+          </div>
+        </div>
+      </section>}
+      {validated && <section className="trl-page__surface trl-import__step" aria-label="Step 3: analyse">
+        <h4>3. Analyse</h4>
+        <p className="trl-m0__note">Runs TRL's calculations on the validated report. Results appear on <strong>Overview</strong> (dashboard) and <strong>Analysis</strong> (details and equity). No research note is created unless you ask on the Research page.</p>
+        <div className="trl-m0__actions">
+          <button type="button" className="mod-cta" disabled={importBusy} onClick={() => void analyse()}>{statistics?.dataset_ref === validated.datasetRef ? "Analyse again" : "Start analysis"}</button>
+          {statistics?.dataset_ref === validated.datasetRef && <>
+            <button type="button" onClick={() => setActivePage("overview")}>Open Overview</button>
+            <button type="button" onClick={() => setActivePage("analysis")}>Open Analysis</button>
+          </>}
+        </div>
+      </section>}
       {evidence && <Evidence evidence={evidence} intakeStatus={intakeStatus} snapshotVerification={snapshotVerification} onVerify={() => void verifySnapshot()} />}
       <M5Preflight paths={batchPaths} result={batchPreflight} combined={combinedBalance} daily={combinedDaily} busy={batchBusy} error={batchError} inputRef={batchInputRef} onSelect={selectBatchFiles} onRemove={(path) => { setBatchPaths((current) => current.filter((item) => item !== path)); resetBatchResults(); }} onClear={() => { setBatchPaths([]); resetBatchResults(); }} onRun={() => void runBatchPreflight()} onCreate={() => void createCombinedBalance()} onDaily={() => void runCombinedDaily()} />
     </section>}

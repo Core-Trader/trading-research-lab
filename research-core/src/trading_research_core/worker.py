@@ -28,6 +28,7 @@ from .pareto import evaluate as pareto_evaluate
 from .mt5_set import intake_parameter_schema
 from .parameter_exploration import add_single_test, attach_forward, create_study, evaluate as exploration_evaluate, render_choice
 from .equity_log import attach_equity_log, equity_metrics
+from .set_check import check_set_against_report
 from .neighbourhood import attach_neighbourhood_run, neighbourhood, render_neighbourhood_set, write_neighbourhood_set
 from .mt5_optimisation import intake_parameter_grid, intake_paired_forward_grid
 
@@ -88,6 +89,7 @@ class Worker:
                     "analysis.realised_balance_daily_drawdown",
                     "analysis.equity_availability",
                     "dataset.attach_equity_log",
+                    "dataset.check_set",
                     "analysis.equity_metrics",
                     "scenario.fixed_close_event_cost",
                     "scenario.monte_carlo_order_permutation",
@@ -241,6 +243,8 @@ class Worker:
             return write_daily_drawdown_artifact(self.workspace_root, dataset_ref, result, rows)
         if method == "dataset.attach_equity_log":
             return attach_equity_log(self.workspace_root, _required_string(params, "dataset_ref"), _required_string(params, "source_path"), _required_string(params, "modelling_mode"))
+        if method == "dataset.check_set":
+            return check_set_against_report(self.workspace_root, _required_string(params, "dataset_ref"), _required_string(params, "source_path"))
         if method == "analysis.equity_metrics":
             return equity_metrics(self.workspace_root, _required_string(params, "dataset_ref"))
         if method == "analysis.equity_availability":

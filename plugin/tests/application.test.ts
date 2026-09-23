@@ -92,6 +92,19 @@ test("archive and restore send only the dataset reference", async () => {
   assert.deepEqual(calls.map((call) => [call.method, call.params]), [["dataset.archive", { dataset_ref: "mt5:A" }], ["dataset.restore", { dataset_ref: "mt5:A" }], ["dataset.deletion_preview", { dataset_ref: "mt5:A" }], ["dataset.delete", { dataset_ref: "mt5:A", dependents: "KEEP" }]]);
 });
 
+test("companion checks send the report reference and file path", async () => {
+  const { worker, calls } = recordingWorker();
+  const service = new ResearchService(worker);
+  await service.getEvidence("mt5:A");
+  await service.checkSet("mt5:A", "C:/MT5/ea.set");
+  await service.attachEquityLog("mt5:A", "C:/x/log.csv", "Every tick based on real ticks");
+  assert.deepEqual(calls.map((call) => [call.method, call.params]), [
+    ["dataset.get_evidence", { dataset_ref: "mt5:A" }],
+    ["dataset.check_set", { dataset_ref: "mt5:A", source_path: "C:/MT5/ea.set" }],
+    ["dataset.attach_equity_log", { dataset_ref: "mt5:A", source_path: "C:/x/log.csv", modelling_mode: "Every tick based on real ticks" }],
+  ]);
+});
+
 test("R-multiple requests send an amount only for a declared 1R", async () => {
   const { worker, calls } = recordingWorker();
   const service = new ResearchService(worker);

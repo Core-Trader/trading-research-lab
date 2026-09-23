@@ -5,6 +5,7 @@ import { localPathForSelectedFile } from "../../services/local-file-path";
 import type { NeighbourPoint, NeighbourhoodResult, NeighbourhoodRole, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSettings, Objective, ParameterStudy } from "../../types";
 import { canBeOrdinal, coverageText, heatmapCells, ordinalNames, statisticsNote, suggestedSetPath } from "./neighbourhood-model";
 import { DismissButton } from "../dismiss-button";
+import { ChartFrame } from "../chart-frame";
 
 type Props = {
   service: ResearchService;
@@ -191,7 +192,8 @@ function SliceHeatmap({ result, ordinal, metrics, direction, onChange }: {
     const next: [string, string] = axis === 0 ? [value, value === y ? x : y] : [value === x ? y : x, value];
     onChange(next, slice.metric);
   };
-  return <figure className="trl-neighbourhood__map">
+  return <ChartFrame title="Neighbourhood map">
+  <figure className="trl-neighbourhood__map">
     <div className="trl-m0__scenario-fields">
       <label className="trl-m0__field"><span>Across</span><select value={x} onChange={(event) => pick(0, event.currentTarget.value)}>{ordinal.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
       <label className="trl-m0__field"><span>Down</span><select value={y} onChange={(event) => pick(1, event.currentTarget.value)}>{ordinal.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
@@ -207,5 +209,6 @@ function SliceHeatmap({ result, ordinal, metrics, direction, onChange }: {
       </table>
     </div>
     <figcaption className="trl-m0__note">Other inputs as the selected set. Darker = better{direction ? "" : " (higher value; this metric has no better direction)"}. Hatched = not tested (unknown, not zero). Outlined = selected set.{slice.windowed ? " Showing a window around the selected set." : ""}</figcaption>
-  </figure>;
+  </figure>
+  </ChartFrame>;
 }

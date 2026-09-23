@@ -132,7 +132,9 @@ Neighbourhood analysis (PX-010, N1–N7) is implemented; see
 The equity logger (PL-006/PL-008) is built and validated in MT5; see
 `internal/development-journal/2026-09-23-equity-logger.md`. Logger 1.0.1 has
 0 link mismatches on V1–V3, and the owner's DCA EA shows equity drawdown
-12.5× balance drawdown. **Next:** owner review of the Analysis-page equity
+12.5× balance drawdown. The Data page is redesigned (UX-002): validate first, then companions (equity
+log, `.set` check), then analyse; all charts have Expand. **Next:** owner review of
+the new Data page and the Analysis-page equity
 panel, then the prop-firm rules module, including Portfolio Lab's
 conservative combined equity low (E6). The first MT5 test corpus is built (DEV-002); see
 `internal/development-journal/2026-09-23-test-corpus-and-bias-fixes.md`. It

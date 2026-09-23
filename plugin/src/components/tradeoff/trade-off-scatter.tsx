@@ -1,5 +1,6 @@
 import React, { useMemo, useState, type ReactNode } from "react";
 import { keyboardOrder, nearestPoint, scatterLayout, type PlacedPoint, type TradeOffPoint, type TradeOffStatus } from "./scatter-layout";
+import { ChartFrame } from "../chart-frame";
 
 type Props = {
   points: TradeOffPoint[];
@@ -66,7 +67,8 @@ export function TradeOffScatter({ points, xLabel, yLabel, xBetter, yBetter, fron
     event.preventDefault();
   };
 
-  return <figure className="trl-tradeoff">
+  return <ChartFrame title={`${yLabel} vs ${xLabel}`}>
+  <figure className="trl-tradeoff">
     <div className="trl-tradeoff__frame">
       <div className="trl-tradeoff__y-axis" aria-hidden="true"><span>{layout.yMax}</span><span className="trl-tradeoff__axis-title">{yLabel}{yBetter ? ` (${yBetter} is better)` : ""}</span><span>{layout.yMin}</span></div>
       <div
@@ -106,7 +108,8 @@ export function TradeOffScatter({ points, xLabel, yLabel, xBetter, yBetter, fron
       {sizeLabel && <li>Point size: {sizeLabel}</li>}
     </ul>
     <figcaption className="trl-m0__note">Each point is one candidate. A candidate is on the Pareto frontier when no other candidate is at least as good on every chosen objective and better on at least one. The frontier is a set of trade-offs to choose from, not a recommendation.</figcaption>
-  </figure>;
+  </figure>
+  </ChartFrame>;
 }
 
 function layer(point: PlacedPoint, selectedId: string | null | undefined): number {

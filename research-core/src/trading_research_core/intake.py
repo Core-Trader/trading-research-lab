@@ -83,16 +83,24 @@ def set_archived(workspace_root: Path, dataset_ref: str, archived: bool) -> dict
     return {"dataset_ref": dataset_ref, "archived": archived, "used_by": dataset_usages(root, dataset_ref)}
 
 
-def set_equity_evidence(workspace_root: Path, dataset_ref: str, equity: dict[str, object]) -> None:
-    """Record a verified equity log on the report's registry entry (PL-006)."""
+def set_evidence_block(workspace_root: Path, dataset_ref: str, key: str, block: dict[str, object]) -> None:
+    """Record companion evidence (equity log, settings check) on a report's registry entry."""
 
+    if key not in {"equity", "set_check"}:
+        raise CoreError("E_INTERNAL", "Unknown evidence block.", details={"key": key})
     root = workspace_root.resolve()
     registry = _load_registry(root)
     entry = next((item for item in registry["entries"] if item.get("dataset_ref") == dataset_ref), None)
     if entry is None:
         raise CoreError("E_DATASET_NOT_FOUND", "The report is not in the library.", details={"dataset_ref": dataset_ref})
-    entry["equity"] = equity
+    entry[key] = block
     _atomic_json(_registry_path(root), {"registry_schema_version": REGISTRY_SCHEMA_VERSION, "entries": sorted(registry["entries"], key=lambda item: str(item["dataset_ref"]))})
+
+
+def set_equity_evidence(workspace_root: Path, dataset_ref: str, equity: dict[str, object]) -> None:
+    """Record a verified equity log on the report's registry entry (PL-006)."""
+
+    set_evidence_block(workspace_root, dataset_ref, "equity", equity)
 
 
 def dataset_usages(workspace_root: Path, dataset_ref: str) -> list[dict[str, str]]:

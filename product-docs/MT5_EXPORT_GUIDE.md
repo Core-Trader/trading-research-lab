@@ -55,6 +55,14 @@ to:
 - mark your default settings (★) on the parameter field
 - show how much of the possible parameter grid was actually tested
 
+## Checking a report against its .set
+
+After importing a report on the **Data & import** page, you can add the `.set`
+you meant to use. TRL compares it, input by input, with the inputs the report
+says actually ran, because MT5 can silently fall back to the EA's defaults or
+an old preset. Differences are listed; inputs that exist on only one side are
+noted.
+
 ## Placing your default on the field
 
 MT5's fast genetic optimisation tests only a sample of all combinations, so
