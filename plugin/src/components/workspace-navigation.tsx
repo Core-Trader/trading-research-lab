@@ -1,11 +1,12 @@
 import React from "react";
 
-export type WorkspacePage = "overview" | "data" | "portfolio" | "analysis" | "research" | "advanced";
+export type WorkspacePage = "overview" | "data" | "portfolio" | "parameters" | "analysis" | "research" | "advanced";
 
 const pages: Array<{ id: WorkspacePage; label: string; description: string }> = [
   { id: "overview", label: "Overview", description: "Research home" },
   { id: "data", label: "Data & import", description: "MT5 reports and source evidence" },
   { id: "portfolio", label: "Portfolio", description: "Combine EA backtests on one account" },
+  { id: "parameters", label: "Parameters", description: "Explore optimisation trade-offs" },
   { id: "analysis", label: "Analysis", description: "Verified results and risk" },
   { id: "research", label: "Research", description: "Strategies, experiments and reports" },
   { id: "advanced", label: "Advanced", description: "Scenarios, simulation and optimisation" },

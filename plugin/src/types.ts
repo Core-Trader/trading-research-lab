@@ -426,3 +426,32 @@ export type PortfolioExploration = {
   }>;
   warnings: string[];
 };
+
+export type StudyMetric = { id: string; column: string; label: string; default_direction: "MAX" | "MIN" | null; unit: string; basis: "MT5_REPORTED" };
+export type StudyParameter = { name: string; kind: string; ordinal: boolean | null; in_schema: boolean | null; tested_values: string[]; default?: string; start?: string | null; step?: string | null; stop?: string | null; value_count?: number | null };
+export type StudyFinding = { severity: "BLOCKED" | "WARNING" | "NOTE"; code: string; message: string; subjects: string[] };
+export type ParameterSchema = { schema_ref: string; source: { filename: string; sha256: string; encoding: string }; parameter_count: number; optimised_parameters: string[]; full_grid_size: string | null; intake_status: string };
+export type ParameterStudy = {
+  study_ref: string;
+  status: "READY" | "BLOCKED";
+  optimisation_ref: string;
+  schema_ref: string | null;
+  context: { title: string | null; deposit: string | null; modelling_mode: string | null; source_filename: string | null };
+  pass_count: number;
+  full_grid_size: string | null;
+  parameters: StudyParameter[];
+  metrics: StudyMetric[];
+  default: { signature: Record<string, string> | null; pass_id: string | null; status: "IN_OPTIMISATION" | "NOT_TESTED" | "NO_SCHEMA" };
+  findings: StudyFinding[];
+};
+export type Objective = { metric: string; direction: "MAX" | "MIN" };
+export type Constraint = { metric: string; operator: ">=" | "<="; threshold: string };
+export type ParameterEvaluation = {
+  evaluation_id: string;
+  configuration_hash: string;
+  study: Pick<ParameterStudy, "study_ref" | "context" | "pass_count" | "full_grid_size" | "parameters" | "metrics" | "default" | "findings">;
+  counts: Record<ParetoStatus, number>;
+  front_count: number;
+  candidates: Array<{ id: string; pass: string | null; parameters: Record<string, string>; metrics: Record<string, string | null>; is_default: boolean; pareto: Omit<ParetoCandidateResult, "id"> }>;
+  warnings: string[];
+};

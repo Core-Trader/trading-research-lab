@@ -19,6 +19,8 @@ import { MonteCarloAnalysis, WhatIfAnalysis } from "./components/advanced/scenar
 import { OptimisationEvidence, PairedForwardEvidence } from "./components/advanced/optimisation-panels";
 import { Diagnostics, type RunDiagnostics } from "./components/advanced/diagnostics-panel";
 import { PortfolioLab } from "./components/portfolio/portfolio-lab";
+import { ParameterExplorer } from "./components/exploration/parameter-explorer";
+import { upsertChoiceBlock } from "./vault/choice-block";
 
 export { writeGeneratedNote } from "./vault/research-vault";
 
@@ -388,6 +390,17 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     finally { setRBusy(false); }
   };
 
+  const recordParameterChoice = async (markdown: string, evaluationId: string): Promise<void> => {
+    if (experiment === null) throw new Error("Select or create an Experiment under Research first.");
+    const file = plugin.app.vault.getAbstractFileByPath(experiment.path);
+    if (!(file instanceof TFile)) throw new Error(`The experiment note ${experiment.path} is not available. Re-select it under Research.`);
+    const prior = await plugin.app.vault.read(file);
+    const { text, replaced } = upsertChoiceBlock(prior, evaluationId, markdown);
+    if (replaced && !window.confirm("Replace the choice previously recorded in this experiment note? Text outside the marked choice block stays unchanged.")) throw new Error("Recording was cancelled; the note was not changed.");
+    await plugin.app.vault.modify(file, text);
+    new Notice(replaced ? "Recorded choice updated in the experiment note." : "Choice recorded in the experiment note.");
+  };
+
   const runM3Analysis = async (): Promise<void> => {
     const datasetRef = evidence?.dataset_ref ?? statistics?.dataset_ref;
     if (datasetRef === undefined) return;
@@ -703,6 +716,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       />
     </section>}
     {activePage === "portfolio" && <PortfolioLab service={service} />}
+    {activePage === "parameters" && <ParameterExplorer service={service} experiment={experiment} onRecordChoice={recordParameterChoice} />}
     {activePage === "advanced" && <section className="trl-page" aria-label="Advanced research">
       <header className="trl-page__header"><div><h3>Advanced research</h3><p>Optional, qualified studies. Results are research evidence, not trading recommendations.</p></div></header>
       <OptimisationEvidence path={optimisationPath} mode={optimisationMode} result={optimisationResult} filter={optimisationFilter} sort={optimisationSort} inputRef={optimisationInputRef} enabled={canRunOptimisation} onPathChange={setOptimisationPath} onModeChange={setOptimisationMode} onSelect={selectOptimisationFile} onRun={() => void runOptimisationIntake()} onFilterChange={setOptimisationFilter} onSortChange={setOptimisationSort} />

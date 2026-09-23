@@ -144,6 +144,59 @@ def evaluate(workspace_root: Path, study_ref: str, objectives: list[dict[str, st
     }
 
 
+def render_choice(workspace_root: Path, study_ref: str, objectives: list[dict[str, str]], constraints: list[dict[str, str]] | None, candidate_id: str, reason: str) -> dict[str, object]:
+    """Markdown recording the owner's chosen candidate, re-derived from a fresh evaluation.
+
+    The Core re-evaluates, so the recorded status and values are authentic; the
+    owner's reason is quoted verbatim. The text describes a choice, not a
+    recommendation.
+    """
+
+    result = evaluate(workspace_root, study_ref, objectives, constraints)
+    chosen = next((candidate for candidate in result["candidates"] if candidate["id"] == candidate_id), None)
+    if chosen is None:
+        raise CoreError("E_STUDY_CANDIDATE_UNKNOWN", "The chosen candidate is not part of this study.", details={"candidate_id": candidate_id})
+    study = result["study"]
+    labels = {metric["id"]: metric["label"] for metric in study["metrics"]}
+    default = study["default"]["signature"] or {}
+    reason_lines = [line.rstrip() for line in reason.strip().splitlines()] or ["(no reason given)"]
+    lines = [
+        "## Chosen parameter set",
+        "",
+        f"- Study: `{study['study_ref']}` ({study['context'].get('title') or 'MT5 optimisation'}, {study['pass_count']} passes)",
+        f"- Evaluation: `{result['evaluation_id']}` ({EVALUATION_VERSION})",
+        "- Objectives: " + ", ".join(f"{labels.get(item['metric'], item['metric'])} {'↑' if item['direction'] == 'MAX' else '↓'}" for item in objectives),
+        "- Constraints: " + (", ".join(f"{labels.get(item['metric'], item['metric'])} {item['operator']} {item['threshold']}" for item in constraints or []) or "none"),
+        f"- Candidate: MT5 pass {chosen['pass']} — {_status_text(chosen['pareto'])}{' — this is the default' if chosen['is_default'] else ''}",
+        "",
+        "| Parameter | Chosen | Default |",
+        "| --- | --- | --- |",
+        *[f"| {name} | {value} | {default.get(name, '—')} |" for name, value in chosen["parameters"].items()],
+        "",
+        "| Metric (MT5-reported) | Value |",
+        "| --- | --- |",
+        *[f"| {labels.get(metric_id, metric_id)} | {value if value is not None else '—'} |" for metric_id, value in chosen["metrics"].items()],
+        "",
+        "Owner's reason:",
+        "",
+        *[f"> {line}" for line in reason_lines],
+        "",
+        "_Recorded as the owner's choice among descriptive trade-offs; not a recommendation or a forecast. Metrics are historical MT5 backtest values._",
+        "",
+    ]
+    return {"evaluation_id": result["evaluation_id"], "candidate_id": candidate_id, "markdown": "\n".join(lines)}
+
+
+def _status_text(pareto: dict[str, Any]) -> str:
+    if pareto["status"] == "PARETO":
+        return "on the Pareto frontier"
+    if pareto["status"] == "DOMINATED":
+        return f"dominated by {pareto['dominated_by_count']} pass(es) (front {pareto['rank']})"
+    if pareto["status"] == "CONSTRAINED":
+        return "fails " + ", ".join(f"{item['metric']} {item['operator']} {item['threshold']}" for item in pareto["violations"])
+    return "missing an objective value"
+
+
 def _read_optimisation(workspace_root: Path, optimisation_ref: str) -> tuple[dict[str, Any], list[dict[str, str]]]:
     source_hash = optimisation_ref.removeprefix("mt5-optimisation:")
     if not optimisation_ref.startswith("mt5-optimisation:") or len(source_hash) != 64 or any(character not in "0123456789ABCDEF" for character in source_hash):

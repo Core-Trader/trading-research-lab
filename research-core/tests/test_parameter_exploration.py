@@ -163,3 +163,23 @@ def test_worker_exploration_methods(tmp_path: Path) -> None:
     study = call("exploration.create_study", optimisation_ref=optimisation["optimisation_ref"], schema_ref=schema["schema_ref"])
     result = call("exploration.evaluate", study_ref=study["study_ref"], objectives=[{"metric": "net_profit", "direction": "MAX"}])
     assert result["counts"]["PARETO"] == 1
+
+
+def test_render_choice_is_core_derived_and_quotes_reason(tmp_path: Path) -> None:
+    from trading_research_core.parameter_exploration import render_choice
+    study = _study(tmp_path)
+    workspace = tmp_path / "workspace"
+    objectives = [{"metric": "net_profit", "direction": "MAX"}, {"metric": "equity_drawdown_pct", "direction": "MIN"}]
+    evaluation = evaluate(workspace, str(study["study_ref"]), objectives)
+    candidate = next(item for item in evaluation["candidates"] if item["pass"] == "2")
+    rendered = render_choice(workspace, str(study["study_ref"]), objectives, [], candidate["id"], "Lower drawdown matters more.\nAccept less profit.")
+    markdown = rendered["markdown"]
+    assert rendered["evaluation_id"] == evaluation["evaluation_id"]
+    assert "MT5 pass 2 — on the Pareto frontier" in markdown
+    assert "| InpLot | 0.03 | 0.02 |" in markdown
+    assert "| Net profit | 150 |" in markdown
+    assert "> Lower drawdown matters more.\n> Accept less profit." in markdown
+    assert "not a recommendation" in markdown
+    with pytest.raises(CoreError) as error:
+        render_choice(workspace, str(study["study_ref"]), objectives, [], "not-a-pass", "x")
+    assert error.value.code == "E_STUDY_CANDIDATE_UNKNOWN"

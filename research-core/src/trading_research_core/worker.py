@@ -26,7 +26,7 @@ from .r_metrics import r_multiple_metrics
 from .portfolio_lab import combine as portfolio_combine, explore as portfolio_explore
 from .pareto import evaluate as pareto_evaluate
 from .mt5_set import intake_parameter_schema
-from .parameter_exploration import create_study, evaluate as exploration_evaluate
+from .parameter_exploration import create_study, evaluate as exploration_evaluate, render_choice
 from .mt5_optimisation import intake_parameter_grid, intake_paired_forward_grid
 
 
@@ -65,6 +65,7 @@ class Worker:
                     "exploration.intake_parameter_schema",
                     "exploration.create_study",
                     "exploration.evaluate",
+                    "exploration.render_choice",
                     "analysis.reconstruct_lifecycles",
                     "analysis.lifecycle_summary",
                     "time.validate_profile",
@@ -130,6 +131,15 @@ class Worker:
             if not isinstance(objectives, list) or not isinstance(constraints, list):
                 raise CoreError("E_REQUEST_INVALID", "params.objectives and params.constraints must be lists.")
             return exploration_evaluate(self.workspace_root, _required_string(params, "study_ref"), objectives, constraints)
+        if method == "exploration.render_choice":
+            objectives = params.get("objectives")
+            constraints = params.get("constraints") or []
+            if not isinstance(objectives, list) or not isinstance(constraints, list):
+                raise CoreError("E_REQUEST_INVALID", "params.objectives and params.constraints must be lists.")
+            reason = params.get("reason", "")
+            if not isinstance(reason, str) or len(reason) > 4000:
+                raise CoreError("E_REQUEST_INVALID", "params.reason must be text of at most 4000 characters.")
+            return render_choice(self.workspace_root, _required_string(params, "study_ref"), objectives, constraints, _required_string(params, "candidate_id"), reason)
         if method == "analysis.pareto_evaluate":
             candidates = params.get("candidates")
             objectives = params.get("objectives")

@@ -1,4 +1,4 @@
-import type { CloseEventDisplaySeries, ParetoEvaluation, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -71,6 +71,22 @@ export class ResearchService {
 
   paretoEvaluate(candidates: Array<{ id: string; values: Record<string, string | null> }>, objectives: Array<{ metric: string; direction: "MAX" | "MIN" }>): Promise<ParetoEvaluation> {
     return this.worker.request("analysis.pareto_evaluate", { candidates, objectives });
+  }
+
+  intakeParameterSchema(sourcePath: string): Promise<ParameterSchema> {
+    return this.worker.request("exploration.intake_parameter_schema", { source_path: sourcePath });
+  }
+
+  createParameterStudy(optimisationRef: string, schemaRef: string | null): Promise<ParameterStudy> {
+    return this.worker.request("exploration.create_study", schemaRef ? { optimisation_ref: optimisationRef, schema_ref: schemaRef } : { optimisation_ref: optimisationRef }, LONG_RUNNING_MS);
+  }
+
+  evaluateParameterStudy(studyRef: string, objectives: Objective[], constraints: Constraint[]): Promise<ParameterEvaluation> {
+    return this.worker.request("exploration.evaluate", { study_ref: studyRef, objectives, constraints }, LONG_RUNNING_MS);
+  }
+
+  renderParameterChoice(studyRef: string, objectives: Objective[], constraints: Constraint[], candidateId: string, reason: string): Promise<{ evaluation_id: string; candidate_id: string; markdown: string }> {
+    return this.worker.request("exploration.render_choice", { study_ref: studyRef, objectives, constraints, candidate_id: candidateId, reason }, LONG_RUNNING_MS);
   }
 
   reconstructLifecycles(datasetRef: string, accountMode: string): Promise<TradeAnalysisResult> {

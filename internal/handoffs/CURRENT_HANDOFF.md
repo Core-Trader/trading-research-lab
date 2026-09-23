@@ -112,9 +112,12 @@ pending. Parameter exploration architecture approved (PX-001–PX-007). **Build 
 `internal/development-journal/2026-09-23-shared-pareto-and-scatter.md`.
 Build step 2 (Portfolio Lab slices 3–4: saved combinations, comparison
 scatter, and `portfolio.explore`) is done. **Owner review in Obsidian is
-pending** for the whole Portfolio page. **Next exact task:** build step 3 per
-§14: `.set` parser, study assembly, and `exploration.evaluate` (parameter
-exploration Core). V2/V3 visuals remain on hold. After that come MVP-C
+pending** for the whole Portfolio page. Build steps 3–4 (parameter exploration Core and the Parameters page) are
+done; see `internal/development-journal/2026-09-23-parameter-exploration-mvp.md`.
+**Owner review in Obsidian is pending** for the Portfolio and Parameters
+pages. **Next exact task:** step 6 follow-ups (single-test Results-summary
+parser for the default; forward metrics in the inspector). V2/V3 visuals
+remain on hold. After that come MVP-C
 narrow-width review and MVP-D release-allowlist preparation per
 `MVP_FAST_TRACK.md`.
 
@@ -194,8 +197,8 @@ Set-Location C:\DEV\Trading_Research_Lab\plugin
 | Area | Status | Evidence / limit |
 | --- | --- | --- |
 | Environment | Pass | Python/Node/npm/Git versions and core imports verified on 2026-09-20. |
-| Research Core unit tests | Pass | 138 `pytest` tests passed on 2026-09-23, including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
-| Plugin automated tests | Pass | 51 Node tests passed on 2026-09-23 (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
+| Research Core unit tests | Pass | 159 `pytest` tests passed on 2026-09-23, including parameter exploration, including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
+| Plugin automated tests | Pass | 60 Node tests passed on 2026-09-23 (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
 | Plugin build | Pass | TypeScript check and esbuild production bundle passed. |
 | Live M0 path | Pass, owner-confirmed | EURUSD import, verified balance curve, generated note, Browse workflow, and diagnostics panel were manually exercised. |
 | Integration/negative coverage | Partial | Live structured unknown-method response was verified; a broader formal integration suite is not yet present. |
@@ -208,7 +211,7 @@ Set-Location C:\DEV\Trading_Research_Lab\plugin
 | M6 What-If increment | Pass | 32 Core tests, 7 plugin tests, production build, and owner-confirmed panel review; see `internal/docs/MILESTONE_6_WHAT_IF_CLOSURE_REPORT.md`. |
 | M6 Monte Carlo technical validation | Pass | 42 Core tests, 7 plugin tests, production build, and independently documented Strategy Factory concept review. Owner accepted the original panel review; the new histogram needs a focused manual review. |
 | M6 optimisation evidence viewer | Accepted | 41 Core tests, 7 plugin tests, production build, and owner-confirmed 162-pass panel review. |
-| MVP dashboard workspace | In progress | Central workspace, concise navigation, automatic safe Overview population, and Core-derived Monte Carlo chart are implemented; view modularised behind `ResearchService` with a stale-import guard; tier A, B, C1, and C2 dashboard work plus batch feedback fixes (138 Core tests, 51 plugin tests, production build pass on 2026-09-23). Owner accepted the Obsidian usability review "for now" on 2026-09-22; further dashboard refinement is expected after competitor/reference UX research. |
+| MVP dashboard workspace | In progress | Central workspace, concise navigation, automatic safe Overview population, and Core-derived Monte Carlo chart are implemented; view modularised behind `ResearchService` with a stale-import guard; tier A, B, C1, and C2 dashboard work plus batch feedback fixes (159 Core tests, 60 plugin tests, production build pass on 2026-09-23). Owner accepted the Obsidian usability review "for now" on 2026-09-22; further dashboard refinement is expected after competitor/reference UX research. |
 
 ## Recently changed files
 
