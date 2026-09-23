@@ -1,4 +1,4 @@
-import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -83,6 +83,10 @@ export class ResearchService {
 
   evaluateParameterStudy(studyRef: string, objectives: Objective[], constraints: Constraint[]): Promise<ParameterEvaluation> {
     return this.worker.request("exploration.evaluate", { study_ref: studyRef, objectives, constraints }, LONG_RUNNING_MS);
+  }
+
+  addSingleTest(studyRef: string, datasetRef: string): Promise<SingleTestAttachment> {
+    return this.worker.request("exploration.add_single_test", { study_ref: studyRef, dataset_ref: datasetRef }, LONG_RUNNING_MS);
   }
 
   renderParameterChoice(studyRef: string, objectives: Objective[], constraints: Constraint[], candidateId: string, reason: string): Promise<{ evaluation_id: string; candidate_id: string; markdown: string }> {

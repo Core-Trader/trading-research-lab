@@ -2,15 +2,22 @@ import React, { useMemo, useRef, useState } from "react";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
 import { localPathForSelectedFile } from "../../services/local-file-path";
-import type { Constraint, Objective, ParameterEvaluation, ParameterStudy } from "../../types";
+import type { Constraint, Objective, ParameterEvaluation, ParameterStudy, SingleTestAttachment } from "../../types";
 import { TradeOffScatter } from "../tradeoff/trade-off-scatter";
-import { betterHint, compareTable, defaultObjectives, frontierMatchesAxes, scatterPoints, statusText } from "./exploration-model";
+import { betterHint, candidateLabel, compareTable, defaultObjectives, frontierMatchesAxes, scatterPoints, statusText } from "./exploration-model";
 
 type Props = {
   service: ResearchService;
   /** The Experiment currently selected in Research; the choice is recorded there. */
   experiment: { id: string; path: string } | null;
   onRecordChoice: (markdown: string, evaluationId: string) => Promise<void>;
+};
+
+const DEFAULT_MESSAGE: Record<ParameterStudy["default"]["status"], string> = {
+  IN_OPTIMISATION: "★ Your default settings are among the tested passes and are marked on the field.",
+  SINGLE_TEST: "★ Your default is placed on the field from an attached single-test report.",
+  NOT_TESTED: "★ Your default settings were not among the tested passes (common with MT5's genetic optimiser). Attach a single-test report of the default below to place it on the field.",
+  NO_SCHEMA: "No .set file: the default reference point and parameter ranges are unavailable.",
 };
 
 const MAX_PINNED = 3;
@@ -39,6 +46,8 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
   const [notice, setNotice] = useState<string | null>(null);
   const xmlInput = useRef<HTMLInputElement>(null);
   const setInput = useRef<HTMLInputElement>(null);
+  const singleInput = useRef<HTMLInputElement>(null);
+  const [attachments, setAttachments] = useState<SingleTestAttachment[]>([]);
   const runs = useRef(new LatestRun()).current;
 
   const configKey = JSON.stringify({ objectives, constraints });
@@ -83,6 +92,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
       const created = await service.createParameterStudy(optimisation.optimisation_ref, schema?.schema_ref ?? null);
       const initial = defaultObjectives(created.metrics);
       setStudy(created);
+      setAttachments([]);
       setObjectives(initial);
       setConstraints([]);
       setEvaluation(null);
@@ -93,6 +103,26 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
       setAxes({ x: drawdown, y: reward, size: created.metrics.some((metric) => metric.id === "trades") ? "trades" : null });
       setBusy(null);
       if (created.status === "READY" && initial.length > 0) await runEvaluation(created, initial, []);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+      setBusy(null);
+    }
+  };
+
+  const attachSingleTest = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file || !study) return;
+    setError(null);
+    setBusy("Importing the single-test report and checking it against the study…");
+    try {
+      const path = localPathForSelectedFile(file);
+      if (!path.toLowerCase().endsWith(".xlsx")) throw new Error("Select an MT5 Strategy Tester .xlsx report.");
+      const intake = await service.intakeMt5Excel(path);
+      const attached = await service.addSingleTest(study.study_ref, intake.dataset_ref);
+      setAttachments((current) => [...current.filter((item) => item.candidate_id !== attached.candidate_id), attached]);
+      setBusy(null);
+      if (attached.status === "READY" && objectives.length > 0) await runEvaluation(study, objectives, constraints);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
       setBusy(null);
@@ -117,6 +147,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
   const points = useMemo(() => evaluation && axes.x && axes.y ? scatterPoints(evaluation, axes.x, axes.y, axes.size) : [], [evaluation, axes]);
   const comparison = useMemo(() => evaluation ? compareTable(evaluation, pinned) : null, [evaluation, pinned]);
   const selectedCandidate = evaluation?.candidates.find((candidate) => candidate.id === selected) ?? null;
+  const defaultStatus = evaluation?.study.default.status ?? study?.default.status ?? "NO_SCHEMA";
   const metricOptions = metrics.map((metric) => <option key={metric.id} value={metric.id}>{metric.label}</option>);
 
   return <section className="trl-page" aria-label="Parameter exploration">
@@ -144,7 +175,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
     {study && <section className="trl-page__surface">
       <h4>Study summary{study.context.title ? `: ${study.context.title}` : ""}</h4>
       <p className="trl-m0__note">{study.pass_count} tested parameter sets{study.full_grid_size ? ` out of ${study.full_grid_size} possible in the .set ranges` : ""}{study.context.deposit ? ` · deposit ${study.context.deposit}` : ""} · modelling {study.context.modelling_mode ?? "not declared"}.</p>
-      <p className={`trl-exploration__default is-${study.default.status.toLowerCase()}`}>{study.default.status === "IN_OPTIMISATION" ? "★ Your default settings are among the tested passes and are marked on the field." : study.default.status === "NOT_TESTED" ? "★ Your default settings were not among the tested passes (common with MT5's genetic optimiser). Run a single test with the default to place it on the field later." : "No .set file: the default reference point and parameter ranges are unavailable."}</p>
+      <p className={`trl-exploration__default is-${defaultStatus.toLowerCase()}`}>{DEFAULT_MESSAGE[defaultStatus]}</p>
       <div className="trl-monthly"><table>
         <thead><tr><th scope="col">Parameter</th><th scope="col">Kind</th><th scope="col">Default</th><th scope="col">Range (start–stop, step)</th><th scope="col">Values tested</th></tr></thead>
         <tbody>{study.parameters.map((parameter) => <tr key={parameter.name}>
@@ -155,6 +186,15 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
           <td title={parameter.tested_values.join(", ")}>{parameter.tested_values.length}{parameter.value_count ? ` of ${parameter.value_count}` : ""}</td>
         </tr>)}</tbody>
       </table></div>
+      <div className="trl-exploration__single">
+        <input ref={singleInput} className="trl-m0__file-input" type="file" accept=".xlsx" onChange={(event) => void attachSingleTest(event)} />
+        <button type="button" disabled={busy !== null || study.status !== "READY"} onClick={() => singleInput.current?.click()}>Attach a single-test report…</button>
+        <span className="trl-m0__note">Run your default (or any setting) as a single MT5 test with the same symbol, period and dates, then attach its .xlsx report to place it on the field. All of its inputs are checked against the .set file.</span>
+      </div>
+      {attachments.length > 0 && <ul className="trl-batch__findings">{attachments.map((item) => <li key={item.candidate_id}>
+        <strong className={item.status === "READY" ? "is-note" : "is-blocked"}>{item.label}: {item.status === "READY" ? (item.is_default ? "placed on the field as ★ your default" : "placed on the field") : "not placed"}</strong>
+        {item.findings.map((finding) => <span key={finding.code}>{finding.severity === "BLOCKED" ? "Blocked" : finding.severity === "WARNING" ? "Warning" : "Note"}: {finding.message}</span>)}
+      </li>)}</ul>}
       {study.findings.length > 0 && <ul className="trl-batch__findings">{study.findings.map((finding) => <li key={finding.code}><strong className={`is-${finding.severity.toLowerCase()}`}>{finding.severity === "NOTE" ? "Note" : finding.severity === "WARNING" ? "Warning" : "Blocked"}</strong><span>{finding.message}</span></li>)}</ul>}
     </section>}
 
@@ -214,7 +254,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
       />
       {!frontierMatchesAxes(JSON.parse(evaluatedConfig).objectives as Objective[], axes.x, axes.y) && <p className="trl-m0__note">The frontier line is shown only when the two axes are exactly the two objectives; frontier points are still highlighted.</p>}
       {selectedCandidate && <div className="trl-exploration__selected">
-        <strong>Selected: Pass {selectedCandidate.pass}{selectedCandidate.is_default ? " (your default)" : ""}</strong> · {statusText(selectedCandidate)}
+        <strong>Selected: {candidateLabel(selectedCandidate)}{selectedCandidate.is_default ? " (your default)" : ""}</strong> · {statusText(selectedCandidate)}
         <button type="button" disabled={pinned.includes(selectedCandidate.id) || pinned.length >= MAX_PINNED || selectedCandidate.is_default} onClick={() => setPinned([...pinned, selectedCandidate.id])}>Pin for comparison</button>
       </div>}
     </section>}
@@ -234,7 +274,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
         ? <p className="trl-m0__note">The choice is written into a marked block of <strong>{experiment.path}</strong>; the rest of the note is left untouched.</p>
         : <p className="trl-m0__inline-error" role="note">Select or create an Experiment under Research first; the choice is recorded in that experiment's note.</p>}
       <label className="trl-m0__field"><span>Why this trade-off? (your words, recorded verbatim)</span><textarea rows={3} value={reason} onChange={(event) => setReason(event.currentTarget.value)} placeholder="e.g. accept ~20% less profit for half the equity drawdown" /></label>
-      <button type="button" className="mod-cta" disabled={!experiment || busy !== null || stale} onClick={() => void recordChoice()}>Record Pass {selectedCandidate.pass} as my choice</button>
+      <button type="button" className="mod-cta" disabled={!experiment || busy !== null || stale} onClick={() => void recordChoice()}>Record {candidateLabel(selectedCandidate)} as my choice</button>
     </section>}
 
     {evaluation && <ul className="trl-batch__warnings">{evaluation.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}

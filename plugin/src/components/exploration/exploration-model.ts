@@ -29,7 +29,7 @@ export function betterHint(metricId: string, objectives: Objective[], metrics: S
 export function scatterPoints(evaluation: ParameterEvaluation, x: string, y: string, size: string | null): TradeOffPoint[] {
   return evaluation.candidates.map((candidate) => ({
     id: candidate.id,
-    label: `Pass ${candidate.pass ?? "?"}`,
+    label: candidateLabel(candidate),
     x: candidate.metrics[x] ?? null,
     y: candidate.metrics[y] ?? null,
     size: size ? candidate.metrics[size] ?? null : undefined,
@@ -55,7 +55,7 @@ export function compareTable(evaluation: ParameterEvaluation, pinnedIds: string[
   if (signature || defaultCandidate) columns.push({ key: "default", title: "★ Default", candidate: defaultCandidate });
   for (const id of pinnedIds) {
     const candidate = byId.get(id);
-    if (candidate && !candidate.is_default) columns.push({ key: id, title: `Pass ${candidate.pass ?? "?"}`, candidate });
+    if (candidate && !candidate.is_default) columns.push({ key: id, title: candidateLabel(candidate), candidate });
   }
   const names = evaluation.study.parameters.map((parameter) => parameter.name);
   const parameterValue = (column: CompareColumn, name: string): string => column.candidate?.parameters[name] ?? (column.key === "default" ? signature?.[name] ?? "—" : "—");
@@ -69,6 +69,10 @@ export function compareTable(evaluation: ParameterEvaluation, pinnedIds: string[
   }
   rows.push({ label: "Status", kind: "status", cells: columns.map((column) => ({ value: column.candidate ? statusText(column.candidate) : "not in this optimisation", differs: false })) });
   return { columns, rows };
+}
+
+export function candidateLabel(candidate: Candidate): string {
+  return candidate.label ?? `Pass ${candidate.pass ?? "?"}`;
 }
 
 export function statusText(candidate: Candidate): string {

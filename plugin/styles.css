@@ -238,5 +238,7 @@
 .trl-exploration__notice { color: var(--color-green); }
 .trl-batch__findings strong.is-note { color: var(--text-muted); }
 .trl-batch__findings strong.is-warning { color: var(--color-orange); }
+.trl-exploration__single { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 0.6rem 0; }
+.trl-exploration__default.is-single_test { border-left-color: var(--color-green); }
 @media (max-width: 58rem) { .trl-dashboard__workflow, .trl-dashboard__grid { grid-template-columns: 1fr; } .trl-dashboard__card--chart, .trl-dashboard__card--wide { grid-column: auto; } }
 @media (max-width: 42rem) { .trl-m0 { padding: 1rem; } .trl-m0__workspace-header, .trl-dashboard__header { display: block; } .trl-m0__workspace-header > span, .trl-dashboard__status { display: inline-block; margin-top: 0.5rem; } .trl-dashboard__card--chart { grid-column: span 1; } .trl-balance-chart__plot { height: 11rem; } .trl-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

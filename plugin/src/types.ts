@@ -441,7 +441,7 @@ export type ParameterStudy = {
   full_grid_size: string | null;
   parameters: StudyParameter[];
   metrics: StudyMetric[];
-  default: { signature: Record<string, string> | null; pass_id: string | null; status: "IN_OPTIMISATION" | "NOT_TESTED" | "NO_SCHEMA" };
+  default: { signature: Record<string, string> | null; pass_id: string | null; status: "IN_OPTIMISATION" | "NOT_TESTED" | "NO_SCHEMA" | "SINGLE_TEST" };
   findings: StudyFinding[];
 };
 export type Objective = { metric: string; direction: "MAX" | "MIN" };
@@ -452,6 +452,8 @@ export type ParameterEvaluation = {
   study: Pick<ParameterStudy, "study_ref" | "context" | "pass_count" | "full_grid_size" | "parameters" | "metrics" | "default" | "findings">;
   counts: Record<ParetoStatus, number>;
   front_count: number;
-  candidates: Array<{ id: string; pass: string | null; parameters: Record<string, string>; metrics: Record<string, string | null>; is_default: boolean; pareto: Omit<ParetoCandidateResult, "id"> }>;
+  single_tests?: Array<{ candidate_id: string; label: string; is_default: boolean; findings: StudyFinding[]; notes: string[] }>;
+  candidates: Array<{ id: string; pass: string | null; label?: string; source?: "OPTIMISATION" | "SINGLE_TEST"; parameters: Record<string, string>; metrics: Record<string, string | null>; is_default: boolean; pareto: Omit<ParetoCandidateResult, "id"> }>;
   warnings: string[];
 };
+export type SingleTestAttachment = { dataset_ref: string; candidate_id: string; label: string; parameters: Record<string, string>; metrics: Record<string, string | null>; is_default: boolean; findings: StudyFinding[]; status: "READY" | "BLOCKED"; notes: string[] };

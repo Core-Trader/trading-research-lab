@@ -111,30 +111,38 @@ def evaluate(workspace_root: Path, study_ref: str, objectives: list[dict[str, st
     _, rows = _read_optimisation(workspace_root, study["optimisation_ref"])
     column_of = {metric["id"]: metric["column"] for metric in study["metrics"]}
     names = [parameter["name"] for parameter in study["parameters"]]
-    candidates = [{"id": row["trl_pass_id"], "values": {metric_id: row.get(column) for metric_id, column in column_of.items()}} for row in rows]
-    analysis = pareto_evaluate(candidates, objectives, constraints)
+    singles = [item for item in _single_tests(workspace_root, study) if item["status"] == "READY"]
+    default_id = study["default"]["pass_id"] or next((item["candidate_id"] for item in singles if item["is_default"]), None)
+    records = [
+        {"id": row["trl_pass_id"], "pass": row.get("Pass"), "label": f"Pass {row.get('Pass')}", "source": "OPTIMISATION", "parameters": {name: row[name] for name in names}, "metrics": {metric_id: row.get(column) for metric_id, column in column_of.items()}}
+        for row in rows
+    ] + [
+        {"id": item["candidate_id"], "pass": None, "label": f"Single test: {item['label']}", "source": "SINGLE_TEST", "parameters": item["parameters"], "metrics": {metric_id: item["metrics"].get(metric_id) for metric_id in column_of}}
+        for item in singles
+    ]
+    analysis = pareto_evaluate([{"id": record["id"], "values": record["metrics"]} for record in records], objectives, constraints)
     status = {item["id"]: item for item in analysis["candidates"]}
-    default_id = study["default"]["pass_id"]
-    configuration = {"calculation_version": EVALUATION_VERSION, "study_ref": study_ref, "objectives": objectives, "constraints": constraints}
+    configuration = {"calculation_version": EVALUATION_VERSION, "study_ref": study_ref, "objectives": objectives, "constraints": constraints, "single_tests": sorted((item["candidate_id"], item["summary_version"]) for item in singles)}
     configuration_hash = sha256(json.dumps(configuration, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest().upper()
+    default = dict(study["default"])
+    if default["status"] == "NOT_TESTED" and default_id is not None:
+        default["status"] = "SINGLE_TEST"
     return {
         "evaluation_id": stable_uuid("parameter-evaluation", configuration_hash),
         "calculation_version": EVALUATION_VERSION,
         "configuration": configuration,
         "configuration_hash": configuration_hash,
-        "study": {key: study[key] for key in ("study_ref", "context", "pass_count", "full_grid_size", "parameters", "metrics", "default", "findings")},
+        "study": {**{key: study[key] for key in ("study_ref", "context", "pass_count", "full_grid_size", "parameters", "metrics", "findings")}, "default": default},
+        "single_tests": [{key: item[key] for key in ("candidate_id", "label", "is_default", "findings", "notes")} for item in singles],
         "counts": analysis["counts"],
         "front_count": analysis["front_count"],
         "candidates": [
             {
-                "id": row["trl_pass_id"],
-                "pass": row.get("Pass"),
-                "parameters": {name: row[name] for name in names},
-                "metrics": {metric_id: row.get(column) for metric_id, column in column_of.items()},
-                "is_default": row["trl_pass_id"] == default_id,
-                "pareto": {key: status[row["trl_pass_id"]][key] for key in ("status", "rank", "dominated_by_count", "dominated_by_example", "violations")},
+                **record,
+                "is_default": record["id"] == default_id,
+                "pareto": {key: status[record["id"]][key] for key in ("status", "rank", "dominated_by_count", "dominated_by_example", "violations")},
             }
-            for row in rows
+            for record in records
         ],
         "warnings": [
             "Metrics are MT5-reported for each optimisation pass; TRL does not recompute them. Equity DD % is MT5's equity drawdown.",
@@ -142,6 +150,87 @@ def evaluate(workspace_root: Path, study_ref: str, objectives: list[dict[str, st
             "Many passes over one history increase the chance that a good-looking pass is luck; check neighbouring parameters and forward results before trusting one.",
         ],
     }
+
+
+_TITLE = __import__("re").compile(r"^(?P<expert>\S+)\s+(?P<symbol>[^,\s]+),(?P<timeframe>\S+)\s+(?P<start>\d{4}\.\d{2}\.\d{2})-(?P<end>\d{4}\.\d{2}\.\d{2})")
+
+
+def add_single_test(workspace_root: Path, study_ref: str, dataset_ref: str) -> dict[str, object]:
+    """Attach one imported single-test report to a study as an extra candidate.
+
+    Its MT5 Results summary supplies the same metric ids as optimisation passes.
+    The report lists every input, so fixed inputs are checked against the .set
+    and the test is recognised as the default only when all inputs match it.
+    """
+
+    from .intake import get_evidence, verify_raw_snapshot
+    from .mt5_report_summary import read_report_summary
+
+    study = _read_study(workspace_root, study_ref)
+    verification = verify_raw_snapshot(workspace_root, dataset_ref)
+    if not verification["verified"]:
+        raise CoreError("E_RAW_SNAPSHOT_MISMATCH", "The report snapshot no longer matches its recorded hash.")
+    evidence = get_evidence(workspace_root, dataset_ref)
+    summary = read_report_summary(Path(str(evidence["raw_snapshot_path"])))
+    findings: list[dict[str, object]] = []
+
+    title = _TITLE.match(study["context"].get("title") or "")
+    if title:
+        expected = {key: title.group(key) for key in ("expert", "symbol", "timeframe", "start", "end")}
+        differing = [key for key, value in expected.items() if (summary.get(key) or "") != value]
+        if differing:
+            findings.append(_finding("BLOCKED", "CONTEXT_DIFFERS", "The single test does not match the optimisation's " + ", ".join(f"{key} ({summary.get(key)} vs {expected[key]})" for key in differing) + "; its metrics are not comparable.", differing))
+    else:
+        findings.append(_finding("WARNING", "CONTEXT_UNVERIFIABLE", "The optimisation title could not be read, so expert, symbol, period and dates were not compared.", []))
+    deposit = (study["context"].get("deposit") or "").split(" ")[0]
+    if deposit and not _same(deposit, summary.get("initial_deposit")):
+        findings.append(_finding("WARNING", "DEPOSIT_DIFFERS", f"Initial deposit {summary.get('initial_deposit')} differs from the optimisation's {deposit}.", []))
+
+    names = [parameter["name"] for parameter in study["parameters"]]
+    missing = [name for name in names if name not in summary["inputs"]]
+    if missing:
+        findings.append(_finding("BLOCKED", "INPUT_MISSING", "The report does not list " + ", ".join(missing) + ".", missing))
+    signature = {name: summary["inputs"].get(name, "") for name in names}
+
+    fixed_differences: list[str] = []
+    schema = read_schema(workspace_root, study["schema_ref"]) if study.get("schema_ref") else None
+    if schema is not None:
+        for definition in schema["parameters"]:
+            if not definition["optimise"] and definition["name"] in summary["inputs"] and not _same(summary["inputs"][definition["name"]], definition["value"]):
+                fixed_differences.append(definition["name"])
+        if fixed_differences:
+            findings.append(_finding("WARNING", "FIXED_INPUTS_DIFFER", f"{len(fixed_differences)} non-optimised input(s) differ from the .set file (for example {fixed_differences[0]}).", fixed_differences))
+    default_signature = study["default"]["signature"]
+    is_default = bool(default_signature) and not missing and not fixed_differences and all(_same(signature[name], default_signature[name]) for name in names)
+
+    _, rows = _read_optimisation(workspace_root, study["optimisation_ref"])
+    matching_pass = next((row["Pass"] for row in rows if all(_same(row[name], signature[name]) for name in names)), None)
+    if matching_pass is not None:
+        findings.append(_finding("NOTE", "MATCHES_PASS", f"These parameters were also tested as optimisation pass {matching_pass}; both points are shown.", []))
+
+    attachment = {
+        "dataset_ref": dataset_ref,
+        "candidate_id": f"single:{dataset_ref}",
+        "label": str(evidence.get("original_filename") or dataset_ref),
+        "summary_version": summary["summary_version"],
+        "parameters": signature,
+        "metrics": summary["metrics"],
+        "is_default": is_default,
+        "findings": findings,
+        "status": "BLOCKED" if any(item["severity"] == "BLOCKED" for item in findings) else "READY",
+        "notes": summary["notes"],
+    }
+    target = _bounded(workspace_root.resolve(), "parameter-studies", study["study_id"], "single-tests")
+    target.mkdir(parents=True, exist_ok=True)
+    (target / f"{dataset_ref.removeprefix('mt5:')}.json").write_text(json.dumps(attachment, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return attachment
+
+
+def _single_tests(workspace_root: Path, study: dict[str, Any]) -> list[dict[str, Any]]:
+    folder = _bounded(workspace_root.resolve(), "parameter-studies", study["study_id"], "single-tests")
+    if not folder.is_dir():
+        return []
+    return [json.loads(path.read_text(encoding="utf-8")) for path in sorted(folder.glob("*.json"))]
 
 
 def render_choice(workspace_root: Path, study_ref: str, objectives: list[dict[str, str]], constraints: list[dict[str, str]] | None, candidate_id: str, reason: str) -> dict[str, object]:
@@ -167,7 +256,7 @@ def render_choice(workspace_root: Path, study_ref: str, objectives: list[dict[st
         f"- Evaluation: `{result['evaluation_id']}` ({EVALUATION_VERSION})",
         "- Objectives: " + ", ".join(f"{labels.get(item['metric'], item['metric'])} {'↑' if item['direction'] == 'MAX' else '↓'}" for item in objectives),
         "- Constraints: " + (", ".join(f"{labels.get(item['metric'], item['metric'])} {item['operator']} {item['threshold']}" for item in constraints or []) or "none"),
-        f"- Candidate: MT5 pass {chosen['pass']} — {_status_text(chosen['pareto'])}{' — this is the default' if chosen['is_default'] else ''}",
+        f"- Candidate: {'MT5 pass ' + str(chosen['pass']) if chosen['pass'] is not None else chosen['label']} — {_status_text(chosen['pareto'])}{' — this is the default' if chosen['is_default'] else ''}",
         "",
         "| Parameter | Chosen | Default |",
         "| --- | --- | --- |",

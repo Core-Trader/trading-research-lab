@@ -65,3 +65,13 @@ test("an untested default shows its .set values and 'not tested' metrics", () =>
   assert.equal(rows.at(-1)!.cells[1]!.value, "Fails trades >= 30");
   assert.deepEqual(compareTable(evaluation(null, false), ["a"]).columns.map((column) => column.title), ["Pass 1"]);
 });
+
+test("single-test candidates use their Core label, including as the default column source", () => {
+  const base = evaluation({ InpLot: "0.02", InpMode: "1" }, false);
+  const single = { ...candidate("single:mt5:X", "", "0.02", "95", "9", "PARETO", true), pass: null, label: "Single test: default.xlsx", source: "SINGLE_TEST" as const };
+  const withSingle = { ...base, candidates: [...base.candidates, single] };
+  assert.equal(scatterPoints(withSingle, "equity_drawdown_pct", "net_profit", null).at(-1)!.label, "Single test: default.xlsx");
+  const { columns, rows } = compareTable(withSingle, ["b"]);
+  assert.equal(columns[0]!.candidate?.id, "single:mt5:X");
+  assert.equal(rows.find((row) => row.label === "Net profit")!.cells[0]!.value, "95");
+});

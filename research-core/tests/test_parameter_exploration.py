@@ -183,3 +183,103 @@ def test_render_choice_is_core_derived_and_quotes_reason(tmp_path: Path) -> None
     with pytest.raises(CoreError) as error:
         render_choice(workspace, str(study["study_ref"]), objectives, [], "not-a-pass", "x")
     assert error.value.code == "E_STUDY_CANDIDATE_UNKNOWN"
+
+
+def _single_report(path: Path, inputs: dict[str, str], *, period: str = "H4 (2026.01.01 - 2026.05.19)", expert: str = "ExampleEA") -> None:
+    from openpyxl import Workbook
+    from trading_research_core.mt5_excel import REQUIRED_DEAL_HEADERS
+    workbook = Workbook()
+    sheet = workbook.active
+    rows: list[list[object]] = [["Strategy Tester Report"], ["Settings"], ["Expert:", None, None, expert], ["Symbol:", None, None, "EURUSD"], ["Period:", None, None, period]]
+    for index, (name, value) in enumerate(inputs.items()):
+        rows.append(["Inputs:" if index == 0 else None, None, None, f"{name}={value}"])
+    rows += [["Currency:", None, None, "USD"], ["Initial Deposit:", None, None, 10000], ["Leverage:", None, None, "1:100"], ["Results"],
+             ["Total Net Profit:", None, None, 120.5, "Equity Drawdown Absolute:", 3],
+             ["Gross Profit:", None, None, 200, "Equity Drawdown Relative:", "8.25% (80.00)"],
+             ["Profit Factor:", None, None, 2.5, "Expected Payoff:", 4.1],
+             ["Recovery Factor:", None, None, 1.5, "Sharpe Ratio:", 1.2, "OnTester result:", "7"],
+             ["Total Trades:", None, None, 29], ["Deals"], list(REQUIRED_DEAL_HEADERS),
+             ["2026.01.01 00:00:00", "1", None, "Balance", None, None, None, None, 0, 0, 0, 10000, "Opening balance"],
+             ["2026.01.02 00:00:00", "2", "EURUSD", "Buy", "Out", 0.1, 1.1, "10", 0, 0, 120.5, 10120.5, "Close"]]
+    for row in rows:
+        sheet.append(row)
+    workbook.save(path)
+
+
+def _study_with_title(tmp_path: Path) -> tuple[Path, dict[str, object]]:
+    workspace = tmp_path / "workspace"
+    xml = tmp_path / "opt.xml"
+    xml.write_text(_xml(ROWS).replace("<o:Title>EA EURUSD,H4</o:Title>", "<o:Title>ExampleEA EURUSD,H4 2026.01.01-2026.05.19</o:Title>"), encoding="utf-8")
+    optimisation = intake_parameter_grid(workspace, str(xml), "1-minute OHLC")
+    set_path = tmp_path / "ea.set"
+    set_path.write_text(SET_TEXT, encoding="utf-8")
+    schema_ref = intake_parameter_schema(workspace, str(set_path))["schema_ref"]
+    return workspace, create_study(workspace, str(optimisation["optimisation_ref"]), schema_ref)
+
+
+def _attach(tmp_path: Path, workspace: Path, study: dict[str, object], name: str, inputs: dict[str, str], **kwargs: str) -> dict[str, object]:
+    from trading_research_core.intake import intake_mt5_excel
+    from trading_research_core.parameter_exploration import add_single_test
+    report = tmp_path / f"{name}.xlsx"
+    _single_report(report, inputs, **kwargs)
+    dataset_ref = str(intake_mt5_excel(workspace, str(report))["dataset_ref"])
+    return add_single_test(workspace, str(study["study_ref"]), dataset_ref)
+
+
+DEFAULT_INPUTS = {"InpMode": "2", "InpLot": "0.02", "InpPeriod": "20", "InpComment": "DCA-EA", "InpUseFilter": "true"}
+
+
+def test_report_summary_maps_results_to_study_metric_ids(tmp_path: Path) -> None:
+    from trading_research_core.mt5_report_summary import read_report_summary
+    report = tmp_path / "single.xlsx"
+    _single_report(report, DEFAULT_INPUTS)
+    summary = read_report_summary(report)
+    assert (summary["expert"], summary["symbol"], summary["timeframe"], summary["start"], summary["end"]) == ("ExampleEA", "EURUSD", "H4", "2026.01.01", "2026.05.19")
+    assert summary["inputs"]["InpLot"] == "0.02" and summary["initial_deposit"] == "10000"
+    assert summary["metrics"] == {"net_profit": "120.5", "profit_factor": "2.5", "recovery_factor": "1.5", "expected_payoff": "4.1", "mt5_sharpe": "1.2", "trades": "29", "mt5_custom": "7", "equity_drawdown_pct": "8.25"}
+
+
+def test_single_test_with_all_default_inputs_becomes_the_default(tmp_path: Path) -> None:
+    rows = [row for row in ROWS if row[0] != "1"]  # remove the default pass from the optimisation
+    workspace = tmp_path / "workspace"
+    xml = tmp_path / "opt.xml"
+    xml.write_text(_xml(rows).replace("<o:Title>EA EURUSD,H4</o:Title>", "<o:Title>ExampleEA EURUSD,H4 2026.01.01-2026.05.19</o:Title>"), encoding="utf-8")
+    optimisation = intake_parameter_grid(workspace, str(xml), "1-minute OHLC")
+    set_path = tmp_path / "ea.set"
+    set_path.write_text(SET_TEXT, encoding="utf-8")
+    study = create_study(workspace, str(optimisation["optimisation_ref"]), intake_parameter_schema(workspace, str(set_path))["schema_ref"])
+    assert study["default"]["status"] == "NOT_TESTED"
+    attached = _attach(tmp_path, workspace, study, "default", DEFAULT_INPUTS)
+    assert attached["status"] == "READY" and attached["is_default"] is True
+    assert [finding["code"] for finding in attached["findings"]] == []
+    result = evaluate(workspace, str(study["study_ref"]), [{"metric": "net_profit", "direction": "MAX"}, {"metric": "equity_drawdown_pct", "direction": "MIN"}])
+    single = next(candidate for candidate in result["candidates"] if candidate["source"] == "SINGLE_TEST")
+    assert single["is_default"] is True and single["pass"] is None and single["metrics"]["equity_drawdown_pct"] == "8.25"
+    assert result["study"]["default"]["status"] == "SINGLE_TEST"
+    assert single["pareto"]["status"] in {"PARETO", "DOMINATED"}
+    assert result["configuration"]["single_tests"] == [[single["id"], "mt5-report-summary-1"]] or result["configuration"]["single_tests"] == [(single["id"], "mt5-report-summary-1")]
+
+
+def test_fixed_input_difference_is_reported_and_not_default(tmp_path: Path) -> None:
+    workspace, study = _study_with_title(tmp_path)
+    attached = _attach(tmp_path, workspace, study, "changed", {**DEFAULT_INPUTS, "InpPeriod": "25"})
+    assert attached["is_default"] is False
+    assert any(finding["code"] == "FIXED_INPUTS_DIFFER" and finding["subjects"] == ["InpPeriod"] for finding in attached["findings"])
+    assert any(finding["code"] == "MATCHES_PASS" for finding in attached["findings"])
+
+
+def test_context_mismatch_blocks_the_single_test(tmp_path: Path) -> None:
+    workspace, study = _study_with_title(tmp_path)
+    attached = _attach(tmp_path, workspace, study, "other_period", DEFAULT_INPUTS, period="H4 (2025.01.01 - 2025.12.31)")
+    assert attached["status"] == "BLOCKED"
+    finding = next(finding for finding in attached["findings"] if finding["code"] == "CONTEXT_DIFFERS")
+    assert finding["subjects"] == ["start", "end"]
+    result = evaluate(workspace, str(study["study_ref"]), [{"metric": "net_profit", "direction": "MAX"}])
+    assert all(candidate["source"] == "OPTIMISATION" for candidate in result["candidates"])
+
+
+def test_missing_optimised_input_blocks(tmp_path: Path) -> None:
+    workspace, study = _study_with_title(tmp_path)
+    attached = _attach(tmp_path, workspace, study, "no_lot", {"InpMode": "2", "InpPeriod": "20"})
+    assert attached["status"] == "BLOCKED"
+    assert any(finding["code"] == "INPUT_MISSING" and finding["subjects"] == ["InpLot"] for finding in attached["findings"])
