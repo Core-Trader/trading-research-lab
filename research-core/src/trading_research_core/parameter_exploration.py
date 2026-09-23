@@ -22,7 +22,7 @@ from .pareto import evaluate as pareto_evaluate
 
 
 STUDY_VERSION = "mvp-parameter-study-1"
-EVALUATION_VERSION = "mvp-parameter-evaluation-1"
+EVALUATION_VERSION = "mvp-parameter-evaluation-2"
 
 # MT5 optimisation column -> (TRL metric id, label, default direction or None, unit)
 METRIC_CATALOGUE: dict[str, tuple[str, str, str | None, str]] = {
@@ -112,6 +112,7 @@ def evaluate(workspace_root: Path, study_ref: str, objectives: list[dict[str, st
     column_of = {metric["id"]: metric["column"] for metric in study["metrics"]}
     names = [parameter["name"] for parameter in study["parameters"]]
     singles = [item for item in _single_tests(workspace_root, study) if item["status"] == "READY"]
+    forward = _forward(workspace_root, study)
     default_id = study["default"]["pass_id"] or next((item["candidate_id"] for item in singles if item["is_default"]), None)
     records = [
         {"id": row["trl_pass_id"], "pass": row.get("Pass"), "label": f"Pass {row.get('Pass')}", "source": "OPTIMISATION", "parameters": {name: row[name] for name in names}, "metrics": {metric_id: row.get(column) for metric_id, column in column_of.items()}}
@@ -122,7 +123,7 @@ def evaluate(workspace_root: Path, study_ref: str, objectives: list[dict[str, st
     ]
     analysis = pareto_evaluate([{"id": record["id"], "values": record["metrics"]} for record in records], objectives, constraints)
     status = {item["id"]: item for item in analysis["candidates"]}
-    configuration = {"calculation_version": EVALUATION_VERSION, "study_ref": study_ref, "objectives": objectives, "constraints": constraints, "single_tests": sorted((item["candidate_id"], item["summary_version"]) for item in singles)}
+    configuration = {"calculation_version": EVALUATION_VERSION, "study_ref": study_ref, "objectives": objectives, "constraints": constraints, "single_tests": sorted((item["candidate_id"], item["summary_version"]) for item in singles), "forward": None if forward is None else forward["forward_optimisation_ref"]}
     configuration_hash = sha256(json.dumps(configuration, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest().upper()
     default = dict(study["default"])
     if default["status"] == "NOT_TESTED" and default_id is not None:
@@ -134,12 +135,14 @@ def evaluate(workspace_root: Path, study_ref: str, objectives: list[dict[str, st
         "configuration_hash": configuration_hash,
         "study": {**{key: study[key] for key in ("study_ref", "context", "pass_count", "full_grid_size", "parameters", "metrics", "findings")}, "default": default},
         "single_tests": [{key: item[key] for key in ("candidate_id", "label", "is_default", "findings", "notes")} for item in singles],
+        "forward": None if forward is None else {key: forward[key] for key in ("forward_optimisation_ref", "forward_title", "period", "metrics", "matched_count", "in_sample_only_count", "forward_only_count", "findings")},
         "counts": analysis["counts"],
         "front_count": analysis["front_count"],
         "candidates": [
             {
                 **record,
                 "is_default": record["id"] == default_id,
+                "forward": None if forward is None else forward["matches"].get(record["id"]),
                 "pareto": {key: status[record["id"]][key] for key in ("status", "rank", "dominated_by_count", "dominated_by_example", "violations")},
             }
             for record in records
@@ -224,6 +227,90 @@ def add_single_test(workspace_root: Path, study_ref: str, dataset_ref: str) -> d
     target.mkdir(parents=True, exist_ok=True)
     (target / f"{dataset_ref.removeprefix('mt5:')}.json").write_text(json.dumps(attachment, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return attachment
+
+
+def attach_forward(workspace_root: Path, study_ref: str, forward_optimisation_ref: str) -> dict[str, object]:
+    """Join a forward (out-of-sample) MT5 optimisation to the study by parameter signature.
+
+    Periods come from the MT5 titles of both exports. Overlapping periods are
+    flagged: such forward metrics are not out-of-sample evidence.
+    """
+
+    from datetime import date
+
+    study = _read_study(workspace_root, study_ref)
+    manifest, forward_rows = _read_optimisation(workspace_root, forward_optimisation_ref)
+    _, rows = _read_optimisation(workspace_root, study["optimisation_ref"])
+    names = [parameter["name"] for parameter in study["parameters"]]
+    findings: list[dict[str, object]] = []
+    in_title = _TITLE.match(study["context"].get("title") or "")
+    out_title = _TITLE.match(manifest.get("report_metadata", {}).get("Title") or "")
+    period = None
+    if in_title and out_title:
+        differing = [key for key in ("expert", "symbol", "timeframe") if in_title.group(key) != out_title.group(key)]
+        if differing:
+            findings.append(_finding("BLOCKED", "CONTEXT_DIFFERS", "The forward export is for a different " + ", ".join(differing) + ".", differing))
+        to_date = lambda text: date(*(int(part) for part in text.split(".")))
+        in_start, in_end, out_start, out_end = (to_date(in_title.group("start")), to_date(in_title.group("end")), to_date(out_title.group("start")), to_date(out_title.group("end")))
+        period = {"in_sample": [in_title.group("start"), in_title.group("end")], "forward": [out_title.group("start"), out_title.group("end")], "source": "MT5_TITLE"}
+        if out_start <= in_end:
+            findings.append(_finding("WARNING", "PERIODS_OVERLAP", f"The forward period {out_title.group('start')}–{out_title.group('end')} overlaps the in-sample period {in_title.group('start')}–{in_title.group('end')}; these forward metrics are not out-of-sample evidence.", []))
+        elif (out_start - in_end).days > 1:
+            findings.append(_finding("NOTE", "PERIOD_GAP", f"There is a gap between the in-sample end ({in_title.group('end')}) and the forward start ({out_title.group('start')}).", []))
+        if out_end < in_start:
+            findings.append(_finding("WARNING", "FORWARD_BEFORE_IN_SAMPLE", "The forward period ends before the in-sample period starts.", []))
+    else:
+        findings.append(_finding("WARNING", "PERIODS_UNVERIFIABLE", "The export titles could not be read, so the periods were not compared.", []))
+    if set(manifest["parameter_columns"]) != set(names):
+        findings.append(_finding("BLOCKED", "PARAMETERS_DIFFER", "The forward export varies different inputs than the study's optimisation.", sorted(set(manifest["parameter_columns"]) ^ set(names))))
+
+    metrics = _metric_catalogue(manifest["metric_columns"])
+    signature = lambda row: tuple(_normalised(row.get(name)) for name in names)
+    forward_by_signature: dict[tuple[str, ...], dict[str, str]] = {}
+    duplicates = 0
+    for row in forward_rows:
+        key = signature(row)
+        if key in forward_by_signature:
+            duplicates += 1
+        forward_by_signature.setdefault(key, row)
+    matched: dict[str, dict[str, object]] = {}
+    for row in rows:
+        forward = forward_by_signature.get(signature(row))
+        if forward is not None:
+            matched[row["trl_pass_id"]] = {"pass": forward.get("Pass"), "metrics": {metric["id"]: forward.get(metric["column"]) for metric in metrics}}
+    if duplicates:
+        findings.append(_finding("WARNING", "FORWARD_DUPLICATE_SIGNATURES", f"{duplicates} forward row(s) repeat a parameter signature; the first occurrence was used.", []))
+    attachment = {
+        "forward_optimisation_ref": forward_optimisation_ref,
+        "forward_title": manifest.get("report_metadata", {}).get("Title"),
+        "period": period,
+        "metrics": metrics,
+        "matched_count": len(matched),
+        "in_sample_only_count": len(rows) - len(matched),
+        "forward_only_count": len({signature(row) for row in forward_rows}) - len(matched),
+        "matches": matched,
+        "findings": findings,
+        "status": "BLOCKED" if any(item["severity"] == "BLOCKED" for item in findings) else "READY",
+    }
+    if attachment["status"] != "READY":
+        # A blocked attempt never replaces an earlier usable attachment.
+        return {key: value for key, value in attachment.items() if key != "matches"}
+    target = _bounded(workspace_root.resolve(), "parameter-studies", study["study_id"])
+    (target / "forward.json").write_text(json.dumps(attachment, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {key: value for key, value in attachment.items() if key != "matches"}
+
+
+def _forward(workspace_root: Path, study: dict[str, Any]) -> dict[str, Any] | None:
+    path = _bounded(workspace_root.resolve(), "parameter-studies", study["study_id"], "forward.json")
+    if not path.is_file():
+        return None
+    attachment = json.loads(path.read_text(encoding="utf-8"))
+    return attachment if attachment["status"] == "READY" else None
+
+
+def _normalised(value: object) -> str:
+    number = _decimal(value)
+    return format(number.normalize(), "f") if number is not None else str(value).strip().lower()
 
 
 def _single_tests(workspace_root: Path, study: dict[str, Any]) -> list[dict[str, Any]]:

@@ -26,7 +26,7 @@ from .r_metrics import r_multiple_metrics
 from .portfolio_lab import combine as portfolio_combine, explore as portfolio_explore
 from .pareto import evaluate as pareto_evaluate
 from .mt5_set import intake_parameter_schema
-from .parameter_exploration import add_single_test, create_study, evaluate as exploration_evaluate, render_choice
+from .parameter_exploration import add_single_test, attach_forward, create_study, evaluate as exploration_evaluate, render_choice
 from .mt5_optimisation import intake_parameter_grid, intake_paired_forward_grid
 
 
@@ -67,6 +67,7 @@ class Worker:
                     "exploration.evaluate",
                     "exploration.render_choice",
                     "exploration.add_single_test",
+                    "exploration.attach_forward",
                     "analysis.reconstruct_lifecycles",
                     "analysis.lifecycle_summary",
                     "time.validate_profile",
@@ -132,6 +133,8 @@ class Worker:
             if not isinstance(objectives, list) or not isinstance(constraints, list):
                 raise CoreError("E_REQUEST_INVALID", "params.objectives and params.constraints must be lists.")
             return exploration_evaluate(self.workspace_root, _required_string(params, "study_ref"), objectives, constraints)
+        if method == "exploration.attach_forward":
+            return attach_forward(self.workspace_root, _required_string(params, "study_ref"), _required_string(params, "forward_optimisation_ref"))
         if method == "exploration.add_single_test":
             return add_single_test(self.workspace_root, _required_string(params, "study_ref"), _required_string(params, "dataset_ref"))
         if method == "exploration.render_choice":

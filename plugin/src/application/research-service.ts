@@ -1,4 +1,4 @@
-import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -87,6 +87,11 @@ export class ResearchService {
 
   addSingleTest(studyRef: string, datasetRef: string): Promise<SingleTestAttachment> {
     return this.worker.request("exploration.add_single_test", { study_ref: studyRef, dataset_ref: datasetRef }, LONG_RUNNING_MS);
+  }
+
+  /** Join a forward MT5 optimisation (already intaken) to the study by parameter signature. */
+  attachForward(studyRef: string, forwardOptimisationRef: string): Promise<ForwardAttachment> {
+    return this.worker.request("exploration.attach_forward", { study_ref: studyRef, forward_optimisation_ref: forwardOptimisationRef }, LONG_RUNNING_MS);
   }
 
   renderParameterChoice(studyRef: string, objectives: Objective[], constraints: Constraint[], candidateId: string, reason: string): Promise<{ evaluation_id: string; candidate_id: string; markdown: string }> {

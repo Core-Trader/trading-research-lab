@@ -283,3 +283,52 @@ def test_missing_optimised_input_blocks(tmp_path: Path) -> None:
     attached = _attach(tmp_path, workspace, study, "no_lot", {"InpMode": "2", "InpPeriod": "20"})
     assert attached["status"] == "BLOCKED"
     assert any(finding["code"] == "INPUT_MISSING" and finding["subjects"] == ["InpLot"] for finding in attached["findings"])
+
+
+def _titled(tmp_path: Path, name: str, rows: list[tuple[str, ...]], title: str, params: tuple[str, str] = ("InpMode", "InpLot")) -> str:
+    xml = tmp_path / f"{name}.xml"
+    xml.write_text(_xml(rows, params).replace("<o:Title>EA EURUSD,H4</o:Title>", f"<o:Title>{title}</o:Title>"), encoding="utf-8")
+    return str(intake_parameter_grid(tmp_path / "workspace", str(xml), "1-minute OHLC")["optimisation_ref"])
+
+
+def test_forward_join_by_normalised_signature_with_contiguous_periods(tmp_path: Path) -> None:
+    from trading_research_core.parameter_exploration import attach_forward
+    in_ref = _titled(tmp_path, "is", ROWS, "ExampleEA EURUSD,H4 2020.01.01-2024.12.31")
+    forward_rows = [("7", "40", "15", "12", "2", "0.020"), ("8", "-10", "30", "9", "1", "0.03"), ("9", "5", "3", "4", "0", "0.01")]
+    out_ref = _titled(tmp_path, "fw", forward_rows, "ExampleEA EURUSD,H4 2025.01.01-2025.12.31")
+    study = create_study(tmp_path / "workspace", in_ref)
+    attached = attach_forward(tmp_path / "workspace", str(study["study_ref"]), out_ref)
+    assert attached["status"] == "READY" and attached["findings"] == []
+    assert (attached["matched_count"], attached["in_sample_only_count"], attached["forward_only_count"]) == (2, 2, 1)
+    assert attached["period"] == {"in_sample": ["2020.01.01", "2024.12.31"], "forward": ["2025.01.01", "2025.12.31"], "source": "MT5_TITLE"}
+    result = evaluate(tmp_path / "workspace", str(study["study_ref"]), [{"metric": "net_profit", "direction": "MAX"}])
+    by_pass = {candidate["pass"]: candidate for candidate in result["candidates"]}
+    assert by_pass["1"]["forward"] == {"pass": "7", "metrics": {"net_profit": "40", "equity_drawdown_pct": "15", "trades": "12"}}
+    assert by_pass["2"]["forward"]["metrics"]["net_profit"] == "-10"
+    assert by_pass["3"]["forward"] is None
+    assert result["forward"]["matched_count"] == 2 and result["configuration"]["forward"] == out_ref
+
+
+def test_forward_overlap_and_parameter_mismatch(tmp_path: Path) -> None:
+    from trading_research_core.parameter_exploration import attach_forward
+    in_ref = _titled(tmp_path, "is", ROWS, "ExampleEA EURUSD,H4 2020.01.01-2025.12.31")
+    same_period = _titled(tmp_path, "fw", ROWS, "ExampleEA EURUSD,H4 2020.01.01-2025.12.31")
+    study = create_study(tmp_path / "workspace", in_ref)
+    overlap = attach_forward(tmp_path / "workspace", str(study["study_ref"]), same_period)
+    assert overlap["status"] == "READY" and [finding["code"] for finding in overlap["findings"]] == ["PERIODS_OVERLAP"]
+    other_params = _titled(tmp_path, "fw2", [("1", "1", "1", "1", "2", "5")], "ExampleEA EURUSD,H4 2026.01.01-2026.03.31", ("InpMode", "InpPeriod"))
+    blocked = attach_forward(tmp_path / "workspace", str(study["study_ref"]), other_params)
+    assert blocked["status"] == "BLOCKED" and any(finding["code"] == "PARAMETERS_DIFFER" for finding in blocked["findings"])
+    result = evaluate(tmp_path / "workspace", str(study["study_ref"]), [{"metric": "net_profit", "direction": "MAX"}])
+    assert [finding["code"] for finding in result["forward"]["findings"]] == ["PERIODS_OVERLAP"]
+
+
+def test_blocked_forward_is_not_used(tmp_path: Path) -> None:
+    from trading_research_core.parameter_exploration import attach_forward
+    in_ref = _titled(tmp_path, "is", ROWS, "ExampleEA EURUSD,H4 2020.01.01-2024.12.31")
+    other_symbol = _titled(tmp_path, "fw", ROWS, "ExampleEA GBPUSD,H4 2025.01.01-2025.12.31")
+    study = create_study(tmp_path / "workspace", in_ref)
+    blocked = attach_forward(tmp_path / "workspace", str(study["study_ref"]), other_symbol)
+    assert blocked["status"] == "BLOCKED" and blocked["findings"][0]["code"] == "CONTEXT_DIFFERS"
+    result = evaluate(tmp_path / "workspace", str(study["study_ref"]), [{"metric": "net_profit", "direction": "MAX"}])
+    assert result["forward"] is None and all(candidate["forward"] is None for candidate in result["candidates"])

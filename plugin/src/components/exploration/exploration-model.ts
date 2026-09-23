@@ -21,7 +21,22 @@ export function frontierMatchesAxes(objectives: Objective[], x: string, y: strin
   return objectives.length === 2 && x !== y && objectives.some((objective) => objective.metric === x) && objectives.some((objective) => objective.metric === y);
 }
 
-export function betterHint(metricId: string, objectives: Objective[], metrics: StudyMetric[]): "higher" | "lower" | undefined {
+/** Axis ids with this prefix read the candidate's matched forward (out-of-sample) metrics. */
+export const FORWARD_PREFIX = "forward:";
+
+export function metricValue(candidate: Candidate, id: string): string | null {
+  return id.startsWith(FORWARD_PREFIX) ? candidate.forward?.metrics[id.slice(FORWARD_PREFIX.length)] ?? null : candidate.metrics[id] ?? null;
+}
+
+/** Plottable metrics: the study's, then the forward export's when one is attached. */
+export function axisOptions(evaluation: ParameterEvaluation | null, metrics: StudyMetric[]): Array<{ id: string; label: string }> {
+  const own = metrics.map((metric) => ({ id: metric.id, label: metric.label }));
+  const forward = evaluation?.forward?.metrics.map((metric) => ({ id: FORWARD_PREFIX + metric.id, label: `Forward: ${metric.label}` })) ?? [];
+  return [...own, ...forward];
+}
+
+export function betterHint(axisId: string, objectives: Objective[], metrics: StudyMetric[]): "higher" | "lower" | undefined {
+  const metricId = axisId.startsWith(FORWARD_PREFIX) ? axisId.slice(FORWARD_PREFIX.length) : axisId;
   const direction = objectives.find((objective) => objective.metric === metricId)?.direction ?? metrics.find((metric) => metric.id === metricId)?.default_direction ?? null;
   return direction === "MAX" ? "higher" : direction === "MIN" ? "lower" : undefined;
 }
@@ -30,9 +45,9 @@ export function scatterPoints(evaluation: ParameterEvaluation, x: string, y: str
   return evaluation.candidates.map((candidate) => ({
     id: candidate.id,
     label: candidateLabel(candidate),
-    x: candidate.metrics[x] ?? null,
-    y: candidate.metrics[y] ?? null,
-    size: size ? candidate.metrics[size] ?? null : undefined,
+    x: metricValue(candidate, x),
+    y: metricValue(candidate, y),
+    size: size ? metricValue(candidate, size) : undefined,
     status: candidate.pareto.status,
     rank: candidate.pareto.rank,
     isDefault: candidate.is_default,
@@ -40,12 +55,13 @@ export function scatterPoints(evaluation: ParameterEvaluation, x: string, y: str
 }
 
 export type CompareColumn = { key: string; title: string; candidate: Candidate | null };
-export type CompareRow = { label: string; kind: "parameter" | "metric" | "status"; cells: Array<{ value: string; differs: boolean }> };
+export type CompareRow = { label: string; kind: "parameter" | "metric" | "forward" | "status"; cells: Array<{ value: string; differs: boolean }> };
 
 /**
  * DEFAULT versus pinned candidates. The default column uses the .set signature
  * for parameters and, when the default was not among the passes, "not tested"
- * for metrics.
+ * for metrics. With a forward export attached, its metrics follow as
+ * "Forward: …" rows (only optimisation passes can have a forward match).
  */
 export function compareTable(evaluation: ParameterEvaluation, pinnedIds: string[]): { columns: CompareColumn[]; rows: CompareRow[] } {
   const byId = new Map(evaluation.candidates.map((candidate) => [candidate.id, candidate]));
@@ -66,6 +82,9 @@ export function compareTable(evaluation: ParameterEvaluation, pinnedIds: string[
   });
   for (const metric of evaluation.study.metrics) {
     rows.push({ label: metric.label, kind: "metric", cells: columns.map((column) => ({ value: column.candidate ? column.candidate.metrics[metric.id] ?? "—" : "not tested", differs: false })) });
+  }
+  for (const metric of evaluation.forward?.metrics ?? []) {
+    rows.push({ label: `Forward: ${metric.label}`, kind: "forward", cells: columns.map((column) => ({ value: !column.candidate ? "not tested" : column.candidate.forward ? column.candidate.forward.metrics[metric.id] ?? "—" : "no forward match", differs: false })) });
   }
   rows.push({ label: "Status", kind: "status", cells: columns.map((column) => ({ value: column.candidate ? statusText(column.candidate) : "not in this optimisation", differs: false })) });
   return { columns, rows };

@@ -2,9 +2,9 @@ import React, { useMemo, useRef, useState } from "react";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
 import { localPathForSelectedFile } from "../../services/local-file-path";
-import type { Constraint, Objective, ParameterEvaluation, ParameterStudy, SingleTestAttachment } from "../../types";
+import type { Constraint, ForwardAttachment, Objective, ParameterEvaluation, ParameterStudy, SingleTestAttachment, StudyFinding } from "../../types";
 import { TradeOffScatter } from "../tradeoff/trade-off-scatter";
-import { betterHint, candidateLabel, compareTable, defaultObjectives, frontierMatchesAxes, scatterPoints, statusText } from "./exploration-model";
+import { axisOptions, betterHint, candidateLabel, compareTable, defaultObjectives, FORWARD_PREFIX, frontierMatchesAxes, scatterPoints, statusText } from "./exploration-model";
 
 type Props = {
   service: ResearchService;
@@ -21,6 +21,7 @@ const DEFAULT_MESSAGE: Record<ParameterStudy["default"]["status"], string> = {
 };
 
 const MAX_PINNED = 3;
+const SEVERITY: Record<StudyFinding["severity"], string> = { BLOCKED: "Blocked", WARNING: "Warning", NOTE: "Note" };
 const MAX_OBJECTIVES = 4;
 
 /**
@@ -48,12 +49,15 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
   const setInput = useRef<HTMLInputElement>(null);
   const singleInput = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<SingleTestAttachment[]>([]);
+  const forwardInput = useRef<HTMLInputElement>(null);
+  const [forward, setForward] = useState<ForwardAttachment | null>(null);
   const runs = useRef(new LatestRun()).current;
 
   const configKey = JSON.stringify({ objectives, constraints });
   const stale = evaluation !== null && configKey !== evaluatedConfig;
   const metrics = study?.metrics ?? [];
-  const labelOf = (id: string): string => metrics.find((metric) => metric.id === id)?.label ?? id;
+  const plottable = axisOptions(evaluation, metrics);
+  const labelOf = (id: string): string => plottable.find((option) => option.id === id)?.label ?? metrics.find((metric) => metric.id === id)?.label ?? id;
 
   const pick = (event: React.ChangeEvent<HTMLInputElement>, extension: string, apply: (path: string) => void): void => {
     const file = event.currentTarget.files?.[0];
@@ -93,6 +97,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
       const initial = defaultObjectives(created.metrics);
       setStudy(created);
       setAttachments([]);
+      setForward(null);
       setObjectives(initial);
       setConstraints([]);
       setEvaluation(null);
@@ -129,6 +134,26 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
     }
   };
 
+  const attachForward = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file || !study) return;
+    setError(null);
+    setBusy("Importing the forward results and pairing them with the study's passes…");
+    try {
+      const path = localPathForSelectedFile(file);
+      if (!path.toLowerCase().endsWith(".xml")) throw new Error("Select the MT5 forward optimisation results (.xml).");
+      const intake = await service.intakeOptimisationGrid(path, study.context.modelling_mode ?? modellingMode.trim());
+      const attached = await service.attachForward(study.study_ref, intake.optimisation_ref);
+      setForward(attached);
+      setBusy(null);
+      if (attached.status === "READY" && objectives.length > 0) await runEvaluation(study, objectives, constraints);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+      setBusy(null);
+    }
+  };
+
   const recordChoice = async (): Promise<void> => {
     if (!study || !selected || !evaluation || stale) return;
     setBusy("Recording your choice in the experiment note…");
@@ -149,6 +174,9 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
   const selectedCandidate = evaluation?.candidates.find((candidate) => candidate.id === selected) ?? null;
   const defaultStatus = evaluation?.study.default.status ?? study?.default.status ?? "NO_SCHEMA";
   const metricOptions = metrics.map((metric) => <option key={metric.id} value={metric.id}>{metric.label}</option>);
+  const plotOptions = plottable.map((option) => <option key={option.id} value={option.id}>{option.label}</option>);
+  const forwardAxis = [axes.x, axes.y, axes.size ?? ""].some((id) => id.startsWith(FORWARD_PREFIX));
+  const overlap = evaluation?.forward?.findings.some((finding) => finding.code === "PERIODS_OVERLAP") ?? false;
 
   return <section className="trl-page" aria-label="Parameter exploration">
     <header className="trl-page__header"><div><h3>Parameter exploration</h3><p>See where your EA settings sit among all tested parameter sets, and choose the trade-off you prefer. TRL marks trade-offs; it never picks a winner.</p></div></header>
@@ -195,6 +223,16 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
         <strong className={item.status === "READY" ? "is-note" : "is-blocked"}>{item.label}: {item.status === "READY" ? (item.is_default ? "placed on the field as ★ your default" : "placed on the field") : "not placed"}</strong>
         {item.findings.map((finding) => <span key={finding.code}>{finding.severity === "BLOCKED" ? "Blocked" : finding.severity === "WARNING" ? "Warning" : "Note"}: {finding.message}</span>)}
       </li>)}</ul>}
+      <div className="trl-exploration__single">
+        <input ref={forwardInput} className="trl-m0__file-input" type="file" accept=".xml" onChange={(event) => void attachForward(event)} />
+        <button type="button" disabled={busy !== null || study.status !== "READY"} onClick={() => forwardInput.current?.click()}>Attach forward results (.xml)…</button>
+        <span className="trl-m0__note">The MT5 forward-test export for a later period. Passes are paired by identical inputs, so you can see how each setting did on data it was not optimised on.</span>
+      </div>
+      {forward && <ul className="trl-batch__findings"><li>
+        <strong className={forward.status === "READY" ? "is-note" : "is-blocked"}>Forward results{forward.period ? ` ${forward.period.forward[0]}–${forward.period.forward[1]}` : ""}: {forward.status === "READY" ? `${forward.matched_count} of the tested sets paired` : "not attached"}</strong>
+        {forward.status === "READY" && <span>{forward.in_sample_only_count} in-sample sets have no forward run; {forward.forward_only_count} forward sets were not in the in-sample results.</span>}
+        {forward.findings.map((finding) => <span key={finding.code}>{SEVERITY[finding.severity]}: {finding.message}</span>)}
+      </li></ul>}
       {study.findings.length > 0 && <ul className="trl-batch__findings">{study.findings.map((finding) => <li key={finding.code}><strong className={`is-${finding.severity.toLowerCase()}`}>{finding.severity === "NOTE" ? "Note" : finding.severity === "WARNING" ? "Warning" : "Blocked"}</strong><span>{finding.message}</span></li>)}</ul>}
     </section>}
 
@@ -232,10 +270,11 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
       <h4>3. Trade-off field</h4>
       {stale && <p className="trl-m0__inline-error" role="note">The field shows the previous evaluation; your objectives or constraints have changed since. Re-evaluate to update it.</p>}
       <div className="trl-m0__scenario-fields">
-        <label className="trl-m0__field"><span>Horizontal axis</span><select value={axes.x} onChange={(event) => setAxes({ ...axes, x: event.currentTarget.value })}>{metricOptions}</select></label>
-        <label className="trl-m0__field"><span>Vertical axis</span><select value={axes.y} onChange={(event) => setAxes({ ...axes, y: event.currentTarget.value })}>{metricOptions}</select></label>
-        <label className="trl-m0__field"><span>Point size</span><select value={axes.size ?? ""} onChange={(event) => setAxes({ ...axes, size: event.currentTarget.value || null })}><option value="">uniform</option>{metricOptions}</select></label>
+        <label className="trl-m0__field"><span>Horizontal axis</span><select value={axes.x} onChange={(event) => setAxes({ ...axes, x: event.currentTarget.value })}>{plotOptions}</select></label>
+        <label className="trl-m0__field"><span>Vertical axis</span><select value={axes.y} onChange={(event) => setAxes({ ...axes, y: event.currentTarget.value })}>{plotOptions}</select></label>
+        <label className="trl-m0__field"><span>Point size</span><select value={axes.size ?? ""} onChange={(event) => setAxes({ ...axes, size: event.currentTarget.value || null })}><option value="">uniform</option>{plotOptions}</select></label>
       </div>
+      {forwardAxis && <p className="trl-m0__note">Colours and the frontier are from the in-sample evaluation; forward values exist only for paired passes, so unpaired ones are not plotted.{overlap ? " The forward period overlaps the in-sample period, so these are not out-of-sample results." : ""}</p>}
       <TradeOffScatter
         points={points}
         xLabel={labelOf(axes.x)}
@@ -249,7 +288,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
         details={(point) => {
           const candidate = evaluation.candidates.find((item) => item.id === point.id);
           if (!candidate) return null;
-          return <>{Object.entries(candidate.parameters).map(([name, value]) => <span key={name}>{name} = {value}</span>)}{candidate.pareto.violations.map((violation) => <span key={violation.metric}>✗ {labelOf(violation.metric)} {violation.operator} {violation.threshold} (is {violation.value ?? "missing"})</span>)}</>;
+          return <>{Object.entries(candidate.parameters).map(([name, value]) => <span key={name}>{name} = {value}</span>)}{evaluation.forward && <span>{candidate.forward ? `Forward: ${evaluation.forward.metrics.map((metric) => `${metric.label} ${candidate.forward!.metrics[metric.id] ?? "—"}`).join(" · ")}` : "No forward match"}</span>}{candidate.pareto.violations.map((violation) => <span key={violation.metric}>✗ {labelOf(violation.metric)} {violation.operator} {violation.threshold} (is {violation.value ?? "missing"})</span>)}</>;
         }}
       />
       {!frontierMatchesAxes(JSON.parse(evaluatedConfig).objectives as Objective[], axes.x, axes.y) && <p className="trl-m0__note">The frontier line is shown only when the two axes are exactly the two objectives; frontier points are still highlighted.</p>}
@@ -265,7 +304,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
         <thead><tr><th scope="col" />{comparison.columns.map((column) => <th key={column.key} scope="col">{column.title}{column.key !== "default" && <button type="button" className="trl-link-button" onClick={() => setPinned(pinned.filter((id) => id !== column.key))}> ✕</button>}</th>)}</tr></thead>
         <tbody>{comparison.rows.map((row) => <tr key={row.label} className={`is-${row.kind}`}><th scope="row">{row.label}</th>{row.cells.map((cell, index) => <td key={index} className={cell.differs ? "is-different" : undefined}>{cell.value}</td>)}</tr>)}</tbody>
       </table></div>
-      <p className="trl-m0__note">Highlighted parameter values differ from your default. Metrics are MT5-reported for each pass. Pin up to {MAX_PINNED} passes from the field.</p>
+      <p className="trl-m0__note">Highlighted parameter values differ from your default. Metrics are MT5-reported for each pass{evaluation.forward ? (overlap ? "; forward rows come from an export whose period overlaps the in-sample period" : "; forward rows are the same settings on the later forward period") : ""}. Pin up to {MAX_PINNED} passes from the field.</p>
     </section>}
 
     {evaluation && selectedCandidate && <section className="trl-page__surface">

@@ -452,8 +452,21 @@ export type ParameterEvaluation = {
   study: Pick<ParameterStudy, "study_ref" | "context" | "pass_count" | "full_grid_size" | "parameters" | "metrics" | "default" | "findings">;
   counts: Record<ParetoStatus, number>;
   front_count: number;
+  forward?: ForwardSummary | null;
   single_tests?: Array<{ candidate_id: string; label: string; is_default: boolean; findings: StudyFinding[]; notes: string[] }>;
-  candidates: Array<{ id: string; pass: string | null; label?: string; source?: "OPTIMISATION" | "SINGLE_TEST"; parameters: Record<string, string>; metrics: Record<string, string | null>; is_default: boolean; pareto: Omit<ParetoCandidateResult, "id"> }>;
+  candidates: Array<{ id: string; pass: string | null; label?: string; source?: "OPTIMISATION" | "SINGLE_TEST"; parameters: Record<string, string>; metrics: Record<string, string | null>; is_default: boolean; forward?: { pass: string | null; metrics: Record<string, string | null> } | null; pareto: Omit<ParetoCandidateResult, "id"> }>;
   warnings: string[];
 };
+/** Forward (out-of-sample) MT5 optimisation joined to a study by parameter signature. */
+export type ForwardSummary = {
+  forward_optimisation_ref: string;
+  forward_title: string | null;
+  period: { in_sample: [string, string]; forward: [string, string]; source: "MT5_TITLE" } | null;
+  metrics: StudyMetric[];
+  matched_count: number;
+  in_sample_only_count: number;
+  forward_only_count: number;
+  findings: StudyFinding[];
+};
+export type ForwardAttachment = ForwardSummary & { status: "READY" | "BLOCKED" };
 export type SingleTestAttachment = { dataset_ref: string; candidate_id: string; label: string; parameters: Record<string, string>; metrics: Record<string, string | null>; is_default: boolean; findings: StudyFinding[]; status: "READY" | "BLOCKED"; notes: string[] };

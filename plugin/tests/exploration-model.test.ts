@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { betterHint, compareTable, defaultObjectives, frontierMatchesAxes, scatterPoints } from "../src/components/exploration/exploration-model.ts";
+import { axisOptions, betterHint, compareTable, defaultObjectives, FORWARD_PREFIX, frontierMatchesAxes, scatterPoints } from "../src/components/exploration/exploration-model.ts";
 import type { ParameterEvaluation, StudyMetric } from "../src/types.ts";
 
 const metric = (id: string, direction: "MAX" | "MIN" | null, label = id): StudyMetric => ({ id, column: id, label, default_direction: direction, unit: "", basis: "MT5_REPORTED" });
@@ -74,4 +74,23 @@ test("single-test candidates use their Core label, including as the default colu
   const { columns, rows } = compareTable(withSingle, ["b"]);
   assert.equal(columns[0]!.candidate?.id, "single:mt5:X");
   assert.equal(rows.find((row) => row.label === "Net profit")!.cells[0]!.value, "95");
+});
+
+test("forward metrics feed forward axes and compare rows; unmatched passes stay unplotted", () => {
+  const base = evaluation({ InpLot: "0.02", InpMode: "1" }, true);
+  const forwardMetrics = [metric("net_profit", "MAX", "Net profit"), metric("equity_drawdown_pct", "MIN", "Equity drawdown %")];
+  const withForward: ParameterEvaluation = {
+    ...base,
+    forward: { forward_optimisation_ref: "f", forward_title: null, period: null, metrics: forwardMetrics, matched_count: 1, in_sample_only_count: 2, forward_only_count: 0, findings: [] },
+    candidates: base.candidates.map((item) => item.id === "a" ? { ...item, forward: { pass: "7", metrics: { net_profit: "40", equity_drawdown_pct: "15" } } } : { ...item, forward: null }),
+  };
+  assert.deepEqual(axisOptions(withForward, METRICS).slice(-2).map((option) => option.label), ["Forward: Net profit", "Forward: Equity drawdown %"]);
+  assert.deepEqual(axisOptions(base, METRICS).length, METRICS.length);
+  const points = scatterPoints(withForward, "net_profit", `${FORWARD_PREFIX}net_profit`, null);
+  assert.deepEqual(points.map((point) => [point.x, point.y]), [["100", "40"], ["90", null], ["300", null]]);
+  assert.equal(betterHint(`${FORWARD_PREFIX}equity_drawdown_pct`, [], METRICS), "lower");
+  assert.equal(frontierMatchesAxes(defaultObjectives(METRICS), "equity_drawdown_pct", `${FORWARD_PREFIX}net_profit`), false);
+  const { rows } = compareTable(withForward, ["b"]);
+  assert.deepEqual(rows.find((row) => row.label === "Forward: Net profit")!.cells.map((cell) => cell.value), ["40", "no forward match"]);
+  assert.equal(rows.at(-1)!.kind, "status");
 });
