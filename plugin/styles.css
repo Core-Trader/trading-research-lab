@@ -346,3 +346,40 @@
 .trl-audit[open] > summary { margin-bottom: 0.4rem; }
 .trl-audit code { font-size: 0.72rem; overflow-wrap: anywhere; }
 .trl-moved-card { max-width: 52rem; }
+/* How to read this · tips (UI/UX pass §4) */
+.trl-guidance { margin-top: 0.9rem; padding: 0.55rem 0.75rem; border-left: 3px solid var(--interactive-accent); border-radius: 0.3rem; background: color-mix(in srgb, var(--interactive-accent) 7%, transparent); }
+.trl-guidance > summary { cursor: pointer; font-weight: 600; }
+.trl-guidance__body { display: grid; gap: 0.4rem; margin-top: 0.4rem; }
+.trl-guidance__read, .trl-guidance__tips { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.3rem; }
+.trl-guidance__heading { font-size: var(--font-ui-smaller); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.trl-guidance__flag { margin: 0; color: var(--text-muted); font-size: var(--font-ui-smaller); font-style: italic; }
+.trl-kpi--warning .trl-kpi__value { color: var(--color-orange); }
+/* What-if outcome bars */
+.trl-outcome { display: grid; grid-template-columns: 8rem minmax(0, 1fr) auto; gap: 0.6rem; align-items: center; margin: 0.3rem 0; font-size: var(--font-ui-smaller); }
+.trl-outcome__label { color: var(--text-muted); }
+.trl-outcome__bar { display: flex; height: 0.9rem; overflow: hidden; border-radius: 0.3rem; background: var(--background-secondary); }
+.trl-outcome__bar .is-win { background: var(--color-green); }
+.trl-outcome__bar .is-loss { background: var(--color-red); }
+.trl-outcome__bar .is-even { background: var(--text-faint); }
+.trl-outcome__counts { font-variant-numeric: tabular-nums; color: var(--text-muted); }
+/* Monte Carlo percentile strip */
+.trl-mc-strip { margin: 0.8rem 0 0; }
+.trl-mc-strip h5 { margin: 0 0 1.6rem; }
+.trl-mc-strip__track { position: relative; height: 0.5rem; margin: 0 1.5rem; border-radius: 0.25rem; background: var(--background-secondary); }
+.trl-mc-strip__middle { position: absolute; top: 0; bottom: 0; border-radius: 0.25rem; background: color-mix(in srgb, var(--color-orange) 35%, transparent); }
+.trl-mc-strip__marker { position: absolute; top: -0.35rem; width: 2px; height: 1.2rem; margin-left: -1px; background: var(--text-muted); cursor: help; }
+.trl-mc-strip__marker.is-emphasis { width: 4px; margin-left: -2px; background: var(--interactive-accent); }
+.trl-mc-strip__label { position: absolute; top: -1.3rem; left: 50%; transform: translateX(-50%); color: var(--text-muted); font-size: 0.68rem; white-space: nowrap; }
+.trl-mc-strip__marker.is-emphasis .trl-mc-strip__label { top: 1.35rem; color: var(--text-accent); font-weight: 600; }
+.trl-mc-strip figcaption { margin-top: 1.8rem; }
+/* Monte Carlo histogram reference lines and fan band */
+.trl-mc-hist { position: relative; }
+.trl-mc-hist__line { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed var(--text-muted); pointer-events: auto; }
+.trl-mc-hist__line.is-p95 { border-left-color: var(--color-orange); }
+.trl-mc-hist__line.is-historical { border-left: 2px solid var(--interactive-accent); }
+.trl-mc-hist__line span { position: absolute; top: 0; left: 0.25rem; padding: 0 0.2rem; border-radius: 0.2rem; background: var(--background-primary); color: var(--text-muted); font-size: 0.68rem; white-space: nowrap; }
+.trl-mc-fan__band { fill: color-mix(in srgb, var(--color-orange) 22%, transparent); stroke: none; }
+.trl-mc-fan__median { fill: none; stroke: var(--color-orange); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.trl-mc-fan__key.is-band { display: inline-block; width: 1.2rem; height: 0.6rem; vertical-align: middle; background: color-mix(in srgb, var(--color-orange) 22%, transparent); opacity: 1; }
+.trl-mc-fan__key.is-median { display: inline-block; width: 1.2rem; height: 0; vertical-align: middle; border-top: 2px dashed var(--color-orange); opacity: 1; }
+.trl-mc-fan__toggle { display: block; margin-top: 0.35rem; }

@@ -3,6 +3,8 @@ import type { PortfolioExploration } from "../../types";
 import { formatTimestamp, roundDecimalString } from "../display-format";
 import { TradeOffScatter } from "../tradeoff/trade-off-scatter";
 import type { TradeOffPoint } from "../tradeoff/scatter-layout";
+import { GuidanceBlock } from "../guidance";
+import { paretoGuidance } from "./pareto-guidance";
 
 const r2 = (value: string | null | undefined): string => value === null || value === undefined ? "—" : roundDecimalString(value, 2);
 
@@ -51,6 +53,15 @@ export function CombinationExplorer({ exploration, labels, selectedId, onPick }:
         </>;
       }}
     />
+    <GuidanceBlock guidance={paretoGuidance({
+      points: points.map((point) => ({ id: point.id, label: point.label, gain: point.y, cost: point.x, status: point.status, dominatedBy: byId.get(point.id)?.pareto.dominated_by_example ?? null })),
+      frontierCount: exploration.counts.PARETO,
+      steps: exploration.frontier_steps ?? null,
+      selectedId,
+      currency: unit,
+      gainLabel: "net P/L",
+      costLabel: "max drawdown",
+    })} />
     <ul className="trl-batch__warnings">{exploration.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
   </section>;
 }

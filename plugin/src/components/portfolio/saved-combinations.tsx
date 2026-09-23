@@ -4,6 +4,8 @@ import { roundDecimalString } from "../display-format";
 import { signTone } from "../dashboard-model";
 import { TradeOffScatter } from "../tradeoff/trade-off-scatter";
 import type { TradeOffPoint } from "../tradeoff/scatter-layout";
+import { GuidanceBlock } from "../guidance";
+import { paretoGuidance } from "./pareto-guidance";
 
 export type SavedCombination = { key: string; name: string; labels: string[]; combination: PortfolioCombination };
 
@@ -55,6 +57,15 @@ export function SavedCombinations({ saved, evaluation, activeKey, onOpen, onRemo
       })}</tbody>
     </table></div>
     {saved.length >= 2 && <TradeOffScatter points={points} xLabel={`Max drawdown (${unit})`} yLabel={`Net P/L (${unit})`} xBetter="lower" yBetter="higher" frontierLine highlightFrontier={evaluation !== null} selectedId={activeKey} onSelect={(point) => onOpen(point.id)} />}
+    {saved.length >= 2 && evaluation && <GuidanceBlock defaultOpen={false} guidance={paretoGuidance({
+      points: points.map((point) => ({ id: point.id, label: point.label, gain: point.y, cost: point.x, status: point.status, dominatedBy: status.get(point.id)?.dominated_by_example ?? null })),
+      frontierCount: evaluation.counts.PARETO,
+      steps: evaluation.frontier_steps ?? null,
+      selectedId: activeKey,
+      currency: unit,
+      gainLabel: "net P/L",
+      costLabel: "max drawdown",
+    })} />}
     {saved.length < 2 && <p className="trl-m0__note">Save at least two combinations to compare them on the return-versus-drawdown field.</p>}
   </section>;
 }

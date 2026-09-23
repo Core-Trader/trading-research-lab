@@ -1,6 +1,8 @@
 # UI/UX pass: audit and proposal
 
-**Status:** DRAFT for owner approval (2026-09-23). No code has been changed.
+**Status:** APPROVED in full (D1–D5) and IMPLEMENTED 2026-09-24; see
+`internal/development-journal/2026-09-24-ui-ux-pass.md`. Revert tag:
+`plugin-pre-uiux-pass`.
 The owner's brief covers sections 1–4, with the hard rule that all guidance
 must come from computed, verified results.
 

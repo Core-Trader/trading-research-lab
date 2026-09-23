@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } fro
 import { createRoot, type Root } from "react-dom/client";
 import { ItemView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import type TradingResearchLabPlugin from "./main";
-import type { SetCheckResult, CloseEventDisplaySeries, PerformanceMetrics, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, MonteCarloResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "./types";
+import type { EquityMetrics, SetCheckResult, CloseEventDisplaySeries, PerformanceMetrics, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, MonteCarloResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "./types";
 import { experimentDocumentText, inspectReportForRegeneration, regenerateReportText, reportDocumentText, strategyDocumentText, uuidv7 } from "./research-documents";
 import { ResearchService } from "./application/research-service";
 import { LatestRun } from "./application/latest-run";
@@ -97,6 +97,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const activePage = useSyncExternalStore((listener) => navigation.subscribe(listener), () => navigation.current.page);
   const setActivePage = (page: WorkspacePage): void => navigation.setPage(page);
   const [importBusy, setImportBusy] = useState(false);
+  const [equityMetrics, setEquityMetrics] = useState<EquityMetrics | null>(null);
+  const [equityMetricsError, setEquityMetricsError] = useState<string | null>(null);
   const [validated, setValidated] = useState<{ datasetRef: string; eventCount: number; workerWasReady: boolean; readinessMs: number; importMs: number } | null>(null);
   const [libraryEntries, setLibraryEntries] = useState<DatasetEvidence[]>([]);
   const [setCheck, setSetCheck] = useState<SetCheckResult | null>(null);
@@ -603,6 +605,16 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     }
   };
 
+  // Equity metrics are loaded once and shared by the Equity panel and the Monte Carlo guidance.
+  useEffect(() => {
+    setEquityMetrics(null);
+    setEquityMetricsError(null);
+    if (equityAvailability?.status !== "AVAILABLE") return;
+    let current = true;
+    service.equityMetrics(equityAvailability.dataset_ref).then((result) => { if (current) setEquityMetrics(result); }).catch((caught) => { if (current) setEquityMetricsError(caught instanceof Error ? caught.message : String(caught)); });
+    return () => { current = false; };
+  }, [service, equityAvailability]);
+
   // Report status for the sidebar card (NAV-3); the sidebar never calculates.
   useEffect(() => {
     navigation.update({
@@ -730,7 +742,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       equity={equityAvailability}
       onRun={() => void runM3Analysis()}
     />}
-      {evidence && <EquityPanel service={service} datasetRef={evidence.dataset_ref} availability={equityAvailability} balanceDrawdown={performanceMetrics?.balance_metrics.maximum_drawdown ?? null} currency={evidence.supplied_facts.currency} onChanged={() => void service.equityAvailability(evidence.dataset_ref).then(setEquityAvailability)} />}
+      {evidence && <EquityPanel service={service} datasetRef={evidence.dataset_ref} availability={equityAvailability} metrics={equityMetrics} error={equityMetricsError} currency={evidence.supplied_facts.currency} onChanged={() => void service.equityAvailability(evidence.dataset_ref).then(setEquityAvailability)} />}
       {(evidence || statistics) && <RMultiplePanel source={rSource} amount={rAmount} result={rResult} busy={rBusy} error={rError} enabled={statistics !== null} onSourceChange={(value) => { setRSource(value); setRResult(null); setRError(null); }} onAmountChange={(value) => { setRAmount(value); setRError(null); }} onRun={() => void runRMultiples()} />}
     </section>}
     {activePage === "research" && <section className="trl-page" aria-label="Research documents">
@@ -764,6 +776,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       onRun={() => void runFixedCostScenario()}
     />}
       {(evidence || statistics) && <MonteCarloAnalysis
+      equity={equityMetrics}
       seed={monteCarloSeed}
       pathCount={monteCarloPathCount}
       error={monteCarloError}

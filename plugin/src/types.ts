@@ -148,6 +148,9 @@ export type EquityMetrics = {
   initial_balance: string;
   maximum_equity_drawdown: string;
   maximum_equity_drawdown_percent: string | null;
+  balance_maximum_drawdown: string;
+  equity_to_balance_drawdown_ratio: string | null;
+  equity_deeper_than_balance: boolean;
   worst_day: { date: string; start_of_day_reference: string; lowest_equity: string; lowest_at: string; loss: string; loss_percent_of_initial: string | null };
   daily: Array<{ date: string; loss: string; loss_percent_of_initial: string | null }>;
   row_count: number;
@@ -231,6 +234,9 @@ export type MonteCarloResult = {
     historical: string[];
     paths: Array<{ path_index: number; values: string[] }>;
   };
+  historical: { maximum_drawdown: string; rank_percent: string; vs_median: "DEEPER" | "SHALLOWER" | "EQUAL" };
+  fan_bands: { p05: string[]; p50: string[]; p95: string[]; event_indices: number[]; widest_band: string; widest_at_event: number };
+  account: { opening_balance: string | null; p50_percent_of_opening: string | null; p95_percent_of_opening: string | null };
   least_drawdown_path: { path_index: number; maximum_drawdown: string };
   worst_drawdown_path: { path_index: number; maximum_drawdown: string };
   warnings: string[];
@@ -420,12 +426,15 @@ export type ParetoCandidateResult = {
   dominated_by_example: string | null;
   violations: Array<{ metric: string; operator: string; threshold: string; value: string | null; reason: "NOT_SATISFIED" | "MISSING_VALUE" }>;
 };
+/** Core frontier steps for one gain (MAX) and one cost (MIN) objective. */
+export type FrontierSteps = { gain_metric: string; cost_metric: string; points: string[]; steps: Array<{ from_id: string; to_id: string; step_gain: string; step_cost: string; ratio: string | null; diminishing: boolean | null }> };
 export type ParetoEvaluation = {
   calculation_version: string;
   configuration_hash: string;
   candidate_count: number;
   counts: Record<ParetoStatus, number>;
   front_count: number;
+  frontier_steps?: FrontierSteps | null;
   candidates: ParetoCandidateResult[];
 };
 
@@ -436,6 +445,7 @@ export type PortfolioExploration = {
   subset_count: number;
   counts: Record<ParetoStatus, number>;
   front_count: number;
+  frontier_steps?: FrontierSteps | null;
   subsets: Array<{
     id: string;
     members: number[];

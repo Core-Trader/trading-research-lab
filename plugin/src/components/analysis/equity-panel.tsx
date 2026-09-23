@@ -5,7 +5,6 @@ import type { EquityAvailabilityResult, EquityLogAttachment, EquityMetrics } fro
 import { CollapsibleSection } from "../collapsible-section";
 import { DismissButton } from "../dismiss-button";
 import { EquityChart } from "./equity-chart";
-import { drawdownGap } from "./equity-model";
 
 const MODES = ["Every tick based on real ticks", "Every tick", "1 minute OHLC", "Open prices only"];
 
@@ -75,27 +74,17 @@ export function EquityHowTo(): React.ReactElement {
  * Equity evidence on the Analysis page. Every number is Core output; without
  * a verified log, equity stays unavailable.
  */
-export function EquityPanel({ service, datasetRef, availability, balanceDrawdown, currency, onChanged }: {
+export function EquityPanel({ service, datasetRef, availability, metrics, error, currency, onChanged }: {
   service: ResearchService;
   datasetRef: string;
   availability: EquityAvailabilityResult | null;
-  balanceDrawdown: string | null;
+  /** Loaded once by the workspace (also used by Monte Carlo guidance). */
+  metrics: EquityMetrics | null;
+  error: string | null;
   currency: string | null;
   onChanged: () => void;
 }): React.ReactElement {
-  const [metrics, setMetrics] = useState<EquityMetrics | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const available = availability?.status === "AVAILABLE";
-
-  useEffect(() => {
-    setMetrics(null);
-    if (!available) return;
-    let current = true;
-    service.equityMetrics(datasetRef).then((result) => { if (current) setMetrics(result); }).catch((caught) => { if (current) setError(caught instanceof Error ? caught.message : String(caught)); });
-    return () => { current = false; };
-  }, [service, datasetRef, available]);
-
-  const gap = metrics ? drawdownGap(metrics.maximum_equity_drawdown, balanceDrawdown) : null;
   const unit = currency ?? "";
 
   return <CollapsibleSection title="Equity (floating drawdown)" defaultOpen>
@@ -103,16 +92,16 @@ export function EquityPanel({ service, datasetRef, availability, balanceDrawdown
       <EquityHowTo />
       <EquityAttach service={service} datasetRef={datasetRef} attached={false} onAttached={onChanged} />
     </>}
-    {error && <p className="trl-m0__inline-error" role="alert">{error}<DismissButton onDismiss={() => setError(null)} /></p>}
+    {error && <p className="trl-m0__inline-error" role="alert">{error}</p>}
     {metrics && <>
       <dl className="trl-m0__diagnostic-grid">
         <dt>Max equity drawdown</dt><dd><strong>{metrics.maximum_equity_drawdown} {unit}</strong>{metrics.maximum_equity_drawdown_percent !== null ? ` (${Number(metrics.maximum_equity_drawdown_percent).toFixed(2)}% of the prior peak)` : ""}</dd>
         {availability?.status === "AVAILABLE" && <><dt>MT5 reported</dt><dd>{availability.equity.mt5_reported_equity_drawdown ?? "—"} {unit}{availability.equity.findings.includes("EQUITY_DRAWDOWN_DIFFERS") ? " — the log is shallower (see the attach notes)" : availability.equity.findings.includes("LOG_DEEPER_THAN_MT5") ? " — the log found a deeper tick low" : " — agrees with the log"}</dd></>}
-        {balanceDrawdown !== null && <><dt>Realised-balance drawdown</dt><dd>{balanceDrawdown} {unit}</dd></>}
+        <dt>Realised-balance drawdown</dt><dd>{metrics.balance_maximum_drawdown} {unit}</dd>
         <dt>Worst day (equity)</dt><dd>{metrics.worst_day.date}: −{metrics.worst_day.loss} {unit}{metrics.worst_day.loss_percent_of_initial !== null ? ` (${Number(metrics.worst_day.loss_percent_of_initial).toFixed(2)}% of the initial balance)` : ""}, low at {metrics.worst_day.lowest_at.replace("T", " ")}</dd>
         <dt>Evidence</dt><dd>TRL tester log, {metrics.row_count} rows; modelling {availability?.status === "AVAILABLE" ? availability.equity.modelling_mode : "—"}</dd>
       </dl>
-      {gap && <p className="trl-equity__gap" role="note">{gap}</p>}
+      {metrics.equity_deeper_than_balance && metrics.equity_to_balance_drawdown_ratio !== null && <p className="trl-equity__gap" role="note">Equity drawdown is {Number(metrics.equity_to_balance_drawdown_ratio).toFixed(1)}× the realised-balance drawdown: open positions went deeper than closed trades show.</p>}
       <EquityChart points={metrics.display_series} currency={currency} />
       <ul className="trl-batch__warnings">{metrics.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
     </>}

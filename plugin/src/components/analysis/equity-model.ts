@@ -20,12 +20,3 @@ export function equityGeometry(points: EquityPoint[]): EquityGeometry | null {
   const lower = points.map((point, index) => `${x(index).toFixed(3)},${y(point.equity_min).toFixed(3)}`).reverse();
   return { balance: line("balance"), equity: line("equity_close"), band: [...upper, ...lower].join(" "), low: String(low), high: String(high) };
 }
-
-/** Gap between the two drawdown views, as words; the numbers are Core values. */
-export function drawdownGap(equityDrawdown: string, balanceDrawdown: string | null): string | null {
-  const equity = Number(equityDrawdown);
-  const balance = balanceDrawdown === null ? NaN : Number(balanceDrawdown);
-  if (!Number.isFinite(equity) || !Number.isFinite(balance) || balance <= 0) return null;
-  const ratio = equity / balance;
-  return ratio >= 1.5 ? `Equity drawdown is ${ratio.toFixed(1)}× the realised-balance drawdown: open positions went much deeper than closed trades show.` : null;
-}
