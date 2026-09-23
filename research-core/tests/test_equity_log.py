@@ -101,11 +101,13 @@ def test_edited_balance_or_other_run_is_blocked(tmp_path: Path) -> None:
     assert "equity" not in get_evidence(workspace, ref)  # nothing recorded for blocked logs
 
 
-def test_drawdown_disagreement_is_a_warning_not_a_block(tmp_path: Path) -> None:
-    workspace, ref = _setup(tmp_path, equity_dd="50.00 (0.50%)")
+@pytest.mark.parametrize("mt5_figure,code", [("50.00 (0.50%)", "LOG_DEEPER_THAN_MT5"), ("300.00 (3.00%)", "EQUITY_DRAWDOWN_DIFFERS")])
+def test_drawdown_disagreement_is_reported_never_blocking(tmp_path: Path, mt5_figure: str, code: str) -> None:
+    workspace, ref = _setup(tmp_path, equity_dd=mt5_figure)
     result = attach_equity_log(workspace, ref, str(_log(tmp_path)), "1 minute OHLC")
     assert result["status"] == "LINKED_VERIFIED"
-    assert [item["code"] for item in result["findings"]] == ["EQUITY_DRAWDOWN_DIFFERS", "SYNTHETIC_INTRABAR_PATH"]
+    assert [item["code"] for item in result["findings"]] == [code, "SYNTHETIC_INTRABAR_PATH"]
+    assert result["findings"][0]["severity"] == ("NOTE" if code == "LOG_DEEPER_THAN_MT5" else "WARNING")
 
 
 def test_end_of_test_closes_after_the_last_logged_row(tmp_path: Path) -> None:

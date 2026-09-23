@@ -60,10 +60,13 @@ def attach_equity_log(workspace_root: Path, dataset_ref: str, source_path: str, 
     drawdown = equity_drawdown(rows)
     reported = _reported_equity_drawdown(Path(str(evidence["raw_snapshot_path"])))
     if reported is not None:
-        difference = abs(drawdown["maximum"] - reported)
+        difference = drawdown["maximum"] - reported
         tolerance = max(reported * Decimal("0.005"), _CENT)
         if difference > tolerance:
-            findings.append(_finding("WARNING", "EQUITY_DRAWDOWN_DIFFERS", f"The log's maximum equity drawdown ({_fmt(drawdown['maximum'])}) differs from MT5's reported Equity Drawdown Maximal ({_fmt(reported)}) by {_fmt(difference)}, more than the {_fmt(tolerance.quantize(_CENT))} tolerance. MT5 measures tick by tick; a coarse interval or a different run can explain it."))
+            # Observed on real runs: MT5's summary figure can miss tick lows the logger sees.
+            findings.append(_finding("NOTE", "LOG_DEEPER_THAN_MT5", f"The log's maximum equity drawdown ({_fmt(drawdown['maximum'])}) is deeper than MT5's reported Equity Drawdown Maximal ({_fmt(reported)}) by {_fmt(difference)}. The logger checks every tick; TRL uses the log's (more conservative) figure."))
+        elif -difference > tolerance:
+            findings.append(_finding("WARNING", "EQUITY_DRAWDOWN_DIFFERS", f"The log's maximum equity drawdown ({_fmt(drawdown['maximum'])}) is shallower than MT5's reported Equity Drawdown Maximal ({_fmt(reported)}) by {_fmt(-difference)}, more than the {_fmt(tolerance.quantize(_CENT))} tolerance: the log may have missed a low. Check the interval and that it comes from this run."))
     else:
         findings.append(_finding("NOTE", "MT5_EQUITY_DRAWDOWN_UNAVAILABLE", "The report has no readable Equity Drawdown Maximal to cross-check against."))
     if not re.search(r"real ticks", mode, re.IGNORECASE):

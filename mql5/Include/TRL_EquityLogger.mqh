@@ -14,8 +14,9 @@
 //| - Strategy Tester single tests only; never in live trading and   |
 //|   never during optimisations. Never places or changes orders.    |
 //| - Tracks the lowest and highest equity on every tick in memory   |
-//|   and writes one row per interval (default M5), plus one row     |
-//|   whenever the balance changes (a deal closed or was charged).   |
+//|   and writes one row per interval (default M5) that had ticks and|
+//|   an open position or equity movement, plus one row whenever the |
+//|   balance changes (a deal closed or was charged).                |
 //| - Writes to <Common>\Files\TRL\ as UTF-8-compatible ANSI CSV,    |
 //|   never overwriting an existing file.                            |
 //| - Does not record the account login.                             |
@@ -24,7 +25,7 @@
 #define TRL_EQUITY_LOGGER_MQH
 
 #define TRL_EQUITY_LOG_FORMAT   "trl-equity-log-1"
-#define TRL_EQUITY_LOGGER_VER   "1.0.0"
+#define TRL_EQUITY_LOGGER_VER   "1.0.1"
 
 int             g_trlHandle        = INVALID_HANDLE;
 ENUM_TIMEFRAMES g_trlInterval      = PERIOD_M5;
@@ -39,6 +40,9 @@ datetime        g_trlEqMinTime     = 0;
 double          g_trlMarginMax     = 0.0;
 int             g_trlPositionsMax  = 0;
 int             g_trlDealsTotal    = 0;
+int             g_trlTicks         = 0;      // ticks seen in the current interval
+double          g_trlTickBalance   = 0.0;    // state at the last tick of the interval
+double          g_trlTickEquity    = 0.0;
 
 string TrlTime(const datetime value)
   {
@@ -56,9 +60,11 @@ void TrlWriteLine(const string line)
       FileWriteString(g_trlHandle, line + "\r\n");
   }
 
-int TrlCountDeals(const datetime until)
+int TrlCountDeals(const datetime now)
   {
-   if(!HistorySelect(0, until))
+   // The upper bound is in the future: deals stamped at the current second are
+   // otherwise missed while the balance already includes them (1.0.1 fix).
+   if(!HistorySelect(0, now + 86400))
       return g_trlDealsTotal;
    return HistoryDealsTotal();
   }
@@ -71,17 +77,23 @@ void TrlResetInterval(const datetime start, const double equity)
    g_trlEqMinTime     = g_trlLastTick;
    g_trlMarginMax     = AccountInfoDouble(ACCOUNT_MARGIN);
    g_trlPositionsMax  = PositionsTotal();
+   g_trlTicks         = 0;
   }
 
 // kind,time,balance,equity_close,equity_min,equity_min_time,equity_max,margin_max,positions_max,deals_total
-void TrlWriteRow(const string kind, const datetime at)
+// Rows carry the state recorded at `at` (never a later tick's values).
+void TrlWriteRow(const string kind, const datetime at, const double balance, const double equity)
   {
-   TrlWriteLine(kind + "," + TrlTime(at) + "," +
-                TrlMoney(AccountInfoDouble(ACCOUNT_BALANCE)) + "," +
-                TrlMoney(AccountInfoDouble(ACCOUNT_EQUITY)) + "," +
+   TrlWriteLine(kind + "," + TrlTime(at) + "," + TrlMoney(balance) + "," + TrlMoney(equity) + "," +
                 TrlMoney(g_trlEqMin) + "," + TrlTime(g_trlEqMinTime) + "," +
                 TrlMoney(g_trlEqMax) + "," + TrlMoney(g_trlMarginMax) + "," +
                 IntegerToString(g_trlPositionsMax) + "," + IntegerToString(g_trlDealsTotal));
+  }
+
+// An interval is worth a row when it had ticks and something at risk or moving.
+bool TrlIntervalInformative()
+  {
+   return g_trlTicks > 0 && (g_trlPositionsMax > 0 || g_trlEqMin != g_trlEqMax || g_trlEqMin != g_trlTickBalance);
   }
 
 bool TrlEquityInit(const ENUM_TIMEFRAMES interval = PERIOD_M5)
@@ -124,9 +136,11 @@ bool TrlEquityInit(const ENUM_TIMEFRAMES interval = PERIOD_M5)
    TrlWriteLine("kind,time,balance,equity_close,equity_min,equity_min_time,equity_max,margin_max,positions_max,deals_total");
    g_trlLastTick    = now;
    g_trlLastBalance = AccountInfoDouble(ACCOUNT_BALANCE);
+   g_trlTickBalance = g_trlLastBalance;
+   g_trlTickEquity  = AccountInfoDouble(ACCOUNT_EQUITY);
    g_trlDealsTotal  = TrlCountDeals(now);
-   TrlResetInterval(now - (now % g_trlIntervalSecs), AccountInfoDouble(ACCOUNT_EQUITY));
-   TrlWriteRow("START", now);
+   TrlResetInterval(now - (now % g_trlIntervalSecs), g_trlTickEquity);
+   TrlWriteRow("START", now, g_trlTickBalance, g_trlTickEquity);
    Print("TRL equity logger: writing Common\\Files\\", name);
    return true;
   }
@@ -137,15 +151,17 @@ void TrlEquityOnTick()
       return;
    datetime now   = TimeCurrent();
    datetime start = now - (now % g_trlIntervalSecs);
+   double equity  = AccountInfoDouble(ACCOUNT_EQUITY);
    if(start != g_trlIntervalStart)
      {
-      // Close the previous interval with the state as of its last tick.
-      TrlWriteRow("INTERVAL", g_trlLastTick);
+      // Close the previous interval with the state recorded at its last tick.
+      if(TrlIntervalInformative())
+         TrlWriteRow("INTERVAL", g_trlLastTick, g_trlTickBalance, g_trlTickEquity);
       g_trlLastTick = now;
-      TrlResetInterval(start, AccountInfoDouble(ACCOUNT_EQUITY));
+      TrlResetInterval(start, equity);
      }
    g_trlLastTick = now;
-   double equity = AccountInfoDouble(ACCOUNT_EQUITY);
+   g_trlTicks++;
    if(equity < g_trlEqMin)
      {
       g_trlEqMin     = equity;
@@ -160,11 +176,13 @@ void TrlEquityOnTick()
    if(positions > g_trlPositionsMax)
       g_trlPositionsMax = positions;
    double balance = AccountInfoDouble(ACCOUNT_BALANCE);
+   g_trlTickBalance = balance;
+   g_trlTickEquity  = equity;
    if(balance != g_trlLastBalance)
      {
       g_trlLastBalance = balance;
       g_trlDealsTotal  = TrlCountDeals(now);
-      TrlWriteRow("BALANCE", now);
+      TrlWriteRow("BALANCE", now, balance, equity);
      }
   }
 
@@ -188,7 +206,7 @@ void TrlEquityFinish()
    if(equity > g_trlEqMax)
       g_trlEqMax = equity;
    g_trlDealsTotal = TrlCountDeals(now);
-   TrlWriteRow("END", now);
+   TrlWriteRow("END", now, balance, equity);
    TrlWriteLine("# test_end: " + TrlTime(now));
    FileClose(g_trlHandle);
    g_trlHandle = INVALID_HANDLE;
