@@ -29,6 +29,7 @@ ALLOWLIST: list[tuple[str, str]] = [
     ("research-core/src/trading_research_core/**/*.py", "research-core/src/trading_research_core"),
     ("product-docs/*.md", "docs"),
     ("mql5/Include/*.mqh", "mql5/Include"),
+    ("mql5/Experts/*.mq5", "mql5/Experts"),
     ("LICENSE", ""),
 ]
 REQUIRED = ["trading-research-lab/manifest.json", "trading-research-lab/main.js", "trading-research-lab/styles.css", "research-core/pyproject.toml"]
@@ -41,7 +42,7 @@ FORBIDDEN_CONTENT = {
     "EMAIL_ADDRESS": re.compile(r"[A-Za-z0-9._%+-]+@(?!example\.com)[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}"),
     "SOURCE_MAP": re.compile(r"sourceMappingURL="),
 }
-TEXT_SUFFIXES = {".js", ".css", ".json", ".py", ".toml", ".md", ".mqh", ""}
+TEXT_SUFFIXES = {".js", ".css", ".json", ".py", ".toml", ".md", ".mqh", ".mq5", ""}
 
 
 def collect(repo: Path) -> list[tuple[Path, str]]:

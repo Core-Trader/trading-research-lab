@@ -1,5 +1,7 @@
 import { Plugin, PluginSettingTab, Setting, TFile, type App, type WorkspaceLeaf } from "obsidian";
 import { ResearchView, RESEARCH_VIEW_TYPE, writeGeneratedNote } from "./research-view";
+import { NavigationView, NAVIGATION_VIEW_TYPE } from "./navigation-view";
+import { ALL_PAGES, NavigationStore, type WorkspacePage } from "./application/navigation";
 import { WorkerClient } from "./worker-client";
 import type { MarkdownResult } from "./types";
 
@@ -9,6 +11,8 @@ const DEFAULT_SETTINGS: TradingResearchSettings = { pythonExecutable: "" };
 export default class TradingResearchLabPlugin extends Plugin {
   settings: TradingResearchSettings = DEFAULT_SETTINGS;
   worker!: WorkerClient;
+  /** Shared by the workspace view and the left-sidebar navigation. */
+  readonly navigation = new NavigationStore();
   private lastOpenedMarkdownPath: string | null = null;
 
   async onload(): Promise<void> {
@@ -17,8 +21,13 @@ export default class TradingResearchLabPlugin extends Plugin {
     this.rememberMarkdownFile(this.app.workspace.getActiveFile());
     this.registerEvent(this.app.workspace.on("file-open", (file) => this.rememberMarkdownFile(file)));
     this.registerView(RESEARCH_VIEW_TYPE, (leaf) => new ResearchView(leaf, this));
-    this.addRibbonIcon("line-chart", "Open Trading Research Lab", () => void this.activateResearchView());
+    this.registerView(NAVIGATION_VIEW_TYPE, (leaf) => new NavigationView(leaf, this));
+    this.addRibbonIcon("line-chart", "Open Trading Research Lab", () => { void this.activateResearchView().then(() => this.openNavigation(true)); });
     this.addCommand({ id: "open-research-view", name: "Open research view", callback: () => void this.activateResearchView() });
+    this.addCommand({ id: "open-navigation", name: "Open navigation sidebar", callback: () => void this.openNavigation(true) });
+    for (const page of ALL_PAGES) {
+      this.addCommand({ id: `open-page-${page.id}`, name: `Open ${page.label}`, callback: () => void this.openPage(page.id) });
+    }
     this.addSettingTab(new TradingResearchSettingsTab(this.app, this));
   }
 
@@ -43,6 +52,18 @@ export default class TradingResearchLabPlugin extends Plugin {
     if (existing !== undefined && existing !== leaf) existing.detach();
     await leaf.setViewState({ type: RESEARCH_VIEW_TYPE, active: true });
     await this.app.workspace.revealLeaf(leaf);
+  }
+
+  /** Switches the workspace to a page, opening the workspace if needed. */
+  async openPage(page: WorkspacePage): Promise<void> {
+    this.navigation.setPage(page);
+    await this.activateResearchView();
+  }
+
+  /** The TRL navigation lives in Obsidian's left sidebar (NAV-1). */
+  async openNavigation(reveal: boolean): Promise<void> {
+    const leaf = await this.app.workspace.ensureSideLeaf(NAVIGATION_VIEW_TYPE, "left", { active: reveal, reveal });
+    if (reveal) await this.app.workspace.revealLeaf(leaf);
   }
 
   async saveSettings(): Promise<void> {

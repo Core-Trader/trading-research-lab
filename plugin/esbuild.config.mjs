@@ -14,6 +14,8 @@ const context = await esbuild.context({
   sourcemap: production ? false : "inline",
   treeShaking: true,
   outfile: "main.js",
+  // MQL5 files offered on the Help page are embedded as text (no network, no separate assets).
+  loader: { ".mqh": "text", ".mq5": "text" },
   minify: production,
 });
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ItemView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import type TradingResearchLabPlugin from "./main";
@@ -9,7 +9,8 @@ import { LatestRun } from "./application/latest-run";
 import { localPathForSelectedFile } from "./services/local-file-path";
 import { createVaultDocument, readCurrentDocument, requestDocumentName } from "./vault/research-vault";
 import { DashboardSummary } from "./components/dashboard-summary";
-import { WorkspaceNavigation, type WorkspacePage } from "./components/workspace-navigation";
+import { ALL_PAGES, pageInfo, type WorkspacePage } from "./application/navigation";
+import { HelpPage } from "./components/help/help-page";
 import { Evidence, type SnapshotVerification } from "./components/data/evidence-panel";
 import { M5Preflight } from "./components/data/batch-preflight-panel";
 import { M2Analysis, M3Analysis, Results } from "./components/analysis/analysis-panels";
@@ -104,7 +105,10 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const [forwardStart, setForwardStart] = useState("");
   const [forwardEnd, setForwardEnd] = useState("");
   const [forwardMode, setForwardMode] = useState("");
-  const [activePage, setActivePage] = useState<WorkspacePage>("overview");
+  // The page lives in the plugin's navigation store, shared with the left sidebar (NAV-1).
+  const navigation = plugin.navigation;
+  const activePage = useSyncExternalStore((listener) => navigation.subscribe(listener), () => navigation.current.page);
+  const setActivePage = (page: WorkspacePage): void => navigation.setPage(page);
   const [forwardResult, setForwardResult] = useState<PairedForwardResult | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [validated, setValidated] = useState<{ datasetRef: string; eventCount: number; workerWasReady: boolean; readinessMs: number; importMs: number } | null>(null);
@@ -682,12 +686,40 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
   };
 
+  // Report status for the sidebar card (NAV-3); the sidebar never calculates.
+  useEffect(() => {
+    navigation.update({
+      busy: importBusy,
+      report: validated && evidence ? {
+        name: evidence.original_filename,
+        market: [evidence.supplied_facts.symbol, evidence.supplied_facts.period?.split(" ")[0]].filter(Boolean).join(" · "),
+        analysed: statistics?.dataset_ref === validated.datasetRef,
+        equity: Boolean(evidence.equity),
+        setCheck: setCheck && setCheck.dataset_ref === validated.datasetRef ? setCheck.status : evidence.set_check?.status ?? null,
+      } : null,
+    });
+  }, [navigation, importBusy, validated, evidence, statistics, setCheck]);
+  useEffect(() => {
+    navigation.update({ workspaceOpen: true });
+    return () => navigation.update({ workspaceOpen: false });
+  }, [navigation]);
+  const analyseRef = useRef(analyse);
+  analyseRef.current = analyse;
+  useEffect(() => navigation.handleActions((action) => {
+    if (action === "validate") fileInputRef.current?.click();
+    else void analyseRef.current();
+  }), [navigation]);
+
   return <section className="trl-m0">
-    <header className="trl-m0__workspace-header">
-      <div><h2>Trading Research Lab</h2><p>Local-first quantitative research workspace</p></div>
-      <span>Desktop research canvas</span>
+    <header className="trl-m0__workspace-header trl-pagebar">
+      <div><span className="trl-pagebar__brand">Trading Research Lab</span><h2>{pageInfo(activePage).label}</h2><p>{pageInfo(activePage).description}</p></div>
+      <div className="trl-pagebar__controls">
+        <select aria-label="Pages" value={activePage} onChange={(event) => setActivePage(event.currentTarget.value as WorkspacePage)}>
+          {ALL_PAGES.map((page) => <option key={page.id} value={page.id}>{page.label}</option>)}
+        </select>
+        <button type="button" title="Show the TRL navigation in the left sidebar" onClick={() => void plugin.openNavigation(true)}>☰ Sidebar</button>
+      </div>
     </header>
-    <WorkspaceNavigation activePage={activePage} onChange={setActivePage} />
     <input ref={fileInputRef} className="trl-m0__file-input" type="file" accept={MT5_REPORT_ACCEPT} onChange={selectSourceFile} />
     {error && <div className="trl-m0__error-wrap"><pre className="trl-m0__error" role="alert">{error}</pre><DismissButton onDismiss={() => setError(null)} /></div>}
     {activePage === "overview" && <DashboardSummary
@@ -799,6 +831,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
         onSelectReport={() => void selectReport()}
       />
     </section>}
+    {activePage === "help" && <HelpPage />}
     {activePage === "portfolio" && <PortfolioLab service={service} linkedNotes={linkedNotes} />}
     {activePage === "parameters" && <ParameterExplorer service={service} experiment={experiment} onRecordChoice={recordParameterChoice} />}
     {activePage === "advanced" && <section className="trl-page" aria-label="Advanced research">

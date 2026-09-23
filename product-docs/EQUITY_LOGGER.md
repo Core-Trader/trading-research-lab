@@ -12,9 +12,15 @@ be logged; TRL then shows closed-trade results only, clearly labelled.
 
 ## 1. Install the include
 
-Copy `mql5/Include/TRL_EquityLogger.mqh` from the TRL release into your
-terminal's `MQL5\Include\` folder. In MetaTrader: **File → Open Data
-Folder**, then `MQL5\Include`.
+The easiest way: in TRL open **Help & downloads**, choose **My MT5 MQL5
+folder**, paste your MQL5 folder path (in MetaTrader: **File → Open Data
+Folder**, then open `MQL5` and copy its path), and click **Save files**. TRL
+puts `TRL_EquityLogger.mqh` in `MQL5\Include\` and a ready example EA,
+`TRL_EquityLogger_Example.mq5`, in `MQL5\Experts\TRL\`. Existing files are
+never overwritten.
+
+To do it by hand, copy `mql5/Include/TRL_EquityLogger.mqh` from the TRL
+release into your terminal's `MQL5\Include\` folder.
 
 ## 2. Add it to your EA
 
