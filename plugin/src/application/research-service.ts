@@ -1,4 +1,4 @@
-import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -155,6 +155,15 @@ export class ResearchService {
 
   realisedBalanceDailyDrawdown(datasetRef: string): Promise<DailyDrawdownResult> {
     return this.worker.request("analysis.realised_balance_daily_drawdown", { dataset_ref: datasetRef });
+  }
+
+  /** Links a TRL tester equity log to a report; the Core refuses a log from another run. */
+  attachEquityLog(datasetRef: string, sourcePath: string, modellingMode: string): Promise<EquityLogAttachment> {
+    return this.worker.request("dataset.attach_equity_log", { dataset_ref: datasetRef, source_path: sourcePath, modelling_mode: modellingMode }, LONG_RUNNING_MS);
+  }
+
+  equityMetrics(datasetRef: string): Promise<EquityMetrics> {
+    return this.worker.request("analysis.equity_metrics", { dataset_ref: datasetRef }, LONG_RUNNING_MS);
   }
 
   equityAvailability(datasetRef: string): Promise<EquityAvailabilityResult> {

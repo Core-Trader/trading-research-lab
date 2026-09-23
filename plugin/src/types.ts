@@ -132,12 +132,21 @@ export type DailyDrawdownResult = {
   artifacts: { table: string; manifest: string; table_sha256: string; manifest_sha256: string };
 };
 
-export type EquityAvailabilityResult = {
+export type EquityEvidence = { log_sha256: string; status: "LINKED_VERIFIED"; equity_source: "MT5_TESTER_LOGGED"; modelling_mode: string; row_count: number; maximum_equity_drawdown: string; mt5_reported_equity_drawdown: string | null; interval: string | null; findings: string[] };
+export type EquityAvailabilityResult =
+  | { dataset_ref: string; status: "UNAVAILABLE"; basis: "INTRATRADE_EQUITY"; reason: string; required_evidence: string; warnings: string[] }
+  | { dataset_ref: string; status: "AVAILABLE"; basis: "INTRATRADE_EQUITY"; source: "MT5_TESTER_LOGGED"; equity: EquityEvidence; warnings: string[] };
+export type EquityLogAttachment = { dataset_ref: string; status: "LINKED_VERIFIED" | "BLOCKED"; findings: Array<{ severity: "BLOCKED" | "WARNING" | "NOTE"; code: string; message: string }>; maximum_equity_drawdown: string; mt5_reported_equity_drawdown: string | null; row_count: number };
+export type EquityMetrics = {
   dataset_ref: string;
-  status: "UNAVAILABLE";
-  basis: "INTRATRADE_EQUITY";
-  reason: string;
-  required_evidence: string;
+  calculation_version: string;
+  initial_balance: string;
+  maximum_equity_drawdown: string;
+  maximum_equity_drawdown_percent: string | null;
+  worst_day: { date: string; start_of_day_reference: string; lowest_equity: string; lowest_at: string; loss: string; loss_percent_of_initial: string | null };
+  daily: Array<{ date: string; loss: string; loss_percent_of_initial: string | null }>;
+  row_count: number;
+  display_series: Array<{ time: string; balance: string; equity_close: string; equity_min: string; equity_max: string }>;
   warnings: string[];
 };
 

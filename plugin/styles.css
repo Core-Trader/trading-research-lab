@@ -279,3 +279,10 @@
 .trl-batch__findings li { position: relative; }
 .trl-m0__error-wrap { position: relative; }
 .trl-m0__error-wrap .trl-dismiss { position: absolute; top: 0.3rem; right: 0.4rem; }
+
+.trl-equity__gap { margin: 0.5rem 0; padding: 0.4rem 0.6rem; border-left: 3px solid var(--color-orange); background: color-mix(in srgb, var(--color-orange) 10%, transparent); }
+.trl-equity__chart { margin: 0.6rem 0 0; }
+.trl-equity__chart svg { width: 100%; height: 12rem; border-left: 1px solid var(--background-modifier-border); border-bottom: 1px solid var(--background-modifier-border); }
+.trl-equity__band { fill: color-mix(in srgb, var(--color-red) 18%, transparent); stroke: none; }
+.trl-equity__equity { fill: none; stroke: var(--color-orange); stroke-width: 1.2; stroke-dasharray: 3 2; }
+.trl-equity__balance { fill: none; stroke: var(--interactive-accent); stroke-width: 1.6; }

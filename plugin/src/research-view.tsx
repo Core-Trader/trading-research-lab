@@ -23,6 +23,7 @@ import { ParameterExplorer } from "./components/exploration/parameter-explorer";
 import { upsertChoiceBlock } from "./vault/choice-block";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT, MT5_REPORT_HINT } from "./application/report-files";
 import { DismissButton } from "./components/dismiss-button";
+import { EquityPanel } from "./components/analysis/equity-panel";
 
 export { writeGeneratedNote } from "./vault/research-vault";
 
@@ -711,6 +712,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       equity={equityAvailability}
       onRun={() => void runM3Analysis()}
     />}
+      {evidence && <EquityPanel service={service} datasetRef={evidence.dataset_ref} availability={equityAvailability} balanceDrawdown={performanceMetrics?.balance_metrics.maximum_drawdown ?? null} currency={evidence.supplied_facts.currency} onChanged={() => void service.equityAvailability(evidence.dataset_ref).then(setEquityAvailability)} />}
       {(evidence || statistics) && <RMultiplePanel source={rSource} amount={rAmount} result={rResult} busy={rBusy} error={rError} enabled={statistics !== null} onSourceChange={(value) => { setRSource(value); setRResult(null); setRError(null); }} onAmountChange={(value) => { setRAmount(value); setRError(null); }} onRun={() => void runRMultiples()} />}
     </section>}
     {activePage === "research" && <section className="trl-page" aria-label="Research documents">

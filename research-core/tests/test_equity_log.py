@@ -81,7 +81,15 @@ def test_equity_metrics_daily_loss_uses_previous_sample_reference(tmp_path: Path
     assert (by_day["2026-01-04"]["start_of_day_reference"], by_day["2026-01-04"]["loss"]) == ("9899.50", "39.50")
     assert by_day["2026-01-03"]["loss"] == "100.00"  # a realised loss counts toward the daily loss too
     assert metrics["worst_day"]["date"] == "2026-01-02" and metrics["worst_day"]["loss_percent_of_initial"] == "1.00000000"  # ties: earliest day
-    assert metrics["maximum_equity_drawdown"] == "150.00" and len(metrics["series"]) == 8
+    assert metrics["maximum_equity_drawdown"] == "150.00" and metrics["row_count"] == 8 and len(metrics["display_series"]) == 8
+
+
+def test_display_series_buckets_keep_extremes(tmp_path: Path) -> None:
+    from trading_research_core.equity_log import display_series
+    _, rows = parse_equity_log(_log(tmp_path).read_bytes())
+    points = display_series(rows, limit=3)
+    assert len(points) == 3 and min(float(point["equity_min"]) for point in points) == 9860.0 and max(float(point["equity_max"]) for point in points) == 10199.0
+    assert points[-1]["balance"] == "10199.00"
 
 
 def test_edited_balance_or_other_run_is_blocked(tmp_path: Path) -> None:

@@ -214,12 +214,34 @@ def equity_metrics(workspace_root: Path, dataset_ref: str) -> dict[str, object]:
         "maximum_equity_drawdown_percent": None if drawdown["percent"] is None else _q(drawdown["percent"]),
         "worst_day": worst,
         "daily": daily,
-        "series": [{"time": row["time"], "balance": _fmt(row["balance"]), "equity_close": _fmt(row["equity_close"]), "equity_min": _fmt(row["equity_min"]), "equity_max": _fmt(row["equity_max"])} for row in rows],
+        "row_count": len(rows),
+        "display_series": display_series(rows),
         "warnings": [
             "Equity comes from the TRL tester logger; each interval's low is the lowest tick-level equity inside it.",
             "Daily loss uses the report clock's midnight and the higher of balance and equity at the previous sample as the start-of-day reference; firms' rules differ.",
         ],
     }
+
+
+DISPLAY_POINTS = 1500
+
+
+def display_series(rows: list[dict[str, Any]], limit: int = DISPLAY_POINTS) -> list[dict[str, str]]:
+    """At most `limit` points for charts: consecutive rows are bucketed, keeping each
+    bucket's lowest equity_min and highest equity_max (no dip is lost) and its
+    last balance and equity_close. Deterministic; display only.
+    """
+
+    size = max(1, -(-len(rows) // limit))
+    points = []
+    for start in range(0, len(rows), size):
+        bucket = rows[start:start + size]
+        last = bucket[-1]
+        points.append({
+            "time": last["time"], "balance": _fmt(last["balance"]), "equity_close": _fmt(last["equity_close"]),
+            "equity_min": _fmt(min(row["equity_min"] for row in bucket)), "equity_max": _fmt(max(row["equity_max"] for row in bucket)),
+        })
+    return points
 
 
 def _link(header: dict[str, str], rows: list[dict[str, Any]], settings: dict[str, Any], events: list[dict[str, Any]]) -> list[dict[str, object]]:

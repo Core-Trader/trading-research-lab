@@ -86,8 +86,8 @@ export function M3Analysis({ drawdown, equity, onRun }: {
       <h4>Intratrade equity</h4>
       <dl className="trl-m0__diagnostic-grid">
         <dt>Status</dt><dd><code>{equity.status}</code></dd>
-        <dt>Reason</dt><dd>{equity.reason}</dd>
-        <dt>Required later evidence</dt><dd>{equity.required_evidence}</dd>
+        {equity.status === "UNAVAILABLE" ? <><dt>Reason</dt><dd>{equity.reason}</dd>
+        <dt>Required later evidence</dt><dd>{equity.required_evidence}</dd></> : <><dt>Source</dt><dd>TRL tester equity log, linked to this report</dd></>}
       </dl>
     </section>}
   </CollapsibleSection>;
