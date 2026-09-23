@@ -364,6 +364,7 @@ export type PortfolioTrackResult = {
   standalone_metrics: PerformanceMetrics["close_event_metrics"] & { maximum_drawdown_percent: string | null; return_to_drawdown: string | null };
 };
 
+export type DatasetArchiveResult = { dataset_ref: string; archived: boolean; used_by: Array<{ kind: "SAVED_COMBINATION" | "PARAMETER_STUDY_SINGLE_TEST"; name: string }> };
 /** A saved combination setup; its result is always recalculated by the Core. */
 export type SavedCombinationEntry = {
   saved: { key: string; name: string; labels: string[]; tracks: string[][]; starting_capital: string; window: "UNION" | "COMMON"; day_boundary: string; saved_calculation_version: string; saved_version: string };

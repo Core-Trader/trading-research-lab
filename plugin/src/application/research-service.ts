@@ -1,4 +1,4 @@
-import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -33,8 +33,18 @@ export class ResearchService {
     return this.worker.request("dataset.intake_mt5_excel", { source_path: sourcePath });
   }
 
-  listRegistry(): Promise<{ entries: DatasetEvidence[] }> {
+  /** Active reports in `entries`; archived ones in `archived_entries`. */
+  listRegistry(): Promise<{ entries: DatasetEvidence[]; archived_entries?: DatasetEvidence[] }> {
     return this.worker.request("dataset.list_registry", {});
+  }
+
+  /** Hides a report from the library; nothing is deleted and its users keep working. */
+  archiveDataset(datasetRef: string): Promise<DatasetArchiveResult> {
+    return this.worker.request("dataset.archive", { dataset_ref: datasetRef });
+  }
+
+  restoreDataset(datasetRef: string): Promise<DatasetArchiveResult> {
+    return this.worker.request("dataset.restore", { dataset_ref: datasetRef });
   }
 
   verifyRawSnapshot(datasetRef: string): Promise<{ verified: boolean; expected_sha256: string; observed_sha256: string }> {

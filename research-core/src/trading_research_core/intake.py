@@ -43,9 +43,50 @@ def intake_mt5_excel(workspace_root: Path, source_path: str) -> dict[str, object
 
 
 def list_registry(workspace_root: Path) -> dict[str, object]:
+    """Active reports in `entries`; archived ones separately in `archived_entries`."""
+
     registry = _load_registry(workspace_root.resolve())
     entries = sorted(registry["entries"], key=lambda entry: str(entry["dataset_ref"]))
-    return {"registry_schema_version": REGISTRY_SCHEMA_VERSION, "entries": entries}
+    return {
+        "registry_schema_version": REGISTRY_SCHEMA_VERSION,
+        "entries": [entry for entry in entries if not entry.get("archived")],
+        "archived_entries": [entry for entry in entries if entry.get("archived")],
+    }
+
+
+def set_archived(workspace_root: Path, dataset_ref: str, archived: bool) -> dict[str, object]:
+    """Archive or restore a report. Nothing is deleted: the raw snapshot, derived
+    tables, and everything that uses the report keep working; archiving only
+    hides it from the library and pickers.
+    """
+
+    root = workspace_root.resolve()
+    registry = _load_registry(root)
+    entry = next((item for item in registry["entries"] if item.get("dataset_ref") == dataset_ref), None)
+    if entry is None:
+        raise CoreError("E_DATASET_NOT_FOUND", "The report is not in the library.", details={"dataset_ref": dataset_ref})
+    if archived:
+        entry["archived"] = True
+    else:
+        entry.pop("archived", None)
+    payload = {"registry_schema_version": REGISTRY_SCHEMA_VERSION, "entries": sorted(registry["entries"], key=lambda item: str(item["dataset_ref"]))}
+    _atomic_json(_registry_path(root), payload)
+    return {"dataset_ref": dataset_ref, "archived": archived, "used_by": dataset_usages(root, dataset_ref)}
+
+
+def dataset_usages(workspace_root: Path, dataset_ref: str) -> list[dict[str, str]]:
+    """Saved combinations and parameter studies that reference a report."""
+
+    root = workspace_root.resolve()
+    usages: list[dict[str, str]] = []
+    for path in sorted((root / "portfolio-combinations").glob("*.json")):
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if any(dataset_ref in track for track in record.get("tracks", [])):
+            usages.append({"kind": "SAVED_COMBINATION", "name": str(record.get("name", path.stem))})
+    single = f"{dataset_ref.removeprefix('mt5:')}.json"
+    for path in sorted((root / "parameter-studies").glob(f"*/single-tests/{single}")):
+        usages.append({"kind": "PARAMETER_STUDY_SINGLE_TEST", "name": path.parent.parent.name})
+    return usages
 
 
 def get_evidence(workspace_root: Path, dataset_ref: str) -> dict[str, object]:
@@ -132,6 +173,7 @@ def _upsert_registry(root: Path, receipt: dict[str, object]) -> None:
     path = _registry_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
     registry = _load_registry(root)
+    # Importing a report again is an explicit act: it also restores it from the archive.
     entries = [entry for entry in registry["entries"] if entry.get("dataset_ref") != receipt["dataset_ref"]]
     entries.append(receipt)
     payload = {"registry_schema_version": REGISTRY_SCHEMA_VERSION, "entries": sorted(entries, key=lambda entry: str(entry["dataset_ref"]))}

@@ -194,6 +194,8 @@
 .trl-portfolio__tracks > li { padding: 0.6rem; border: 1px solid var(--background-modifier-border); border-radius: 0.4rem; background: var(--background-primary); }
 .trl-portfolio__tracks ol { margin: 0.4rem 0; font-size: var(--font-ui-smaller); }
 .trl-portfolio__track-number { display: inline-grid; place-items: center; min-width: 1.5rem; height: 1.5rem; margin-right: 0.5rem; padding: 0 0.3rem; border-radius: 0.75rem; background: var(--interactive-accent); color: var(--text-on-accent); font-size: var(--font-ui-smaller); font-weight: 700; font-variant-numeric: tabular-nums; }
+.trl-portfolio__archived { margin-top: 0.75rem; }
+.trl-portfolio__archived summary { cursor: pointer; color: var(--text-muted); font-size: var(--font-ui-smaller); }
 .trl-portfolio__include { margin-right: 0.6rem; font-size: var(--font-ui-smaller); }
 .trl-portfolio__label { min-width: min(14rem, 100%); max-width: 100%; font-weight: 600; }
 .trl-portfolio__overlap { margin: 0.6rem 0 0; font-size: var(--font-ui-smaller); color: var(--text-muted); }

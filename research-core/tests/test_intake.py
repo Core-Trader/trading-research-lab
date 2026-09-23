@@ -150,3 +150,30 @@ def test_tampered_managed_snapshot_is_detected(tmp_path: Path) -> None:
     with pytest.raises(CoreError, match="Existing managed raw snapshot hash does not match") as error:
         intake_mt5_excel(workspace, str(source))
     assert error.value.code == "E_RAW_SNAPSHOT_MISMATCH"
+
+
+def test_archive_hides_restores_and_keeps_everything(tmp_path: Path) -> None:
+    from trading_research_core.intake import set_archived
+    from trading_research_core.worker import Worker
+
+    source = tmp_path / "mt5-report.xlsx"
+    workspace = tmp_path / "workspace"
+    _write_supported_report(source)
+    ref = str(intake_mt5_excel(workspace, str(source))["dataset_ref"])
+    (workspace / "portfolio-combinations").mkdir()
+    (workspace / "portfolio-combinations" / "k.json").write_text(json.dumps({"name": "Mine", "tracks": [[ref]]}), encoding="utf-8")
+    archived = set_archived(workspace, ref, True)
+    assert archived["used_by"] == [{"kind": "SAVED_COMBINATION", "name": "Mine"}]
+    registry = list_registry(workspace)
+    assert registry["entries"] == [] and [entry["dataset_ref"] for entry in registry["archived_entries"]] == [ref]
+    assert verify_raw_snapshot(workspace, ref)["verified"] is True  # nothing deleted
+    assert get_evidence(workspace, ref)["archived"] is True
+    worker = Worker(workspace)
+    assert worker.dispatch({"method": "dataset.restore", "params": {"dataset_ref": ref}})["archived"] is False
+    assert [entry["dataset_ref"] for entry in list_registry(workspace)["entries"]] == [ref]
+    set_archived(workspace, ref, True)
+    intake_mt5_excel(workspace, str(source))  # importing again restores it
+    assert list_registry(workspace)["archived_entries"] == []
+    with pytest.raises(CoreError) as error:
+        set_archived(workspace, "mt5:" + "0" * 64, True)
+    assert error.value.code == "E_DATASET_NOT_FOUND"

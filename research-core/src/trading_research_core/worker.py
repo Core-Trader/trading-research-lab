@@ -12,7 +12,7 @@ from .analysis import basic_statistics, markdown_summary
 from .dataset_store import read_dataset, write_dataset
 from .errors import CoreError
 from .mt5_excel import import_mt5_excel
-from .intake import get_evidence, intake_mt5_excel, list_registry, verify_raw_snapshot
+from .intake import get_evidence, intake_mt5_excel, list_registry, set_archived, verify_raw_snapshot
 from .protocol import encode, failure, parse_request, success
 from .reporting import prepare_report_payload, write_report_revision_manifest
 from .trade_analysis import close_event_summary, reconstruct_lifecycles, write_trade_artifact
@@ -50,6 +50,8 @@ class Worker:
                     "dataset.import_mt5_excel",
                     "dataset.intake_mt5_excel",
                     "dataset.list_registry",
+                    "dataset.archive",
+                    "dataset.restore",
                     "dataset.get_evidence",
                     "dataset.verify_raw_snapshot",
                     "portfolio.preflight_mt5_excel_batch",
@@ -101,6 +103,8 @@ class Worker:
             return intake_mt5_excel(self.workspace_root, _required_string(params, "source_path"))
         if method == "dataset.list_registry":
             return list_registry(self.workspace_root)
+        if method in {"dataset.archive", "dataset.restore"}:
+            return set_archived(self.workspace_root, _required_string(params, "dataset_ref"), method == "dataset.archive")
         if method == "dataset.get_evidence":
             return get_evidence(self.workspace_root, _required_string(params, "dataset_ref"))
         if method == "dataset.verify_raw_snapshot":

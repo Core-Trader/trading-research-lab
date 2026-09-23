@@ -82,6 +82,14 @@ test("neighbourhood requests send roles, radius, and the target path verbatim", 
   assert.deepEqual(calls[4]?.params.neighbourhood, settings);
 });
 
+test("archive and restore send only the dataset reference", async () => {
+  const { worker, calls } = recordingWorker();
+  const service = new ResearchService(worker);
+  await service.archiveDataset("mt5:A");
+  await service.restoreDataset("mt5:A");
+  assert.deepEqual(calls.map((call) => [call.method, call.params]), [["dataset.archive", { dataset_ref: "mt5:A" }], ["dataset.restore", { dataset_ref: "mt5:A" }]]);
+});
+
 test("R-multiple requests send an amount only for a declared 1R", async () => {
   const { worker, calls } = recordingWorker();
   const service = new ResearchService(worker);

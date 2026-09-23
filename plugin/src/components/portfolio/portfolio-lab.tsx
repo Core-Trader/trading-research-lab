@@ -17,6 +17,7 @@ type Props = { service: ResearchService };
  */
 export function PortfolioLab({ service }: Props): React.ReactElement {
   const [library, setLibrary] = useState<DatasetEvidence[]>([]);
+  const [archived, setArchived] = useState<DatasetEvidence[]>([]);
   const [tracks, setTracks] = useState<TrackDraft[]>([]);
   const [capital, setCapital] = useState("");
   const [period, setPeriod] = useState<"UNION" | "COMMON">("UNION");
@@ -35,7 +36,7 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
   const evaluations = useRef(new LatestRun()).current;
 
   const refreshLibrary = useCallback(async (): Promise<void> => {
-    try { setLibrary((await service.listRegistry()).entries); } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
+    try { const registry = await service.listRegistry(); setLibrary(registry.entries); setArchived(registry.archived_entries ?? []); } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
   }, [service]);
   useEffect(() => { void refreshLibrary(); }, [refreshLibrary]);
 
@@ -78,6 +79,16 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
     } finally {
       setBusy(null);
     }
+  };
+
+  const archive = async (entry: DatasetEvidence, restore: boolean): Promise<void> => {
+    setError(null);
+    try {
+      const result = restore ? await service.restoreDataset(entry.dataset_ref) : await service.archiveDataset(entry.dataset_ref);
+      await refreshLibrary();
+      const users = result.used_by.map((use) => use.kind === "SAVED_COMBINATION" ? `saved combination "${use.name}"` : "a parameter study").join(", ");
+      new Notice(restore ? `${entry.original_filename} restored to the library.` : `${entry.original_filename} archived.${users ? ` Still used by ${users}; those keep working.` : ""}`);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
   };
 
   const resolveAmount = (): string | null => {
@@ -179,6 +190,7 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
           <td>{assigned.has(entry.dataset_ref)
             ? <span className="trl-m0__note">{(() => { const index = tracks.findIndex((track) => track.refs.includes(entry.dataset_ref)); return `In track ${index + 1}${tracks[index]?.label ? ` · ${tracks[index]!.label}` : ""}`; })()}</span>
             : <span className="trl-portfolio__assign">
+              <button type="button" className="trl-link-button" disabled={busy !== null} title="Hide from the library. Nothing is deleted; restore it any time from Archived reports." onClick={() => void archive(entry, false)}>Archive</button>
               <button type="button" disabled={busy !== null} onClick={() => change(addTrack(tracks, entry.dataset_ref, entry.original_filename.replace(/\.xlsx$/i, "")))}>New track</button>
               {tracks.length > 0 && <select value="" disabled={busy !== null} onChange={(event) => { if (event.currentTarget.value) change(addToTrack(tracks, event.currentTarget.value, entry.dataset_ref)); }}>
                 <option value="">Chain onto…</option>
@@ -187,6 +199,17 @@ export function PortfolioLab({ service }: Props): React.ReactElement {
             </span>}</td>
         </tr>)}</tbody>
       </table>}
+      {archived.length > 0 && <details className="trl-portfolio__archived">
+        <summary>Archived reports ({archived.length})</summary>
+        <p className="trl-m0__note">Archived reports are hidden from the library but not deleted; saved combinations and studies that use them keep working.</p>
+        <table className="trl-portfolio__table">
+          <tbody>{archived.map((entry) => <tr key={entry.dataset_ref}>
+            <td>{describe(entry, entry.dataset_ref)}</td>
+            <td>{entry.event_count}</td>
+            <td><button type="button" disabled={busy !== null} onClick={() => void archive(entry, true)}>Restore</button></td>
+          </tr>)}</tbody>
+        </table>
+      </details>}
     </section>
 
     <section className="trl-page__surface">
