@@ -129,7 +129,12 @@ stagnation band has a legend. Multi-XML studies (PX-008), the release
 decisions R-D1 to R-D4, and the clean-machine install check are deferred.
 Neighbourhood analysis (PX-010, N1–N7) is implemented; see
 `internal/development-journal/2026-09-23-neighbourhood-analysis.md`.
-The equity logger spec (PL-006) is drafted in `internal/docs/EQUITY_LOGGER_SPEC.md`: **owner decisions E1–E8 are pending**, then the fixture plan, the `.mqh` include plus adapter, and validation with the backtest agent. The first MT5 test corpus is built (DEV-002); see
+The equity logger (PL-006/PL-008) is built and validated in MT5; see
+`internal/development-journal/2026-09-23-equity-logger.md`. Logger 1.0.1 has
+0 link mismatches on V1–V3, and the owner's DCA EA shows equity drawdown
+12.5× balance drawdown. **Next:** owner review of the Analysis-page equity
+panel, then the prop-firm rules module, including Portfolio Lab's
+conservative combined equity low (E6). The first MT5 test corpus is built (DEV-002); see
 `internal/development-journal/2026-09-23-test-corpus-and-bias-fixes.md`. It
 fixed three parser biases (the `Inp` prefix, spaced EA names, and built-in
 forward). Run `scripts/corpus_check.py` after importer changes. Permanent
@@ -225,8 +230,8 @@ Set-Location C:\DEV\Trading_Research_Lab\plugin
 | Area | Status | Evidence / limit |
 | --- | --- | --- |
 | Environment | Pass | Python/Node/npm/Git versions and core imports verified on 2026-09-20. |
-| Research Core unit tests | Pass | 203 `pytest` tests passed on 2026-09-23 (plus 4 release-script tests in `scripts/tests`), including MT5 HTML import, report archive, neighbourhood analysis, saved-combination persistence, parameter exploration (single tests, forward pairing), including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
-| Plugin automated tests | Pass | 71 Node tests passed on 2026-09-23 (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
+| Research Core unit tests | Pass | 217 `pytest` tests passed on 2026-09-23 (plus 4 release-script tests in `scripts/tests`), including MT5 HTML import, report archive, neighbourhood analysis, saved-combination persistence, parameter exploration (single tests, forward pairing), including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
+| Plugin automated tests | Pass | 73 Node tests passed on 2026-09-23 (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
 | Plugin build | Pass | TypeScript check and esbuild production bundle passed. |
 | Live M0 path | Pass, owner-confirmed | EURUSD import, verified balance curve, generated note, Browse workflow, and diagnostics panel were manually exercised. |
 | Integration/negative coverage | Partial | Live structured unknown-method response was verified; a broader formal integration suite is not yet present. |

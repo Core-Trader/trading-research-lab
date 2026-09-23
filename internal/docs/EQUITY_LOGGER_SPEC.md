@@ -219,6 +219,18 @@ modelling_mode)`, works as follows.
 | E7 | `TRL_EquityLogger.mqh` becomes shipped product material: added to the release allowlist under `mql5/`, with a product-docs page on adding it to an EA. | **Yes** |
 | E8 | The validation run may also use a logged **copy** of the owner's DCA EA, kept in `TRL_Corpus`; the original is never modified. | Owner's choice |
 
+## 6a. Validation result (2026-09-23)
+
+Logger 1.0.1 passed on V1 (MA EURUSD), V2 (MA GBPUSD), and V3 (a logged copy
+of the owner's DCA EA):
+- trading unchanged against unlogged runs
+- 0 link mismatches
+- TRL attach LINKED_VERIFIED for all three
+- equity drawdown within tolerance of MT5's figure, or deeper
+
+Logger 1.0.0 was correctly refused by the link check; see the journal entry
+of the same date.
+
 ## 7. Deferred (POST-MVP)
 
 - Logging during optimisations, e.g. equity metrics per pass.

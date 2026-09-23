@@ -21,6 +21,7 @@ import warnings
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "research-core" / "src"))
 
+from trading_research_core.equity_log import parse_equity_log  # noqa: E402
 from trading_research_core.errors import CoreError  # noqa: E402
 from trading_research_core.intake import intake_mt5_report  # noqa: E402
 from trading_research_core.mt5_optimisation import intake_parameter_grid  # noqa: E402
@@ -44,6 +45,9 @@ def check(folders: list[Path]) -> list[dict[str, str]]:
                     elif suffix == ".xml":
                         grid = intake_parameter_grid(workspace, str(path), "declared by corpus check")
                         detail = f"{grid['pass_count']} passes; inputs {', '.join(grid['parameter_columns'])}"
+                    elif suffix == ".csv":
+                        header, rows = parse_equity_log(path.read_bytes())
+                        detail = f"equity log {header.get('logger_version')}; {len(rows)} rows; {header.get('expert')} {header.get('symbol')} {header.get('timeframe')}"
                     elif suffix == ".set":
                         schema = intake_parameter_schema(workspace, str(path))
                         detail = f"{schema['parameter_count']} inputs; optimised {', '.join(schema['optimised_parameters']) or 'none'}"
