@@ -1,4 +1,4 @@
-# Prop-firm rule check: specification (draft for owner decisions)
+# Prop-firm rule check: specification
 
 **Status:** APPROVED 2026-09-24 (owner accepted P1–P10 as recommended).
 
