@@ -72,12 +72,12 @@ def _check_survival(survival_days: Any) -> None:
 class _Phase:
     """One profile applied to one run: the conservative context and, for portfolios, the optimistic one."""
 
-    def __init__(self, record: dict[str, Any], root: Path, target: dict[str, Any], report_clock_zone: str | None, survival_days: int | None) -> None:
+    def __init__(self, record: dict[str, Any], root: Path, target: dict[str, Any], report_clock_zone: str | None, survival_days: int | None, run: dict[str, Any] | None = None) -> None:
         self.record = record
         self.rules = rules = record["rules"]
         self.boundary = DayBoundary(rules["reset"], report_clock_zone)
         self.account = Decimal(rules["account_size"])
-        self.run = _run(root, target, self.account)
+        self.run = run if run is not None else _run(root, target, self.account)
         variants = self.run["variants"]
         if rules["breach_on"] == "BALANCE_CLOSE":
             variants = [[sample | {"low": sample["balance"], "low_at": sample["time"]} for sample in samples] for samples in variants]
@@ -120,7 +120,8 @@ def chain_starts(workspace_root: Path, profile_ids: list[str], target: dict[str,
         raise CoreError("E_PROP_CHAIN_INVALID", "Every phase except the last needs a profit target; otherwise it can never pass on to the next phase.")
     if len({Decimal(record["rules"]["account_size"]) for record in records}) != 1:
         raise CoreError("E_PROP_CHAIN_INVALID", "All phases must use the same account size (results are not rescaled).")
-    phases = [_Phase(record, root, target, report_clock_zone, survival_days) for record in records]
+    shared = _run(root, target, Decimal(records[0]["rules"]["account_size"]))  # one load for every phase (same run, same account size)
+    phases = [_Phase(record, root, target, report_clock_zone, survival_days, shared) for record in records]
     starts = []
     for index in range(len(phases[0].context.days)):
         steps: list[dict[str, object]] = []
