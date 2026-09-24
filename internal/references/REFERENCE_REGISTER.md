@@ -57,3 +57,14 @@ with each reuse: identify the exact repository, commit, source path and symbol;
 record the entry immediately; add a concise source comment where appropriate;
 validate the TRL result; and record the product scope and any dependencies. No
 untracked external code reuse is permitted.
+
+## Prop-firm rule sources (data, not code; PROP-2)
+
+Presets in `research-core/.../prop_presets.py` copy published rule values, not
+code. Each preset records its source URL and retrieval date, and the user is
+told to verify against the firm's current terms.
+
+| Source | Use | Retrieved | Notes |
+| --- | --- | --- | --- |
+| https://ftmo.com/en/trading-objectives/ (FTMO, primary) | FTMO 2-Step (Challenge, Verification, Account) and 1-Step (Challenge, Account) values | 2026-09-24 | Authoritative. The values and definitions came from the 1-Step and 2-Step tabs: 00:00 CE(S)T reset, balance-at-reset daily reference, "drops below", position-opened trading day, 1-Step end-of-day trailing loss, and the best-day 50% rule. The cookie banner was not accepted. |
+| https://propfirmmatch.com/ (aggregator, secondary) | Finding firms, programme names, and rule-change dates | 2026-09-24 | This is an affiliate site with discount codes. Its FTMO page listed programme structure, trading days, and the best-day rule, but no loss limits. Use it for discovery and cross-checks only; take the preset values from each firm's own rules page. Non-essential cookies were declined. |

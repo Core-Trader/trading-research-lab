@@ -22,6 +22,18 @@ Implementation notes:
   the worst daily loss (93.41) and the overall headroom (9 987.49) match an
   independent hand calculation from `equity.parquet`.
 
+**PROP-2 amendment (2026-09-24):** firm presets are allowed. They are
+editable, sourced, and dated; see `prop_presets.py` and
+`REFERENCE_REGISTER.md`. The new profile options are:
+- `trading_day_definition`
+- `limit_touch_counts` (FTMO breaches only *below* a limit)
+- `best_day_max_percent` (FTMO 1-Step: a best day of at most 50%)
+
+The challenge pass point is now the first sample at which the target, the
+minimum trading days, and the best-day share all hold together. Two new
+outcomes cover the failures: `BEST_DAY_RULE_NOT_MET` and
+`OBJECTIVES_NOT_MET_TOGETHER`.
+
 **Builds on:**
 - M3-POL-003: broker and prop-firm rules are optional, versioned overlays,
   never hard-coded policy

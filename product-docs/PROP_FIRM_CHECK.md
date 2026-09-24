@@ -5,11 +5,15 @@ question: would this backtest have broken my prop firm's rules, and if so,
 when and by how much? When a run stays within the rules, it shows how close
 it came.
 
-## Your rules, not a firm's
+## Firm presets and your own rules
 
-TRL does not include rules for any named firm, because firms change their
-terms. Create a **profile** with the numbers from your firm's current rules.
-You can set:
+When you create a profile, you can **start from a firm preset**; FTMO 2-Step
+and 1-Step are included. A preset is copied from the firm's published rules
+on the date shown, and every value stays editable. Firms change their terms,
+so check the preset against your firm's current rules. Each preset also lists
+what TRL cannot check (for example news restrictions).
+
+You can also start from a blank profile and set:
 - daily loss
 - overall loss (fixed, trailing, or trailing until it reaches the starting
   balance)
@@ -17,6 +21,10 @@ You can set:
 - minimum trading days
 - maximum calendar days
 - the time the day resets
+- what counts as a trading day (a position opened, or any deal)
+- whether exactly reaching a limit counts as a breach
+- a best-day (consistency) rule: pass only once your best day is at most a
+  given share of the positive days' profit
 
 A profile is never overwritten. Editing one saves a new version.
 
