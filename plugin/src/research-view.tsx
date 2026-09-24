@@ -696,6 +696,11 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     navigation.update({ workspaceOpen: true });
     return () => navigation.update({ workspaceOpen: false });
   }, [navigation]);
+  // The library list is loaded before the picker is opened (loading it on focus
+  // opened an empty list on the first press); it reloads after each import.
+  useEffect(() => {
+    if (activePage === "data" && !importBusy) void refreshLibrary();
+  }, [activePage, importBusy]);
   const analyseRef = useRef(analyse);
   analyseRef.current = analyse;
   useEffect(() => navigation.handleActions((action) => {
@@ -738,7 +743,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
         <p className="trl-m0__note">Choose one {MT5_REPORT_HINT}. TRL copies it unchanged, checks it, and stores it in the library. Nothing is analysed yet.</p>
         <div className="trl-m0__actions">
           <button type="button" className="mod-cta" disabled={importBusy} onClick={() => fileInputRef.current?.click()}>Browse and validate report…</button>
-          <select aria-label="Use a report already in the library" value="" disabled={importBusy} onFocus={() => void refreshLibrary()} onChange={(event) => { const entry = libraryEntries.find((item) => item.dataset_ref === event.currentTarget.value); if (entry) useLibraryReport(entry); }}>
+          <select aria-label="Use a report already in the library" value="" disabled={importBusy} onChange={(event) => { const entry = libraryEntries.find((item) => item.dataset_ref === event.currentTarget.value); if (entry) useLibraryReport(entry); }}>
             <option value="">…or use a report already in the library</option>
             {libraryEntries.map((entry) => <option key={entry.dataset_ref} value={entry.dataset_ref}>{entry.original_filename} · {entry.supplied_facts.symbol ?? "?"} {entry.supplied_facts.period ?? ""}</option>)}
           </select>

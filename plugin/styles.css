@@ -335,6 +335,14 @@
 .trl-sidenav__group button.is-active { background: var(--background-modifier-active-hover, var(--background-secondary)); color: var(--text-accent); font-weight: 600; }
 /* Help page */
 .trl-help h5 { margin: 1rem 0 0.35rem; }
+.trl-help__section > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
+.trl-help__section > summary::-webkit-details-marker { display: none; }
+.trl-help__section > summary h4 { display: inline; margin: 0; }
+.trl-help__section > summary h4::before { content: "▸"; display: inline-block; width: 1.1em; color: var(--text-muted); transition: transform 120ms ease; }
+.trl-help__section[open] > summary h4::before { transform: rotate(90deg); }
+.trl-help__section > summary:hover h4 { color: var(--interactive-accent); }
+.trl-help__section[open] > summary { margin-bottom: 0.5rem; }
+.trl-help__section > summary .trl-m0__note { margin: 0; }
 .trl-help__code { padding: 0.6rem 0.75rem; border-radius: 0.35rem; background: var(--background-secondary); font-size: var(--font-ui-smaller); overflow-x: auto; }
 .trl-help__files { margin: 0.25rem 0 0.5rem; }
 
