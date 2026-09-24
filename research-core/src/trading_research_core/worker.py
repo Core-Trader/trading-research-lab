@@ -22,6 +22,7 @@ from .what_if import fixed_close_event_cost_scenario
 from .monte_carlo import order_permutation_scenario
 from .display_series import close_event_display_series
 from .performance_metrics import performance_metrics
+from .significance import significance
 from .r_metrics import r_multiple_metrics
 from .portfolio_lab import combine as portfolio_combine, delete_saved_combination, explore as portfolio_explore, list_saved_combinations, save_combination
 from .pareto import evaluate as pareto_evaluate
@@ -72,6 +73,7 @@ class Worker:
                     "analysis.close_event_display_series",
                     "analysis.performance_metrics",
                     "analysis.r_multiple_metrics",
+                    "analysis.significance",
                     "portfolio.combine",
                     "portfolio.explore",
                     "portfolio.save_combination",
@@ -242,6 +244,8 @@ class Worker:
             if amount is not None and not isinstance(amount, str):
                 raise CoreError("E_REQUEST_INVALID", "params.r_amount must be a decimal string when supplied.")
             return r_multiple_metrics(read_dataset(self.workspace_root, _required_string(params, "dataset_ref")), _required_string(params, "r_source"), amount)
+        if method == "analysis.significance":
+            return significance(read_dataset(self.workspace_root, _required_string(params, "dataset_ref")), _required_string(params, "confidence"))
         if method == "analysis.performance_metrics":
             return performance_metrics(read_dataset(self.workspace_root, _required_string(params, "dataset_ref")))
         if method == "analysis.close_event_display_series":
