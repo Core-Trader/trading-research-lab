@@ -411,3 +411,4 @@
 .trl-prop-daily__bar.is-active { opacity: 1; outline: 1px solid var(--text-normal); }
 .trl-prop-daily__limit { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed var(--color-red); pointer-events: none; }
 .trl-chart-frame.is-expanded .trl-prop-daily__plot { height: 60vh; }
+.trl-tradeoff__key-result strong { font-weight: 600; }

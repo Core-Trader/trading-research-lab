@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { axisOptions, betterHint, compareTable, defaultObjectives, FORWARD_PREFIX, frontierMatchesAxes, scatterPoints } from "../src/components/exploration/exploration-model.ts";
+import { axisOptions, betterHint, compareTable, defaultObjectives, FORWARD_PREFIX, frontierMatchesAxes, keyResultLines, scatterPoints } from "../src/components/exploration/exploration-model.ts";
 import type { ParameterEvaluation, StudyMetric } from "../src/types.ts";
 
 const metric = (id: string, direction: "MAX" | "MIN" | null, label = id): StudyMetric => ({ id, column: id, label, default_direction: direction, unit: "", basis: "MT5_REPORTED" });
@@ -93,4 +93,15 @@ test("forward metrics feed forward axes and compare rows; unmatched passes stay 
   const { rows } = compareTable(withForward, ["b"]);
   assert.deepEqual(rows.find((row) => row.label === "Forward: Net profit")!.cells.map((cell) => cell.value), ["40", "no forward match"]);
   assert.equal(rows.at(-1)!.kind, "status");
+});
+
+test("scatter cards always carry the key results, skipping metrics already on an axis", () => {
+  const pct = { ...metric("equity_drawdown_pct", "MIN", "Equity drawdown %"), unit: "percent" };
+  const metrics = [metric("net_profit", "MAX", "Net profit"), pct, metric("trades", null, "Trades")];
+  const pass = candidate("a", "1", "0.1", "1234.5678", "3.14159", "PARETO");
+  assert.deepEqual(keyResultLines(pass, metrics, ["mt5_result", "trades", null]), [
+    { id: "net_profit", label: "Net profit", value: "1234.57" },
+    { id: "equity_drawdown_pct", label: "Equity drawdown %", value: "3.14%" },
+  ]);
+  assert.deepEqual(keyResultLines(pass, metrics, ["net_profit", "equity_drawdown_pct", null]).map((line) => line.value), ["20"]);
 });

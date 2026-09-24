@@ -6,7 +6,7 @@ import type { Constraint, ForwardAttachment, NeighbourhoodSettings, Objective, P
 import { TradeOffScatter } from "../tradeoff/trade-off-scatter";
 import { NeighbourhoodPanel } from "./neighbourhood-panel";
 import { defaultSettings } from "./neighbourhood-model";
-import { axisOptions, betterHint, candidateLabel, compareTable, defaultObjectives, FORWARD_PREFIX, frontierMatchesAxes, scatterPoints, statusText } from "./exploration-model";
+import { axisOptions, betterHint, candidateLabel, compareTable, defaultObjectives, FORWARD_PREFIX, frontierMatchesAxes, keyResultLines, scatterPoints, statusText } from "./exploration-model";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT } from "../../application/report-files";
 import { DismissButton } from "../dismiss-button";
 import { money, num } from "../display-format";
@@ -300,7 +300,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
         details={(point) => {
           const candidate = evaluation.candidates.find((item) => item.id === point.id);
           if (!candidate) return null;
-          return <>{Object.entries(candidate.parameters).map(([name, value]) => <span key={name}>{name} = {value}</span>)}{evaluation.forward && <span>{candidate.forward ? `Forward: ${forwardCardMetrics.map((metric) => `${metric.label} ${num(candidate.forward!.metrics[metric.id])}`).join(" · ")}` : "No forward match"}</span>}{candidate.pareto.violations.map((violation) => <span key={violation.metric}>✗ {labelOf(violation.metric)} {violation.operator} {violation.threshold} (is {violation.value ?? "missing"})</span>)}</>;
+          return <>{keyResultLines(candidate, metrics, [axes.x, axes.y, axes.size]).map((line) => <span key={line.id} className="trl-tradeoff__key-result">{line.label}: <strong>{line.value}</strong></span>)}{Object.entries(candidate.parameters).map(([name, value]) => <span key={name}>{name} = {value}</span>)}{evaluation.forward && <span>{candidate.forward ? `Forward: ${forwardCardMetrics.map((metric) => `${metric.label} ${num(candidate.forward!.metrics[metric.id])}`).join(" · ")}` : "No forward match"}</span>}{candidate.pareto.violations.map((violation) => <span key={violation.metric}>✗ {labelOf(violation.metric)} {violation.operator} {violation.threshold} (is {violation.value === null || violation.value === undefined ? "missing" : num(violation.value)})</span>)}</>;
         }}
       />
       {!frontierMatchesAxes(JSON.parse(evaluatedConfig).objectives as Objective[], axes.x, axes.y) && <p className="trl-m0__note">The frontier line is shown only when the two axes are exactly the two objectives; frontier points are still highlighted.</p>}

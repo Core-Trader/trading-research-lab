@@ -102,3 +102,16 @@ export function statusText(candidate: Candidate): string {
   if (pareto.status === "CONSTRAINED") return "Fails " + pareto.violations.map((violation) => `${violation.metric} ${violation.operator} ${violation.threshold}`).join(", ");
   return "Missing a value";
 }
+
+/** Results every scatter card shows, whatever the axes: MT5-reported, in this order. */
+export const KEY_RESULT_METRICS = ["net_profit", "equity_drawdown_pct", "profit_factor", "recovery_factor", "trades"];
+
+/** Key results for a pass, skipping the metrics already on the card's axes. Display only. */
+export function keyResultLines(candidate: Candidate, metrics: StudyMetric[], onAxes: Array<string | null>): Array<{ id: string; label: string; value: string }> {
+  return KEY_RESULT_METRICS.filter((id) => !onAxes.includes(id)).flatMap((id) => {
+    const metric = metrics.find((item) => item.id === id);
+    if (!metric) return [];
+    const raw = candidate.metrics[id] ?? null;
+    return [{ id, label: metric.label, value: raw === null ? "—" : metric.unit === "percent" ? `${num(raw)}%` : num(raw) }];
+  });
+}
