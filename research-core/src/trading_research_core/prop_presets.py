@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 
-PRESETS_VERSION = "prop-presets-1"
+PRESETS_VERSION = "prop-presets-2"
 
 _FTMO_SOURCE = "https://ftmo.com/en/trading-objectives/"
 _FTMO_RETRIEVED = "2026-09-24"
@@ -76,6 +76,55 @@ PRESETS: list[dict[str, Any]] = [
 
 for _preset in PRESETS:
     _preset |= {"source_url": _FTMO_SOURCE, "retrieved_at": _FTMO_RETRIEVED, "name": f"{_preset['firm']} {_preset['programme'].split(': ')[-1]} · {_preset['phase']}"}
+
+# FundedNext: CFD Challenge Terms §4–§7 plus two Help Center articles (2026-09-24).
+_FN_SOURCE = "https://fundednext.com/cfd-challenge-terms"
+_FN_DETAILS = [
+    "https://help.fundednext.com/en/articles/8019811-how-can-i-calculate-the-daily-loss-limit",
+    "https://help.fundednext.com/en/articles/8394309-when-does-the-daily-loss-limit-reset-with-fundednext-cfd",
+]
+_FN_COMMON = {
+    # "resets at midnight based on server time ... GMT+3 [daylight saving] ... GMT+2" = EET/EEST
+    "reset": {"kind": "FIRM_RESET", "time": "00:00", "zone": "Europe/Athens"},
+    # Help Center example: the day's limit is measured from the day's starting value (initial balance × %).
+    "start_of_day_reference": "BALANCE",
+    "daily_loss_basis": "INITIAL_BALANCE",  # "calculated as a percentage of the Initial Account Size"
+    "overall_loss_mode": "FIXED",  # Terms §5.2: MLL "as a percentage of the Initial Account Size"
+    "trailing_reference": None,
+    "breach_on": "EQUITY_TOUCH",  # "losing more than ... on closed or running trades"
+    "limit_touch_counts": True,  # Terms §7.1: "reaches or exceeds any DLL/MLL threshold"
+    "trading_day_definition": "DEAL_OPENED_OR_CLOSED",  # §4.3: "opens and/or closes at least one trade"
+    "maximum_calendar_days": None,
+    "best_day_max_percent": None,
+}
+_FN_NOT_MODELLED = [
+    "Prohibited Trading Practices (Terms §8), including EA and copy-trading restrictions, are not checked. PropFirmMatch reported EAs as a paid add-on at FundedNext; check FundedNext's current EA policy before relying on an EA result.",
+    "Add-ons and special offers can change these parameters (Terms §5.5).",
+    "The Help Center says a loss of more than the limit breaches, while the Terms (§7.1) act when it is reached; this preset follows the Terms.",
+]
+
+
+def _fundednext(preset_id: str, programme: str, phase: str, daily: str, overall: str, target: str, days: int) -> dict[str, Any]:
+    return {
+        "preset_id": preset_id, "firm": "FundedNext", "programme": programme, "phase": phase,
+        "rules": _FN_COMMON | {"daily_loss_limit": {"kind": "PERCENT", "value": daily}, "overall_loss_limit": {"kind": "PERCENT", "value": overall},
+                               "profit_target": {"kind": "PERCENT", "value": target}, "minimum_trading_days": days},
+        "not_modelled": _FN_NOT_MODELLED,
+        "source_url": _FN_SOURCE, "source_details": _FN_DETAILS, "retrieved_at": "2026-09-24",
+        "name": f"FundedNext {programme} · {phase}",
+    }
+
+
+# Terms §5.1–§5.4: DLL, MLL, minimum Trading Days, Profit Targets per model.
+PRESETS += [
+    _fundednext("fundednext-stellar-2step-phase1", "Stellar 2-Step", "Phase 1", "5", "10", "8", 5),
+    _fundednext("fundednext-stellar-2step-phase2", "Stellar 2-Step", "Phase 2", "5", "10", "5", 5),
+    _fundednext("fundednext-stellar-1step", "Stellar 1-Step", "Challenge", "3", "6", "10", 2),
+    _fundednext("fundednext-stellar-lite-phase1", "Stellar Lite", "Phase 1", "4", "8", "8", 5),
+    _fundednext("fundednext-stellar-lite-phase2", "Stellar Lite", "Phase 2", "4", "8", "4", 5),
+    _fundednext("fundednext-evaluation-phase1", "Evaluation", "Phase 1", "5", "10", "10", 5),
+    _fundednext("fundednext-evaluation-phase2", "Evaluation", "Phase 2", "5", "10", "5", 5),
+]
 
 
 def list_presets() -> dict[str, object]:

@@ -557,7 +557,7 @@ export type PropRules = {
   best_day_max_percent?: string | null;
 };
 export type PropPresetOrigin = { preset_id: string; firm: string; programme: string; phase: string; source_url: string; retrieved_at: string };
-export type PropPreset = PropPresetOrigin & { name: string; rules: Omit<PropRules, "name" | "account_size">; not_modelled: string[] };
+export type PropPreset = PropPresetOrigin & { name: string; rules: Omit<PropRules, "name" | "account_size">; not_modelled: string[]; source_details?: string[] };
 export type PropProfile = { profile_version: string; profile_id: string; profile_hash: string; saved_at: string; supersedes: string | null; values_source: string; preset?: PropPresetOrigin | null; rules: PropRules };
 export type PropVerdict = "BROKEN" | "POSSIBLY_BROKEN" | "NOT_BROKEN";
 export type PropEvidenceLevel = "EQUITY_LOGGED" | "PORTFOLIO_CONSERVATIVE" | "REALISED_ONLY";

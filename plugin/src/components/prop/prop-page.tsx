@@ -233,7 +233,7 @@ function ProfileEditor({ form, presets, onChange, onSave, onCancel }: { form: Pr
         <option value="">A blank profile</option>
         {[...new Set(presets.map((item) => item.firm))].map((firm) => <optgroup key={firm} label={firm}>{presets.filter((item) => item.firm === firm).map((item) => <option key={item.preset_id} value={item.preset_id}>{item.programme} · {item.phase}</option>)}</optgroup>)}
       </select>
-      {chosen && <span className="trl-m0__note">Copied from <a href={chosen.source_url}>{chosen.source_url}</a> on {chosen.retrieved_at}. Verify against the firm's current terms; every value below stays editable. Not checked: {chosen.not_modelled.join(" ")}</span>}
+      {chosen && <span className="trl-m0__note">Copied from <a href={chosen.source_url}>{chosen.source_url}</a>{chosen.source_details?.map((url, index) => <React.Fragment key={url}> and <a href={url}>detail {index + 1}</a></React.Fragment>)} on {chosen.retrieved_at}. Verify against the firm's current terms; every value below stays editable. Not checked: {chosen.not_modelled.join(" ")}</span>}
     </label>}
     <p className="trl-m0__note">Leave a rule as "Not used" if your firm does not have it. Placeholders in empty boxes are examples, not any firm's terms.</p>
     <div className="trl-m0__scenario-fields">

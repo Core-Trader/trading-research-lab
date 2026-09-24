@@ -292,11 +292,12 @@ from trading_research_core.prop_presets import PRESETS, list_presets  # noqa: E4
 
 
 def test_presets_are_valid_profiles_with_their_source() -> None:
-    assert list_presets()["presets"] == PRESETS and len(PRESETS) == 5
+    assert list_presets()["presets"] == PRESETS and len(PRESETS) == 12 and len({item["preset_id"] for item in PRESETS}) == 12
     for item in PRESETS:
         rules = validate_profile({"name": item["name"], "account_size": "100000", **item["rules"]})
-        assert rules["reset"] == {"kind": "FIRM_RESET", "time": "00:00", "zone": "Europe/Prague"}
-        assert item["source_url"].startswith("https://ftmo.com/") and item["retrieved_at"] == "2026-09-24" and item["not_modelled"]
+        assert rules["reset"]["kind"] == "FIRM_RESET" and rules["reset"]["time"] == "00:00"
+        own_site = {"FTMO": "https://ftmo.com/", "FundedNext": "https://fundednext.com/"}[item["firm"]]
+        assert item["source_url"].startswith(own_site) and item["retrieved_at"] == "2026-09-24" and item["not_modelled"]
 
 
 def test_ftmo_daily_limit_example_below_not_touch() -> None:
@@ -356,3 +357,18 @@ def test_preset_origin_is_recorded_and_older_profiles_still_load(tmp_path: Path)
     legacy = {"profile_version": "prop-profile-1", "profile_id": "00000000-0000-5000-8000-000000000001", "profile_hash": _hash(legacy_rules), "saved_at": "2026-09-24T00:00:00+00:00", "supersedes": None, "values_source": "USER_SUPPLIED", "rules": legacy_rules}
     (workspace / "prop-profiles" / "00000000-0000-5000-8000-000000000001.json").write_text(json.dumps(legacy), encoding="utf-8")
     assert evaluate(workspace, legacy["profile_id"], {"kind": "DATASET", "dataset_ref": ref})["profile"]["rules"]["limit_touch_counts"] is True
+
+
+def test_fundednext_presets_follow_the_challenge_terms() -> None:
+    by_id = {item["preset_id"]: item["rules"] for item in PRESETS}
+    # Terms §5.1–§5.4 (DLL, MLL, minimum Trading Days, Profit Target), retrieved 2026-09-24
+    expected = {
+        "fundednext-stellar-2step-phase1": ("5", "10", 5, "8"), "fundednext-stellar-2step-phase2": ("5", "10", 5, "5"),
+        "fundednext-stellar-1step": ("3", "6", 2, "10"), "fundednext-stellar-lite-phase1": ("4", "8", 5, "8"),
+        "fundednext-stellar-lite-phase2": ("4", "8", 5, "4"), "fundednext-evaluation-phase1": ("5", "10", 5, "10"),
+        "fundednext-evaluation-phase2": ("5", "10", 5, "5"),
+    }
+    for preset_id, (daily, overall, days, target) in expected.items():
+        rules = by_id[preset_id]
+        assert (rules["daily_loss_limit"]["value"], rules["overall_loss_limit"]["value"], rules["minimum_trading_days"], rules["profit_target"]["value"]) == (daily, overall, days, target)
+        assert rules["reset"]["zone"] == "Europe/Athens" and rules["limit_touch_counts"] is True and rules["trading_day_definition"] == "DEAL_OPENED_OR_CLOSED"
