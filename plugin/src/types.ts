@@ -637,3 +637,30 @@ export type PropChain = {
   findings: Array<{ severity: string; code: string; message: string }>;
   warnings: string[];
 };
+
+/** MT5 symbol sweeps (SYMBOL_SWEEP_SPEC.md). Metric values are MT5-reported strings. */
+export type SweepMetric = { column: string; id: string; label: string; default_direction: "MAX" | "MIN" | null; unit: string };
+export type SymbolSweep = {
+  sweep_ref: string;
+  adapter_version: string;
+  source: { filename: string; sha256: string; byte_count: number };
+  imported_at: string;
+  context: { title: string; expert: string | null; chart_symbol: string | null; timeframe: string | null; start: string | null; end: string | null; server: string | null; deposit: string | null; leverage: string | null; condition: string | null; build: string | null; created: string | null };
+  modelling_mode: string;
+  declared_set: { schema_ref: string; filename: string; sha256: string; parameter_count: number; inputs: Record<string, string>; status: string; note: string } | null;
+  metrics: SweepMetric[];
+  row_count: number;
+  zero_trade_symbols: string[];
+  limitations: string[];
+  created?: boolean;
+};
+export type SweepRow = { symbol: string; pass: string; source_sequence: string; zero_trades: boolean; pareto: { status: "PARETO" | "DOMINATED" | "CONSTRAINED" | "INCOMPLETE"; rank: number | null; dominated_by_count: number; dominated_by_example: string | null; violations: Array<{ metric: string; operator: string; threshold: string; value: string | null }> } } & Record<string, unknown>;
+export type SweepEvaluation = { sweep: SymbolSweep; evaluation_id: string; counts: Record<string, number>; front_count: number; rows: SweepRow[]; warnings: string[] };
+export type SweepComparison = {
+  metric: string; metric_label: string;
+  sweeps: Array<{ sweep_ref: string; expert: string | null; filename: string }>;
+  comparable: boolean;
+  differences: Array<{ field: string; values: Array<string | null> }>;
+  matrix: Array<{ symbol: string; values: Array<string | null>; tested: boolean[] }>;
+  warnings: string[];
+};

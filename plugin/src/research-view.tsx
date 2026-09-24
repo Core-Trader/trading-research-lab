@@ -20,6 +20,7 @@ import { MonteCarloAnalysis, WhatIfAnalysis } from "./components/advanced/scenar
 import { Diagnostics, type RunDiagnostics } from "./components/advanced/diagnostics-panel";
 import { PortfolioLab } from "./components/portfolio/portfolio-lab";
 import { PropCheckPage } from "./components/prop/prop-page";
+import { SymbolScanPage } from "./components/sweep/symbol-scan-page";
 import { EquityAttach, EquityHowTo } from "./components/analysis/equity-panel";
 import { ParameterExplorer } from "./components/exploration/parameter-explorer";
 import { upsertChoiceBlock } from "./vault/choice-block";
@@ -765,6 +766,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     {activePage === "help" && <HelpPage />}
     {activePage === "portfolio" && <PortfolioLab service={service} linkedNotes={linkedNotes} onPropCheck={(key) => navigation.requestPropCheck(`combination:${key}`)} />}
     {activePage === "prop" && <PropCheckPage service={service} currentDatasetRef={evidence?.dataset_ref ?? null} request={propRequest} />}
+    {activePage === "scan" && <SymbolScanPage service={service} experiment={experiment} onRecordChoice={recordParameterChoice} />}
     {activePage === "parameters" && <ParameterExplorer service={service} experiment={experiment} onRecordChoice={recordParameterChoice} />}
     {activePage === "advanced" && <section className="trl-page" aria-label="Advanced research">
       <header className="trl-page__header"><div><h3>Advanced research</h3><p>Optional, qualified studies. Results are research evidence, not trading recommendations.</p></div></header>

@@ -4,8 +4,8 @@ import { ALL_PAGES, NavigationStore, PAGE_GROUPS, pageInfo } from "../src/applic
 
 test("every page appears once, grouped for the sidebar", () => {
   const ids = ALL_PAGES.map((page) => page.id);
-  assert.deepEqual([...new Set(ids)].sort(), ["advanced", "analysis", "data", "help", "overview", "parameters", "portfolio", "prop", "research"]);
-  assert.equal(ids.length, 9);
+  assert.deepEqual([...new Set(ids)].sort(), ["advanced", "analysis", "data", "help", "overview", "parameters", "portfolio", "prop", "research", "scan"]);
+  assert.equal(ids.length, 10);
   assert.deepEqual(PAGE_GROUPS.map((group) => group.label), ["Home", "Data", "Research", "Documents", "Help"]);
   assert.equal(pageInfo("help").label, "Help & downloads");
 });

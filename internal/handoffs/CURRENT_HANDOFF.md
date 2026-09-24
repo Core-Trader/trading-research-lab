@@ -162,7 +162,7 @@ An autonomous session on the same day (see
 - the worker-client restart-race fix, with a real-worker integration test
 - worker memory measurements
 
-The Help page now has a **Research workflow** guide (DOC-001; `product-docs/RESEARCH_WORKFLOW.md` is generated from `plugin/src/components/help/research-workflow.ts`). Its 9-item gaps list is the owner's next topic; symbol-sweep import comes first. Note: TRL has never imported MT5 symbol-sweep XML. The older 7-row sweep export is deliberately rejected, per the M6 optimisation decision package.
+The Help page now has a **Research workflow** guide (DOC-001; `product-docs/RESEARCH_WORKFLOW.md` is generated from `plugin/src/components/help/research-workflow.ts`). Its gaps list is the owner's next topic. Gap 1, symbol-sweep import, is done: the **Symbol scan** page (SWEEP-1) was checked on the owner's three RoboForex sweeps (3 EAs × 20 symbols). 8 gaps remain. Note: TRL has never imported MT5 symbol-sweep XML. The older 7-row sweep export is deliberately rejected, per the M6 optimisation decision package.
 **Next:** the owner reviews in Obsidian:
 1. Re-attach the DCA V3 equity log.
 2. Prop-firm check with FTMO and FundedNext presets, and the report-clock

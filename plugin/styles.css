@@ -432,3 +432,10 @@
 .trl-workflow__label.is-c { border-color: var(--color-purple); }
 .trl-workflow__label.is-u { border-color: var(--color-orange); }
 .trl-workflow__source { color: var(--text-muted); font-size: var(--font-ui-smaller); }
+/* Symbol scan */
+.trl-portfolio__table tr.is-active { background: var(--background-modifier-hover); }
+.trl-monthly tr.is-frontier th { color: var(--text-accent); }
+.trl-monthly tr.is-muted td, .trl-monthly tr.is-muted th { opacity: 0.55; }
+.trl-sweep-compare th[scope="row"] { text-align: left; }
+.trl-sweep-compare th[scope="row"] label { display: inline-flex; gap: 0.3rem; align-items: center; font-weight: 400; color: var(--text-normal); }
+.trl-sweep-compare td.is-untested { color: var(--text-faint); }

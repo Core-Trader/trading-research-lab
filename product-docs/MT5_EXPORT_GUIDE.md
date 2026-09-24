@@ -11,6 +11,7 @@ originals.
 | Show your default settings and parameter ranges | EA inputs | `.set` |
 | Place your default settings on the field | A single test of the default settings | `.xlsx` |
 | Out-of-sample (forward) check | Forward optimisation results | `.xml` |
+| Compare one EA across many symbols (Symbol scan) | Symbol sweep results | `.xml` (+ optional `.set`) |
 
 ## Backtest report (`.xlsx` or `.html`)
 
@@ -44,6 +45,33 @@ title to check that exports belong together, so keep the default title.
 MT5 does not write the **modelling mode** (for example "1-minute OHLC" or
 "Every tick") into the XML. TRL asks you for it, so note it when you run the
 optimisation.
+
+## Symbol sweep (`.xml`)
+
+A symbol sweep runs one EA, with the same inputs, once on every symbol in
+Market Watch.
+
+1. In MT5's Market Watch, show the symbols you want to test.
+2. In the Strategy Tester, choose optimisation **All symbols selected in
+   Market Watch**, then run it.
+3. On the **Optimization results** tab, right-click and choose the export to
+   XML.
+4. In TRL, open **Symbol scan**:
+   - import the XML
+   - declare the modelling mode (MT5 does not write it into the file)
+   - optionally add the `.set` you used, so the inputs are recorded
+
+   TRL cannot confirm those were the inputs, because the sweep file lists
+   none.
+
+On the Symbol scan page you can:
+- filter symbols with your own thresholds
+- see the trade-off frontier
+- compare up to 6 EAs' sweeps on the same symbols side by side
+- record a shortlist in your Experiment note
+
+TRL does not rank symbols. A sweep has no individual trades, so re-test each
+shortlisted symbol as a single test before the other analyses.
 
 ## EA inputs (`.set`)
 

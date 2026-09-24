@@ -43,9 +43,9 @@ Every point is labelled: a sourced fact (with its source), your own workflow cho
 
 **Purpose:** Find symbols worth a closer look.
 
-**Where:** MT5 only: optimisation mode "All symbols selected in Market Watch" (Optimization=3), a fixed .set, the scan window only
+**Where:** MT5: optimisation mode "All symbols selected in Market Watch" (Optimization=3), a fixed .set, the scan window only; then TRL Symbol scan (import the exported XML, filter, compare EAs, shortlist)
 
-**Inputs:** A baseline .set
+**Inputs:** A baseline .set (attach it on import to record the inputs)
 
 **Checks:**
 
@@ -53,7 +53,7 @@ Every point is labelled: a sourced fact (with its source), your own workflow cho
 - **[S]** In "1 minute OHLC" and "Open prices only", stop loss, take profit and pending orders fill at exactly the requested price. The scan is optimistic for stop-based EAs, so treat it as a screen only. *(Source: [MetaTrader 5 Help: Testing Features](https://www.metatrader5.com/en/terminal/help/algotrading/testing_features).)*
 - **[S]** Profit Factor = gross profit ÷ gross loss; Recovery Factor = profit ÷ maximum drawdown. Both are MT5's definitions. *(Source: [MetaTrader 5 Help: Testing Report](https://www.metatrader5.com/en/terminal/help/algotrading/testing_report).)*
 - **[U]** Your cut-offs for profit factor, recovery factor, drawdown and trade count. Tight cut-offs keep few symbols and may discard slow but steady ones; loose ones pass noise to the next steps.
-- **[C]** TRL cannot import the symbol-sweep results yet: rank them in MT5, then take the shortlist into step 3.
+- **[C]** On Symbol scan, set your own filters, look at the trade-off frontier, compare up to 6 EAs on the same symbols, and record the shortlist in your Experiment note. TRL does not rank symbols for you.
 
 ## 3. Check the shortlist realistically
 
@@ -176,7 +176,6 @@ Every point is labelled: a sourced fact (with its source), your own workflow cho
 
 ## Not in TRL yet
 
-- Importing MT5 symbol-sweep ("All symbols selected in Market Watch") results.
 - A per-window comparison table for step 4.
 - Rolling walk-forward optimisation (re-optimising for each window).
 - Significance statistics and a minimum-trade warning.

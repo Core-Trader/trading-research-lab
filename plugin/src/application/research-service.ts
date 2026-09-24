@@ -1,4 +1,4 @@
-import type { PropChain, PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { SweepComparison, SweepEvaluation, SymbolSweep, PropChain, PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -192,6 +192,31 @@ export class ResearchService {
   /** A multi-phase challenge from every start day: each phase after a pass starts the next day as a fresh account. */
   propChainStarts(profileIds: string[], target: PropTarget, reportClockZone: string | null): Promise<PropChain> {
     return this.worker.request("prop.chain_starts", reportClockZone ? { profile_ids: profileIds, target, report_clock_zone: reportClockZone } : { profile_ids: profileIds, target }, LONG_RUNNING_MS);
+  }
+
+  /** Imports an MT5 "All symbols selected in Market Watch" export; the .set is optional and recorded as declared. */
+  intakeSymbolSweep(sourcePath: string, modellingMode: string, setPath: string | null): Promise<SymbolSweep> {
+    return this.worker.request("sweep.intake", setPath ? { source_path: sourcePath, modelling_mode: modellingMode, set_path: setPath } : { source_path: sourcePath, modelling_mode: modellingMode }, LONG_RUNNING_MS);
+  }
+
+  listSymbolSweeps(): Promise<{ adapter_version: string; sweeps: SymbolSweep[]; max_compare: number }> {
+    return this.worker.request("sweep.list", {});
+  }
+
+  evaluateSymbolSweep(sweepRef: string, objectives: Objective[], constraints: Constraint[]): Promise<SweepEvaluation> {
+    return this.worker.request("sweep.evaluate", { sweep_ref: sweepRef, objectives, constraints });
+  }
+
+  compareSymbolSweeps(sweepRefs: string[], metric: string): Promise<SweepComparison> {
+    return this.worker.request("sweep.compare", { sweep_refs: sweepRefs, metric });
+  }
+
+  renderSymbolShortlist(sweepRefs: string[], symbols: string[], reason: string): Promise<{ shortlist_id: string; markdown: string }> {
+    return this.worker.request("sweep.render_shortlist", { sweep_refs: sweepRefs, symbols, reason });
+  }
+
+  deleteSymbolSweep(sweepRef: string): Promise<{ sweep_ref: string; deleted: boolean }> {
+    return this.worker.request("sweep.delete", { sweep_ref: sweepRef });
   }
 
   /** Firm presets with their source and retrieval date; copied into editable profiles. */

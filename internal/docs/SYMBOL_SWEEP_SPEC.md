@@ -1,7 +1,17 @@
 # Symbol sweep import: specification (draft for owner decisions)
 
-**Status:** DRAFT 2026-09-24. Nothing is built. S2 (the optional `.set`) is
-confirmed by the owner; S1 and S3–S8 are pending.
+**Status:** APPROVED 2026-09-24. The owner accepted S1–S8 as recommended,
+confirmed the optional `.set` (S2), and accepted S9: compare at most **6**
+sweeps at once, for readable grid columns and distinguishable scatter
+colours. S9 is a design choice, not a sourced number.
+
+Implementation:
+- `research-core/.../symbol_sweep.py`, with the worker methods `sweep.intake`,
+  `sweep.list`, `sweep.evaluate`, `sweep.compare`, `sweep.render_shortlist`,
+  and `sweep.delete`
+- the plugin **Symbol scan** page (`plugin/src/components/sweep/`)
+- the Parameters importer now sends a sweep file to this page with a clear
+  message, and the sweep importer does the same for parameter grids
 
 **Builds on:**
 - Research workflow guide step 2 (DOC-001), gap 1
