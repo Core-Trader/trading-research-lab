@@ -34,6 +34,17 @@ minimum trading days, and the best-day share all hold together. Two new
 outcomes cover the failures: `BEST_DAY_RULE_NOT_MET` and
 `OBJECTIVES_NOT_MET_TOGETHER`.
 
+**P8 rolling starts implemented (2026-09-24):** `prop_rolling.py` and
+`prop.rolling_starts`:
+- one start per day with data, shifted to the account size (not rescaled)
+- each start is followed to its first decision: PASSED, BROKEN,
+  POSSIBLY_BROKEN, OUT_OF_TIME, SURVIVED (profiles without a target, a
+  30-day default horizon), or NOT_DECIDED
+- the summary gives the success share of decided starts and the
+  nearest-rank median days to pass or to breach
+- starts overlap and share one history, so the share is descriptive, not a
+  probability
+
 **Builds on:**
 - M3-POL-003: broker and prop-firm rules are optional, versioned overlays,
   never hard-coded policy

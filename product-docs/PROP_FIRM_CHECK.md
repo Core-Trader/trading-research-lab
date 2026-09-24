@@ -55,8 +55,25 @@ The result depends on the evidence available:
   labelled an **optimistic preview**, because open-position losses are
   invisible. See [EQUITY_LOGGER.md](EQUITY_LOGGER.md) to add a log.
 
-A loss exactly equal to a limit counts as a breach. The run is not cut off
+By default, a loss exactly equal to a limit counts as a breach. FTMO presets
+count a breach only below the limit, as FTMO does. The run is not cut off
 at the first breach: you see when it happened and how the run continued.
 
 This checks a past run. It does not predict whether a live challenge will
 pass.
+
+## Rolling start dates
+
+**Rolling start dates** uses every day of the run as a challenge start. It
+answers the question: had I started on that day, would I have passed, broken
+a rule, or run out of time?
+
+- Each start is moved to begin at the profile's account size. Profit and
+  loss are not rescaled, so lots are as tested.
+- The chart shows one coloured cell per start day.
+- The pass share counts only starts that reached a decision. Starts where
+  the backtest ended first are left out.
+- The starts overlap and share one history, so the share describes this
+  backtest under these rules. It is not a probability of passing.
+- Without a profit target (for example a funded-account profile), each start
+  is followed for 30 days and counted as survived or broken.

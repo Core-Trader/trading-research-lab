@@ -70,3 +70,61 @@ recommended (PROP-1).
   than 5 decimals.
 
 **Tests:** plugin 87, Core 242; the build is clean.
+
+## Follow-up: FTMO presets, Parameters tooltip, rolling starts (PROP-2, P8)
+
+### FTMO presets (commit 8cd97e6)
+
+- **Sources:** the owner asked for firm presets and suggested PropFirmMatch.
+  - PropFirmMatch is an affiliate aggregator. It listed FTMO's programmes,
+    trading days, and the best-day rule, but no loss limits.
+  - The values were therefore taken from FTMO's own trading-objectives page.
+  - Both sources are recorded in `REFERENCE_REGISTER.md`. The FTMO cookie
+    banner was not accepted; PropFirmMatch's non-essential cookies were
+    declined.
+- **Five presets:** 2-Step Challenge, Verification, and Account; 1-Step
+  Challenge and Account. Each carries its source URL, retrieval date, and a
+  list of what TRL cannot check.
+- **New profile options**, needed to match FTMO:
+  - `trading_day_definition`: FTMO counts days on which a position is
+    opened
+  - `limit_touch_counts`: FTMO breaches only when equity drops *below* the
+    limit
+  - `best_day_max_percent`: the 1-Step best-day rule, 50%
+- **Pass point:** now the first moment at which the target, the minimum
+  days, and the best-day share hold together (`prop-check-2`).
+- **Tests** use FTMO's own worked examples:
+  - the daily limit of 97 000 on day 2
+  - the 1-Step end-of-day trailing floor of 94 000
+  - the best day at 62.5% (not met), then at 38.46% after one more day (pass)
+- Profiles saved before this change still load, with the defaults filled in.
+
+### Parameters tooltip (commit 1307f95)
+
+The scatter card always shows net profit, equity drawdown %, profit factor,
+recovery factor, and trades, skipping any already on an axis.
+
+### Rolling start dates (commit bfaebdc; `prop-rolling-1`)
+
+- **What it does:** every day with data is a challenge start, followed to
+  its first decision:
+  - passed
+  - broken, or possibly broken (portfolio, conservative bound only)
+  - out of time (the maximum calendar days are reached)
+  - survived, for profiles without a target (default 30 days)
+  - not decided (the data ended)
+- **How a start works:** each start shifts the run to begin at the account
+  size. P/L is not rescaled (P6), and starts that inherit open positions
+  are counted.
+- **Speed:** a day-level fast path skips days in which no breach or pass is
+  possible. It is tested against a full scan on 40 random runs. The first
+  start matches `prop.evaluate` (the pass time and the first-breach time).
+- **Real DCA V3 run (FTMO presets, report clock `Europe/Athens`):** about
+  0.2 s per call.
+  - All 161 starts are "not decided" for the 2-Step and 1-Step challenges.
+    The run makes about +0.2% in a year, so it never reaches the 10% or 5%
+    targets.
+  - The 2-Step funded account survives 30 days from every decided start
+    (144).
+  - 122 of the 161 starts inherit open DCA positions.
+- **Tests:** Core 254, plugin 90; the build is clean.
