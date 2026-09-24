@@ -1,6 +1,11 @@
 # Proposal: cost breakdown, including opening commissions
 
-**Status:** DRAFT 2026-09-24. Awaiting the owner (C1–C6).
+**Status:** APPROVED and BUILT 2026-09-24 (the owner accepted C1–C5 as recommended; C6 deferred).
+
+**Built:**
+- Core `cost_breakdown.py` (`cost-breakdown-1`); worker `analysis.cost_breakdown` and `analysis.render_cost_note`.
+- Plugin: the Analysis widget "Costs: commissions and swaps" (tiles, a before-costs-to-net step chart, reconciliation, by-symbol and by-month tables), `cost-model.ts` guidance, the Overview net P/L tile note, and record to note.
+- **Checked on the dev vault's 10 real reports:** all reconcile to the cent. Four distinct reports charge the same commission on opening as on closing deals, so per-trade figures left out half the commission. A net swap credit gave a negative cost share; that is now reported as a credit, not a share.
 
 This is workflow gap 1 of the 5 that remain. The sources are in
 `internal/references/REFERENCE_REGISTER.md`.

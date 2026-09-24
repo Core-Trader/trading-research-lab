@@ -553,3 +553,13 @@
 .trl-equity-combo__balance { fill: none; stroke: var(--text-muted, #999); stroke-width: 1.2; stroke-dasharray: 4 3; }
 .trl-equity-combo__key { display: inline-block; width: 1rem; height: 0; vertical-align: middle; border-top: 2px solid var(--interactive-accent, #7b6cd9); }
 .trl-equity-combo__key.is-balance { border-top: 2px dashed var(--text-muted, #999); }
+/* Costs: from before costs to net (C1) */
+.trl-cost-steps { margin: 0.75rem 0; display: grid; gap: 0.3rem; }
+.trl-cost-steps__row { display: grid; grid-template-columns: minmax(8rem, 11rem) minmax(0, 1fr) minmax(6rem, auto); align-items: center; gap: 0.6rem; font-size: var(--font-ui-small); }
+.trl-cost-steps__row.is-total { font-weight: 600; }
+.trl-cost-steps__track { height: 0.7rem; background: var(--background-modifier-border); border-radius: 999px; overflow: hidden; }
+.trl-cost-steps__bar { display: block; height: 100%; border-radius: 999px; }
+.trl-cost-steps__bar.is-positive { background: var(--color-green, #3f9f5f); }
+.trl-cost-steps__bar.is-negative { background: var(--color-red, #c0504d); }
+.trl-cost-steps__value { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 42rem) { .trl-cost-steps__row { grid-template-columns: 1fr auto; } .trl-cost-steps__track { grid-column: 1 / -1; } }

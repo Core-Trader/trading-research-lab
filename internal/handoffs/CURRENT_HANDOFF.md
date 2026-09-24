@@ -174,6 +174,8 @@ Research-note access is done (NOTES-1):
 - the sidebar recent-notes card
 - name clash checks
 
+Gap closed (COST-1): Analysis → Costs, with opening commissions named on the Overview tile. C6 is deferred. 4 workflow gaps remain.
+
 Gap closed (EQP-1): Portfolio combines equity logs (floating losses included), with the drawdown as a range. 5 workflow gaps remain.
 
 Gap closed (BOOT-1): Monte Carlo can resample single trades or blocks (% ending below zero). Guidance can be switched off everywhere (GUIDE-1). 6 workflow gaps remain.

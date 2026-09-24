@@ -129,9 +129,10 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
   },
   {
     number: 7, title: "Stress costs and trade order", purpose: "See how thin the edge is.",
-    where: "TRL Advanced: What-If and Monte Carlo", inputs: "What-If: an extra cost per trade; Monte Carlo: a method (reorder, resample, or resample in blocks), a seed and the number of paths",
+    where: "TRL Analysis → Costs, then Advanced: What-If and Monte Carlo", inputs: "What-If: an extra cost per trade; Monte Carlo: a method (reorder, resample, or resample in blocks), a seed and the number of paths",
     checks: [
       { label: "U", text: "The extra cost per trade, for example your broker's typical spread plus slippage. Higher costs are more pessimistic; the right value depends on your broker and symbol." },
+      { label: "S", source: "mt5Testing", text: "MT5 can charge commission when a position opens and/or closes. Analysis → Costs splits commissions and swaps, reconciles them with the final balance, and shows the amount on opening deals that per-trade figures leave out." },
       { label: "S", source: "playbook", text: "Reshuffling trades measures ordering risk only, not total risk." },
       { label: "S", source: "nistBootstrap", text: "Resampling trades with replacement lets the final result vary, so the share of paths ending below zero is defined; use \"Resample in blocks\" when trades depend on each other (Künsch 1989)." },
       { label: "U", text: "The worst drawdown you accept at the 95th percentile of reshuffles: your risk budget." },
@@ -171,7 +172,6 @@ export const WORKFLOW_GAPS = [
   "Modelling spread, slippage or execution delay inside TRL (today: What-If's fixed cost per trade).",
   "Importing demo or live account statements to track real forward results.",
   "A checklist in Research notes that tracks steps 0–10.",
-  "A cost breakdown view; TRL's closed-trade figures also leave out commissions charged when positions open.",
 ];
 
 /** The shipped guide (product-docs/RESEARCH_WORKFLOW.md), generated from the same content as the Help page. */

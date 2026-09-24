@@ -769,3 +769,20 @@ export type EquityCombination = {
   findings: Array<{ severity: "WARNING" | "NOTE"; code: string; message: string }>;
   warnings: string[];
 };
+
+/** analysis.cost_breakdown (PROPOSAL_COST_BREAKDOWN.md C1–C4); values are Core decimal strings. */
+export type CostRow = { trade_result_before_costs: string; commission_open: string; commission_close: string; swap_charged: string; swap_credited: string; commissions: string; swaps: string; net: string; costs: string; cost_share_percent: string | null; closed_trades: number; volume: string };
+export type CostBreakdown = {
+  calculation_version: string;
+  evaluation_id: string;
+  dataset_ref: string;
+  currency: string | null;
+  source_filename: string | null;
+  summary: CostRow;
+  reconciliation: { opening_balance: string; computed_final: string; reported_final: string; difference: string; status: "MATCHES" | "DIFFERS" };
+  per_trade_exclusion: { amount: string; per_closed_trade: string | null; opening_commission: string };
+  intensity: { cost_per_closed_trade: string | null; commission_per_lot: string | null; cost_share_percent: string | null };
+  by_symbol: Array<CostRow & { symbol: string }>;
+  by_month: Array<CostRow & { month: string }>;
+  warnings: string[];
+};

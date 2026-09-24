@@ -1,6 +1,6 @@
 import { plain } from "./plain-language.ts";
 import { formatPercent, formatTimestamp, roundDecimalString } from "./display-format.ts";
-import type { DailyDrawdownResult, DatasetEvidence, PerformanceMetrics, SignificanceResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { CostBreakdown, DailyDrawdownResult, DatasetEvidence, PerformanceMetrics, SignificanceResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import { belowMinimum } from "../application/research-settings.ts";
 
 export const UNAVAILABLE = "Unavailable";
@@ -18,6 +18,8 @@ export type DashboardInputs = {
   performance?: PerformanceMetrics | null;
   /** Significance of the average trade (G6) and your own minimum trades (G5). */
   significance?: SignificanceResult | null;
+  /** C2: opening-deal amounts left out of close-event figures. */
+  costs?: CostBreakdown | null;
   minTrades?: number | null;
   /** Failure messages from automatic dashboard calculations, per source. */
   errors?: { closeEvents?: string | null; dailyDrawdown?: string | null; displaySeries?: string | null; performance?: string | null };
@@ -71,7 +73,7 @@ export function buildDashboardModel(inputs: DashboardInputs): DashboardModel | n
 
   const kpis: Kpi[] = [
     summary
-      ? { id: "net-pnl", label: "Net close-event P/L", source: "closeEvents", state: "ready", value: money(summary.net_pnl), detail: "Sum of verified close events", tone: signTone(summary.net_pnl) }
+      ? { id: "net-pnl", label: "Net close-event P/L", source: "closeEvents", state: "ready", value: money(summary.net_pnl), detail: openingExclusionLine(inputs.costs ?? null) ?? "Sum of verified close events", tone: signTone(summary.net_pnl) }
       : { id: "net-pnl", label: "Net close-event P/L", source: "closeEvents", ...pending("closeEvents") },
     summary
       ? { id: "close-events", label: "Close events", source: "closeEvents", state: "ready", value: String(summary.count), detail: [`${summary.win_count} wins · ${summary.loss_count} losses · ${summary.breakeven_count} breakeven`, belowMinimum(summary.count, inputs.minTrades ?? null) ? `fewer than your minimum of ${inputs.minTrades}` : "", significanceLine(inputs.significance ?? null)].filter(Boolean).join(" · "), tone: belowMinimum(summary.count, inputs.minTrades ?? null) ? "warning" : "neutral" }
@@ -161,4 +163,10 @@ export function significanceLine(result: SignificanceResult | null): string {
   if (result.validity === "NOT_VALID") return "average-trade test not valid (wins and losses not random)";
   const level = `${Math.round(Number(result.confidence) * 100)} %`;
   return Number(result.mean_test.interval.low) > 0 ? `average trade above zero at ${level}` : `average trade not distinguishable from zero at ${level}`;
+}
+
+/** C2: the Overview net P/L tile names opening-deal amounts it leaves out (the balance change includes them). */
+export function openingExclusionLine(costs: CostBreakdown | null): string | null {
+  if (!costs || Number(costs.per_trade_exclusion.amount) === 0) return null;
+  return `Closing deals only; excludes ${Number(costs.per_trade_exclusion.amount).toFixed(2)} ${costs.currency ?? ""} on opening deals (the balance change includes it)`;
 }

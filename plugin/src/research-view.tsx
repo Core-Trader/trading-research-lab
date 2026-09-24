@@ -34,7 +34,8 @@ import { DismissButton } from "./components/dismiss-button";
 import { LayoutContext, WidgetSurface } from "./components/layout/widget-surface";
 import { ThresholdContext } from "./components/thresholds-context";
 import { SignificancePanel } from "./components/analysis/significance-panel";
-import type { SignificanceResult } from "./types";
+import { CostsPanel } from "./components/analysis/costs-panel";
+import type { CostBreakdown, SignificanceResult } from "./types";
 import { ANALYSIS_WIDGETS } from "./layout/widgets";
 import type { LastReport } from "./application/last-report";
 import { EquityPanel } from "./components/analysis/equity-panel";
@@ -116,6 +117,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const [validated, setValidated] = useState<{ datasetRef: string; eventCount: number; workerWasReady: boolean; readinessMs: number; importMs: number } | null>(null);
   const [libraryEntries, setLibraryEntries] = useState<DatasetEvidence[]>([]);
   const [significance, setSignificance] = useState<SignificanceResult | null>(null);
+  const [costs, setCosts] = useState<CostBreakdown | null>(null);
+  const [costsError, setCostsError] = useState<string | null>(null);
   const [monteCarloMethod, setMonteCarloMethod] = useState<MonteCarloMethod>("REORDER");
   const [significanceError, setSignificanceError] = useState<string | null>(null);
   const thresholds = useSyncExternalStore(plugin.thresholds.subscribe, () => plugin.thresholds.snapshot);
@@ -727,6 +730,17 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     return () => { active = false; };
   }, [service, statistics, thresholds.confidence]);
 
+  // Costs (C1–C4) follow the analysed report.
+  useEffect(() => {
+    setCostsError(null);
+    if (!statistics) { setCosts(null); return; }
+    let active = true;
+    service.costBreakdown(statistics.dataset_ref)
+      .then((result) => { if (active) setCosts(result); })
+      .catch((caught) => { if (active) setCostsError(caught instanceof Error ? caught.message : String(caught)); });
+    return () => { active = false; };
+  }, [service, statistics]);
+
   // SESSION-1: reopen with the last loaded report until a new one is loaded.
   // Only references are saved; an analysed report is recalculated by the Core.
   const restoreSettled = useRef(false);
@@ -799,6 +813,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       displaySeries={displaySeries}
       performance={performanceMetrics}
       significance={significance}
+      costs={costs}
       minTrades={thresholds.minTrades}
       busyStatus={importBusy ? status : null}
       onBrowseReport={() => setActivePage("data")}
@@ -870,6 +885,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       <WidgetSurface surface="analysis" label="Analysis" variant="stack" definitions={ANALYSIS_WIDGETS} unavailableNote="Appears once a report is imported." widgets={{
         "analysis.results": statistics && <Results statistics={statistics} />,
         "analysis.significance": statistics && <SignificancePanel service={service} datasetRef={statistics.dataset_ref} result={significance} error={significanceError} analysis={{ datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id }} notes={notesApi} />,
+        "analysis.costs": statistics && <CostsPanel service={service} datasetRef={statistics.dataset_ref} result={costs} error={costsError} analysis={{ datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id }} notes={notesApi} />,
         "analysis.trades": (evidence || statistics) && <M2Analysis
       accountMode={accountMode}
       closeEvents={closeEventAnalysis}

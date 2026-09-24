@@ -159,3 +159,10 @@ test("SQN tile shows the capped value with raw N and no quality band", () => {
   assert.equal(byId["sqn"]?.detail, "N capped at 100 · raw SQN 0.64 (N = 4) · no quality band");
   assert.ok(!/poor|good|excellent|holy/i.test(byId["sqn"]?.detail ?? ""));
 });
+
+test("the net P/L tile names opening-deal amounts it leaves out (C2)", async () => {
+  const { openingExclusionLine } = await import("../src/components/dashboard-model.ts");
+  assert.equal(openingExclusionLine(null), null);
+  assert.equal(openingExclusionLine({ currency: "USD", per_trade_exclusion: { amount: "0", per_closed_trade: "0", opening_commission: "0" } } as never), null);
+  assert.equal(openingExclusionLine({ currency: "USD", per_trade_exclusion: { amount: "-10.5", per_closed_trade: "-5.25", opening_commission: "-10.5" } } as never), "Closing deals only; excludes -10.50 USD on opening deals (the balance change includes it)");
+});

@@ -183,3 +183,20 @@ live index on a real vault (rename and delete refresh) and the sidebar card.
     only on the observed value, and the realised-against-equity sentence
     is neutral.
 - **Tests:** Core 302; plugin 153.
+
+## Follow-up: cost breakdown (COST-1)
+
+- **Core:** `cost_breakdown.py` over the canonical events; the Core returns
+  the commission and swap totals, so the plugin does no arithmetic.
+- **Real data:** read-only run on the dev vault's 10 reports.
+  - All reconcile to the cent.
+  - Opening commissions equal closing commissions where commission is
+    charged.
+  - A net swap credit (USDJPY, CADCHF) produced a negative "cost share",
+    now suppressed and worded as a credit.
+- **Plugin:**
+  - The widget, the step chart, the guidance (including a tip for when
+    swaps cost more than commissions), the Overview tile note, and record
+    to note.
+  - Harness-checked on the real TRL_V3b report.
+- **Tests:** Core 308; plugin 160.
