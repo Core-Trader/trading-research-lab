@@ -77,3 +77,20 @@ a rule, or run out of time?
   backtest under these rules. It is not a probability of passing.
 - Without a profit target (for example a funded-account profile), each start
   is followed for 30 days and counted as survived or broken.
+
+## Whole challenges (two or three phases)
+
+Under **What to check**, pick a **Then phase 2** profile, and optionally a
+phase 3, for example FTMO Challenge → Verification. **Rolling starts through
+2 phases** then follows every start day through each phase in turn:
+- A pass starts the next phase on the next trading day, as a fresh account.
+- Each start ends as completed, failed (the result shows which phase), or
+  not decided.
+- Hover a day to see how each phase went.
+
+## Shortcuts
+
+- **Check prop-firm rules…** on the report card in the sidebar opens this
+  page with the current report selected.
+- **Prop check** next to a saved combination on the Portfolio page opens it
+  with that combination selected.

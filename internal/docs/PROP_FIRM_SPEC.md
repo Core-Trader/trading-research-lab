@@ -45,6 +45,14 @@ outcomes cover the failures: `BEST_DAY_RULE_NOT_MET` and
 - starts overlap and share one history, so the share is descriptive, not a
   probability
 
+**Chained phases (2026-09-24, PROP-4):** `prop.chain_starts` takes 2 or 3
+profiles, in order. Every phase except the last needs a profit target, and
+all phases use the same account size. Each phase after a pass starts on the
+next day with data, shifted to the account size.
+- Final outcomes: COMPLETED, FAILED (with the phase), POSSIBLY_FAILED, or
+  NOT_DECIDED
+- A final funded phase without a target counts "survived" as completing it
+
 **Builds on:**
 - M3-POL-003: broker and prop-firm rules are optional, versioned overlays,
   never hard-coded policy

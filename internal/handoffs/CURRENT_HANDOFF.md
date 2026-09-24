@@ -152,9 +152,24 @@ Since then:
 - rolling start dates (P8)
 
 See the follow-up section of the same journal entry.
-**Next:** the owner reviews the Prop-firm check page in Obsidian, including:
-- a new profile started from an FTMO preset
-- rolling start dates The navigation sidebar (NAV-1–3) and the Help &
+An autonomous session on the same day (see
+`internal/development-journal/2026-09-24-autonomous-session.md`) added:
+- chained phases
+- quick actions
+- FundedNext presets
+- the P1–P3 prop corpus in MT5 (the RoboForex terminal was closed with the
+  owner's authorisation; it may need restarting)
+- the worker-client restart-race fix, with a real-worker integration test
+- worker memory measurements
+
+**Next:** the owner reviews in Obsidian:
+1. Re-attach the DCA V3 equity log.
+2. Prop-firm check with FTMO and FundedNext presets, and the report-clock
+   zone `Europe/Athens`.
+3. Rolling starts, and a 2-phase chain (the P1–P3 corpus reports make good
+   test cases).
+4. The sidebar and saved-combination quick actions.
+5. The Parameters tooltip. The navigation sidebar (NAV-1–3) and the Help &
 downloads page (HELP-001) are built. **Revert point:** tag `plugin-pre-nav-sidebar`, plus the built-file
 backup and steps in `C:\DEV\TRL_Plugin_Backups\2026-09-23_pre-nav-sidebar\HOW_TO_REVERT.md`.
 The Data page is redesigned (UX-002): validate first, then companions (equity
@@ -257,8 +272,8 @@ Set-Location C:\DEV\Trading_Research_Lab\plugin
 | Area | Status | Evidence / limit |
 | --- | --- | --- |
 | Environment | Pass | Python/Node/npm/Git versions and core imports verified on 2026-09-20. |
-| Research Core unit tests | Pass | 254 `pytest` tests passed on 2026-09-24 (prop check F1–F9, FTMO presets and examples, rolling starts, day boundary) (plus 4 release-script tests in `scripts/tests`), including MT5 HTML import, report archive, neighbourhood analysis, saved-combination persistence, parameter exploration (single tests, forward pairing), including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
-| Plugin automated tests | Pass | 90 Node tests passed on 2026-09-24 (prop model and presets, rolling guidance, scatter key results, display precision policy) (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
+| Research Core unit tests | Pass | 262 `pytest` tests passed on 2026-09-24 (plus chains, FundedNext presets, reset-spanning intervals) (prop check F1–F9, FTMO presets and examples, rolling starts, day boundary) (plus 4 release-script tests in `scripts/tests`), including MT5 HTML import, report archive, neighbourhood analysis, saved-combination persistence, parameter exploration (single tests, forward pairing), including Portfolio explore = combine per subset, including shared Pareto (brute-force cross-checked), Portfolio Lab P1–P16, R-multiple R1–R8, performance metrics F1–F13, display series, and Monte Carlo v3; earlier coverage includes M0/M1 coverage plus M2 FIFO, partial-allocation, quality, account-mode, deterministic-artifact, and worker-IPC cases. |
+| Plugin automated tests | Pass | 93 Node tests passed on 2026-09-24, including a real-worker crash/restart integration test; (prop model and presets, rolling guidance, scatter key results, display precision policy) (incl. chart geometry, calendar layout, display rounding, KPI tiles): generated-note safety, research documents, application-service IPC mapping, superseded-run rejection, and dashboard view-model (Unavailable is never zero). |
 | Plugin build | Pass | TypeScript check and esbuild production bundle passed. |
 | Live M0 path | Pass, owner-confirmed | EURUSD import, verified balance curve, generated note, Browse workflow, and diagnostics panel were manually exercised. |
 | Integration/negative coverage | Partial | Live structured unknown-method response was verified; a broader formal integration suite is not yet present. |
