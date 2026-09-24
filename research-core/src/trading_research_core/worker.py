@@ -29,6 +29,7 @@ from .mt5_set import intake_parameter_schema
 from .parameter_exploration import add_single_test, attach_forward, create_study, evaluate as exploration_evaluate, render_choice
 from .equity_log import attach_equity_log, equity_metrics
 from .prop_presets import list_presets as prop_list_presets
+from .windows import render_windows_note, separate_windows, split_windows
 from .symbol_sweep import compare_symbol_sweeps, delete_symbol_sweep, evaluate_symbol_sweep, intake_symbol_sweep, list_symbol_sweeps, render_symbol_shortlist
 from .prop_rolling import chain_starts as prop_chain_starts, rolling_starts as prop_rolling_starts
 from .prop_check import delete_profile as prop_delete_profile, evaluate as prop_evaluate, list_profiles as prop_list_profiles, save_profile as prop_save_profile
@@ -96,6 +97,9 @@ class Worker:
                     "dataset.check_set",
                     "analysis.equity_metrics",
                     "prop.list_presets",
+                    "windows.split",
+                    "windows.separate",
+                    "windows.render_note",
                     "sweep.intake",
                     "sweep.list",
                     "sweep.evaluate",
@@ -264,6 +268,17 @@ class Worker:
             return check_set_against_report(self.workspace_root, _required_string(params, "dataset_ref"), _required_string(params, "source_path"))
         if method == "analysis.equity_metrics":
             return equity_metrics(self.workspace_root, _required_string(params, "dataset_ref"))
+        if method in {"windows.split", "windows.separate", "windows.render_note"}:
+            min_trades, max_losing = params.get("min_trades"), params.get("max_losing_windows")
+            mode = "SPLIT" if method == "windows.split" else "SEPARATE" if method == "windows.separate" else str(params.get("mode"))
+            if mode == "SPLIT":
+                start = params.get("start")
+                result = split_windows(self.workspace_root, _required_string(params, "dataset_ref"), params.get("months"), start if isinstance(start, str) and start.strip() else None, min_trades, max_losing)
+            elif mode == "SEPARATE":
+                result = separate_windows(self.workspace_root, params.get("dataset_refs"), min_trades, max_losing)
+            else:
+                raise CoreError("E_REQUEST_INVALID", "params.mode must be SPLIT or SEPARATE.")
+            return render_windows_note(result, str(params.get("reason") or "")) if method == "windows.render_note" else result
         if method == "sweep.intake":
             set_path = params.get("set_path")
             return intake_symbol_sweep(self.workspace_root, _required_string(params, "source_path"), _required_string(params, "modelling_mode"), set_path if isinstance(set_path, str) and set_path.strip() else None)
