@@ -15,10 +15,13 @@ export class WorkerClient {
   private sequence = 0;
   private startPromise: Promise<void> | null = null;
 
-  constructor(
-    private readonly pythonExecutable: string,
-    private readonly workspaceRoot: string,
-  ) {}
+  private readonly pythonExecutable: string;
+  private readonly workspaceRoot: string;
+
+  constructor(pythonExecutable: string, workspaceRoot: string) {
+    this.pythonExecutable = pythonExecutable;
+    this.workspaceRoot = workspaceRoot;
+  }
 
   get isReady(): boolean {
     return this.child !== null && this.startPromise === null;
@@ -74,15 +77,24 @@ export class WorkerClient {
     // The first run has no worker-data directory yet. Create only the plugin's
     // own local workspace before asking Node to use it as the child-process cwd.
     mkdirSync(this.workspaceRoot, { recursive: true });
-    this.child = spawn(this.pythonExecutable, ["-m", "trading_research_core", "--workspace-root", this.workspaceRoot], {
+    const child = spawn(this.pythonExecutable, ["-m", "trading_research_core", "--workspace-root", this.workspaceRoot], {
       cwd: this.workspaceRoot,
       windowsHide: true,
       stdio: "pipe",
     });
-    this.child.stdout.on("data", (chunk: Buffer) => this.consumeStdout(chunk.toString("utf8")));
-    this.child.stderr.on("data", (chunk: Buffer) => console.error("[Trading Research Lab worker]", chunk.toString("utf8")));
-    this.child.on("error", (error) => { this.failAll(error); this.child = null; });
-    this.child.on("exit", (code) => {
+    this.child = child;
+    this.stdoutBuffer = "";
+    // Events from a worker that has already been replaced (after a timeout, stop, or crash) must not
+    // touch the current worker or its pending requests.
+    child.stdout.on("data", (chunk: Buffer) => { if (this.child === child) this.consumeStdout(chunk.toString("utf8")); });
+    child.stderr.on("data", (chunk: Buffer) => console.error("[Trading Research Lab worker]", chunk.toString("utf8")));
+    child.on("error", (error) => {
+      if (this.child !== child) return;
+      this.child = null;
+      this.failAll(error);
+    });
+    child.on("exit", (code) => {
+      if (this.child !== child) return;
       this.child = null;
       this.failAll(new Error(`Research worker exited with code ${code ?? "unknown"}.`));
     });
@@ -122,7 +134,9 @@ export class WorkerClient {
   }
 
   private terminate(): void {
-    this.child?.kill();
+    const child = this.child;
     this.child = null;
+    this.failAll(new Error("Research worker was stopped."));
+    child?.kill();
   }
 }
