@@ -21,6 +21,7 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 from .dataset_store import read_dataset
+from .day_boundary import DayBoundary
 from .errors import CoreError
 
 
@@ -186,10 +187,11 @@ def equity_metrics(workspace_root: Path, dataset_ref: str) -> dict[str, object]:
     import pyarrow.parquet as pq
     rows = [_typed(row) for row in pq.read_table(target / "equity.parquet").to_pylist()]
     initial = rows[0]["balance"]
+    boundary = DayBoundary()
     days: dict[str, dict[str, Any]] = {}
     reference = max(rows[0]["balance"], rows[0]["equity_close"])
     for index, row in enumerate(rows):
-        day = row["time"][:10]
+        day = boundary.day(row["time"])
         if day not in days:
             if index > 0:
                 previous = rows[index - 1]

@@ -18,6 +18,7 @@ prototype or an external reference project.
 | --- | --- | --- | --- | --- |
 | openpyxl | `>=3.1.5,<4` | MIT | MT5 `.xlsx` input adapter | Local runtime verified; release review pending |
 | pyarrow | `>=25.0.1,<26` | Apache-2.0 | Canonical Parquet storage | Local runtime verified; release review pending |
+| tzdata | `>=2026.1` (2026.4 installed 2026-09-24) | Apache-2.0 (Python Software Foundation, https://github.com/python/tzdata) | IANA time zone data for firm reset times (`day_boundary.py`); Windows has no system tz database for `zoneinfo`. Data only, no code executed. | Local runtime verified; release review pending |
 | React / React DOM | `^19.1.1` | MIT | Isolated plugin view | Local build verified; release review pending |
 | esbuild | `0.25.5` | MIT | Plugin bundling | Local build verified; release review pending |
 | TypeScript | `^5.8.3` | Apache-2.0 | Plugin type checking | Local build verified; release review pending |

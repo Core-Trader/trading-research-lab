@@ -1,7 +1,26 @@
 # Prop-firm rule check: specification (draft for owner decisions)
 
-**Status:** DRAFT 2026-09-24. Nothing is built. Decisions P1–P10 (§9) are
-pending.
+**Status:** APPROVED 2026-09-24 (owner accepted P1–P10 as recommended).
+
+Implementation notes:
+- Core: `day_boundary.py` (shared; `equity_metrics` uses it) and
+  `prop_check.py`, with `prop.list_profiles`, `prop.save_profile`,
+  `prop.delete_profile`, and `prop.evaluate`. Tests are in
+  `test_prop_check.py` (F1–F9).
+- The IANA zones come from the `tzdata` package (Apache-2.0), because
+  Windows has no system tz database. It is recorded in
+  `THIRD_PARTY_LICENSES.md`.
+- The report-clock zone is passed with each evaluation (the plugin
+  remembers it per report), not stored on the report.
+- An interval's low counts on the day of its `equity_min_time`.
+- Trailing floors rise only from earlier samples: a peak and a trough in
+  one interval are not combined in an unknown order.
+- For portfolios, the logs' final balance can differ from Portfolio Lab's
+  close-event total by opening-deal costs. This is reported as a NOTE, and
+  the check uses the logs.
+- F10 (2026-09-24): on the logged DCA V3 run with a 5%/10% sample profile,
+  the worst daily loss (93.41) and the overall headroom (9 987.49) match an
+  independent hand calculation from `equity.parquet`.
 
 **Builds on:**
 - M3-POL-003: broker and prop-firm rules are optional, versioned overlays,

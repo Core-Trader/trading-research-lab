@@ -28,6 +28,7 @@ from .pareto import evaluate as pareto_evaluate
 from .mt5_set import intake_parameter_schema
 from .parameter_exploration import add_single_test, attach_forward, create_study, evaluate as exploration_evaluate, render_choice
 from .equity_log import attach_equity_log, equity_metrics
+from .prop_check import delete_profile as prop_delete_profile, evaluate as prop_evaluate, list_profiles as prop_list_profiles, save_profile as prop_save_profile
 from .set_check import check_set_against_report
 from .neighbourhood import attach_neighbourhood_run, neighbourhood, render_neighbourhood_set, write_neighbourhood_set
 from .mt5_optimisation import intake_parameter_grid, intake_paired_forward_grid
@@ -91,6 +92,10 @@ class Worker:
                     "dataset.attach_equity_log",
                     "dataset.check_set",
                     "analysis.equity_metrics",
+                    "prop.list_profiles",
+                    "prop.save_profile",
+                    "prop.delete_profile",
+                    "prop.evaluate",
                     "scenario.fixed_close_event_cost",
                     "scenario.monte_carlo_order_permutation",
                     "optimisation.intake_parameter_grid",
@@ -247,6 +252,19 @@ class Worker:
             return check_set_against_report(self.workspace_root, _required_string(params, "dataset_ref"), _required_string(params, "source_path"))
         if method == "analysis.equity_metrics":
             return equity_metrics(self.workspace_root, _required_string(params, "dataset_ref"))
+        if method == "prop.list_profiles":
+            return prop_list_profiles(self.workspace_root)
+        if method == "prop.save_profile":
+            profile = params.get("profile")
+            if not isinstance(profile, dict):
+                raise CoreError("E_REQUEST_INVALID", "params.profile must be an object.")
+            supersedes = params.get("supersedes")
+            return prop_save_profile(self.workspace_root, profile, supersedes if isinstance(supersedes, str) and supersedes else None)
+        if method == "prop.delete_profile":
+            return prop_delete_profile(self.workspace_root, _required_string(params, "profile_id"))
+        if method == "prop.evaluate":
+            zone = params.get("report_clock_zone")
+            return prop_evaluate(self.workspace_root, _required_string(params, "profile_id"), params.get("target"), zone if isinstance(zone, str) and zone.strip() else None)
         if method == "analysis.equity_availability":
             dataset_ref = _required_string(params, "dataset_ref")
             try:
