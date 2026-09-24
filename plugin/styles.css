@@ -140,7 +140,7 @@
 .trl-mc-percentiles th, .trl-mc-percentiles td { padding: 0.3rem 0.8rem 0.3rem 0; border-bottom: 1px solid var(--background-modifier-border); text-align: left; }
 .trl-mc-percentiles td { text-align: right; }
 .trl-mc-fan__plot { cursor: default; }
-.trl-mc-fan__path { fill: none; stroke: var(--interactive-accent); stroke-width: 1; opacity: 0.18; }
+.trl-mc-fan__path { fill: none; stroke: var(--interactive-accent); stroke-width: 1; opacity: 0.3; }
 .trl-mc-fan__historical { fill: none; stroke: var(--text-normal); stroke-width: 2; }
 .trl-mc-fan__key { display: inline-block; width: 1rem; height: 0.2rem; margin-right: 0.25rem; vertical-align: middle; background: var(--interactive-accent); opacity: 0.5; }
 .trl-mc-fan__key.is-historical { background: var(--text-normal); opacity: 1; }
@@ -329,6 +329,7 @@
 .trl-sidenav__actions button { width: 100%; }
 .trl-sidenav__group h6 { margin: 0 0 0.2rem; padding: 0 0.15rem; color: var(--text-muted); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; }
 .trl-sidenav__group ul { display: grid; gap: 0.05rem; margin: 0; padding: 0; list-style: none; }
+.trl-sidenav__group button, .trl-sidenav__group button:hover, .trl-sidenav__group button:active, .trl-sidenav__group button:focus, .trl-sidenav__group button:focus-visible, .trl-sidenav__group button.is-active { justify-content: flex-start; text-align: left; }
 .trl-sidenav__group button { display: flex; align-items: center; gap: 0.45rem; width: 100%; padding: 0.3rem 0.25rem; border: 0; border-radius: 0.3rem; background: transparent; box-shadow: none; color: var(--text-normal); text-align: left; }
 .trl-sidenav__group button:hover { background: var(--background-modifier-hover); }
 .trl-sidenav__group button.is-active { background: var(--background-modifier-active-hover, var(--background-secondary)); color: var(--text-accent); font-weight: 600; }

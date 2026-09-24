@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { lineGeometry, nearestIndex } from "../src/components/chart-geometry.ts";
+import { lineGeometry, nearestIndex, slotIndex } from "../src/components/chart-geometry.ts";
 
 test("line geometry needs at least two numeric points", () => {
   assert.equal(lineGeometry([]), null);
@@ -80,4 +80,14 @@ test("intensity is a bounded visual scale", async () => {
   assert.equal(intensity("0", 50), 0.15);
   assert.equal(intensity("10", 0), 0.15);
   assert.equal(intensity("999", 50), 1);
+});
+
+test("slot index maps a hover position to the bar under it, not the nearest point", () => {
+  assert.equal(slotIndex(0, 4), 0);
+  assert.equal(slotIndex(0.24, 4), 0);
+  assert.equal(slotIndex(0.26, 4), 1);
+  assert.equal(slotIndex(0.99, 4), 3);
+  assert.equal(slotIndex(1, 4), 3);
+  assert.equal(slotIndex(-0.2, 4), 0);
+  assert.equal(slotIndex(0.7, 1), 0);
 });

@@ -139,18 +139,18 @@ export function DrawdownPercentileTable({ percentiles, currency }: { percentiles
 }
 
 export function PathFan({ result }: { result: MonteCarloResult }): React.ReactElement {
-  const [showPaths, setShowPaths] = useState(false);
+  const [showBand, setShowBand] = useState(false);
   const fan = result.path_fan;
-  const band = useMemo(() => fanBandGeometry(result, showPaths), [result, showPaths]);
+  const band = useMemo(() => fanBandGeometry(result, true), [result]);
   if (band === null) return <p className="trl-m0__note">The path band could not be drawn from these results.</p>;
   const lastEvent = fan.event_indices.at(-1) ?? 0;
   return <ChartFrame title="Running total across reshuffles">
     <figure className="trl-mc-fan">
       <div className="trl-balance-chart__body">
         <div className="trl-balance-chart__y-axis" aria-hidden="true"><span>{band.high.toFixed(2)}</span><span>{band.low.toFixed(2)}</span></div>
-        <div className="trl-balance-chart__plot trl-mc-fan__plot" role="img" aria-label={`Middle 90% band of cumulative closed-trade P/L across paths, the median path, and your actual order, from 0 to ${lastEvent} trades.`}>
+        <div className="trl-balance-chart__plot trl-mc-fan__plot" role="img" aria-label={`Cumulative closed-trade P/L for ${fan.paths.length} reshuffled paths, the median path, and your actual order, from 0 to ${lastEvent} trades.`}>
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            <polygon className="trl-mc-fan__band" points={band.band} />
+            {showBand && <polygon className="trl-mc-fan__band" points={band.band} />}
             {band.paths.map((points, index) => <polyline key={fan.paths[index]?.path_index ?? index} className="trl-mc-fan__path" points={points} vectorEffect="non-scaling-stroke" />)}
             <polyline className="trl-mc-fan__median" points={band.median} vectorEffect="non-scaling-stroke" />
             <polyline className="trl-mc-fan__historical" points={band.historical} vectorEffect="non-scaling-stroke" />
@@ -159,8 +159,8 @@ export function PathFan({ result }: { result: MonteCarloResult }): React.ReactEl
       </div>
       <div className="trl-balance-chart__x-axis" aria-hidden="true"><span>Trade 0</span><span>Trade {lastEvent}</span></div>
       <figcaption className="trl-m0__note">
-        <span className="trl-mc-fan__key is-band" /> middle 90% of paths <span className="trl-mc-fan__key is-median" /> median path <span className="trl-mc-fan__key is-historical" /> your actual order ({result.currency}).
-        <label className="trl-mc-fan__toggle"><input type="checkbox" checked={showPaths} onChange={() => setShowPaths(!showPaths)} /> show the first {fan.paths.length} individual paths</label>
+        <span className="trl-mc-fan__key" /> {fan.paths.length} reshuffled paths <span className="trl-mc-fan__key is-median" /> median path <span className="trl-mc-fan__key is-historical" /> your actual order ({result.currency}).{showBand && <> <span className="trl-mc-fan__key is-band" /> middle 90% of all paths.</>}
+        <label className="trl-mc-fan__toggle"><input type="checkbox" checked={showBand} onChange={() => setShowBand(!showBand)} /> also shade the middle 90% of all paths</label>
       </figcaption>
     </figure>
   </ChartFrame>;

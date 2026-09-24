@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import type { CloseEventDisplaySeries } from "../types";
 import { calendarMonths } from "./calendar-model";
-import { barGeometry, intensity, nearestIndex } from "./chart-geometry";
+import { barGeometry, intensity, slotIndex } from "./chart-geometry";
 import { signTone } from "./dashboard-model";
 import { formatTimestamp } from "./display-format";
 
@@ -47,7 +47,7 @@ export function CloseEventBars({ series }: { series: Series }): React.ReactEleme
         tabIndex={0}
         role="img"
         aria-label={`Net P/L of ${events.length} verified close events in ${unit}; largest ${events[geometry.highIndex]!.net_pnl}, smallest ${events[geometry.lowIndex]!.net_pnl}. Use arrow keys to inspect events.`}
-        onPointerMove={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); if (bounds.width > 0) setActive(nearestIndex((event.clientX - bounds.left) / bounds.width - 0.5 / events.length, events.length)); }}
+        onPointerMove={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); if (bounds.width > 0) setActive(slotIndex((event.clientX - bounds.left) / bounds.width, events.length)); }}
         onPointerLeave={() => setActive(null)}
         onKeyDown={onKeyDown}
         onBlur={() => setActive(null)}

@@ -66,7 +66,7 @@ export function monteCarloGuidance(result: MonteCarloResult, equity: EquityMetri
     Number(historical.rank_percent) === 0
       ? `Your actual trade order had a worst drawdown of ${r2(historical.maximum_drawdown)} ${ccy}; none of the reorderings had a smaller one.`
       : `Your actual trade order had a worst drawdown of ${r2(historical.maximum_drawdown)} ${ccy}, deeper than ${r2(historical.rank_percent)}% of the reorderings.`,
-    `The shaded band holds the middle 90% of paths at each point. It is widest after trade ${bands.widest_at_event}, where it spans ${r2(bands.widest_band)} ${ccy}: the order in which trades arrive moves the running total by up to that much.`,
+    `At each point the middle 90% of all paths covers a range of running totals (tick the shading option to see it). That range is widest after trade ${bands.widest_at_event}, where it spans ${r2(bands.widest_band)} ${ccy}: the order in which trades arrive moves the running total by up to that much.`,
     "These drawdowns are measured on closed-trade P/L from zero, not account equity.",
   ];
   const tips: string[] = [];

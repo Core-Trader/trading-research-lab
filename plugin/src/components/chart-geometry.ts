@@ -48,6 +48,12 @@ export function nearestIndex(fraction: number, count: number): number {
   return Math.round(clamped * (count - 1));
 }
 
+/** Index of the equal-width bar slot under a horizontal position (0–1). Bars occupy slots, not points. */
+export function slotIndex(fraction: number, count: number): number {
+  if (count <= 1) return 0;
+  return Math.min(count - 1, Math.max(0, Math.floor(fraction * count)));
+}
+
 function round(value: number): number {
   return Math.round(value * 1000) / 1000;
 }
