@@ -13,9 +13,9 @@ under these rules; it is not an independent probability.
 Speed: days in which no breach and no pass is possible (checked from the
 day's lowest low, highest balance, and highest equity) are stepped over
 whole; other days are scanned sample by sample with the same rules as
-`prop.evaluate`. A sample's low counts on the sample's day here (evaluate
-uses the low's own timestamp), which can only differ for an interval that
-spans the reset.
+`prop.evaluate`. As in evaluate, an interval's low counts on the day of its
+own timestamp: an interval that spans the reset charges its low to the
+previous day's limit. Days holding such an interval are always scanned.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from .errors import CoreError
 from .prop_check import _amount, _beyond, _daily_limit, _q, _run, _span, load_profile
 
 
-ROLLING_VERSION = "prop-rolling-1"
+ROLLING_VERSION = "prop-rolling-2"
 DEFAULT_SURVIVAL_DAYS = 30
 _ZERO = Decimal(0)
 _HUNDRED = Decimal(100)
@@ -191,8 +191,10 @@ class _Context:
         for index, sample in enumerate(samples):
             day = boundary.day(sample["time"])
             if not self.days or self.days[-1]["day"] != day:
-                self.days.append({"day": day, "a": index, "b": index, "min_low": sample["low"], "max_balance": sample["balance"], "max_high": sample["high"]})
+                self.days.append({"day": day, "a": index, "b": index, "min_low": sample["low"], "max_balance": sample["balance"], "max_high": sample["high"], "spans": False})
             info = self.days[-1]
+            if boundary.day(sample["low_at"]) != day:
+                info["spans"] = True
             info["b"] = index
             info["min_low"] = min(info["min_low"], sample["low"])
             info["max_balance"] = max(info["max_balance"], sample["balance"])
@@ -223,6 +225,7 @@ class _Context:
         high_water = self.account
         best_profit, positive = _ZERO, _ZERO
         previous = reference_sample
+        prior: tuple[str, Decimal, Decimal | None] | None = None  # the previous day of this start: label, reference, daily limit
 
         def decided(outcome: str, moment: str, day: str, rule: str | None = None) -> dict[str, object]:
             return base | {"outcome": outcome, "rule": rule, "decided_at": moment, "decided_day": day, "calendar_days": _span(start_day, day)}
@@ -250,12 +253,17 @@ class _Context:
                 interesting = _beyond(self._floor(top) - low, _ZERO, self.touch)
             if self.level is not None and info["max_balance"] + shift >= self.level:
                 interesting = True
+            if info["spans"]:
+                interesting = True
             if interesting or not self.fast:
                 event_time = self.first_event.get(day)
                 for index in range(info["a"], info["b"] + 1):
                     sample = samples[index]
                     sample_low = sample["low"] + shift
-                    if daily_limit is not None and _beyond(day_reference - sample_low, daily_limit, self.touch):
+                    reference, limit = day_reference, daily_limit
+                    if info["spans"] and prior is not None and self.boundary.day(sample["low_at"]) == prior[0]:
+                        reference, limit = prior[1], prior[2]
+                    if limit is not None and _beyond(reference - sample_low, limit, self.touch):
                         return decided("BROKEN", sample["low_at"], day, "DAILY_LOSS")
                     if self.overall is not None:
                         if _beyond(self._floor(high_water) - sample_low, _ZERO, self.touch):
@@ -274,6 +282,7 @@ class _Context:
                     high_water = max(high_water, info["max_balance"] + shift)
                 elif trailing == "EQUITY_HIGH":
                     high_water = max(high_water, info["max_high"] + shift)
+            prior = (day, day_reference, daily_limit)
             previous = samples[info["b"]]
             closed = previous["balance"] + shift - day_start
             positive += max(_ZERO, closed)

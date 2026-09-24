@@ -105,4 +105,23 @@ def test_summary_uses_nearest_rank_median_and_worker_method(tmp_path: Path) -> N
     workspace, ref = _workspace(tmp_path)
     profile = _profile(workspace, profit_target={"kind": "PERCENT", "value": "1"})
     result = Worker(workspace).dispatch({"method": "prop.rolling_starts", "params": {"profile_id": profile, "target": {"kind": "DATASET", "dataset_ref": ref}}})
-    assert result["calculation_version"] == "prop-rolling-1" and len(result["starts"]) == 6  # one per day with a sample, including the END row on 01-31
+    assert result["calculation_version"] == "prop-rolling-2" and len(result["starts"]) == 6  # one per day with a sample, including the END row on 01-31
+
+
+def test_an_interval_spanning_the_reset_charges_the_previous_day_like_evaluate() -> None:
+    from trading_research_core.prop_check import _check
+
+    # Day 1 starts at 10 000 and ends at 9 600. The 00:05 interval of day 2 had its low (9 450) at 23:59 on day 1:
+    # against day 1 (reference 10 000) that is a 550 loss and breaks the 500 limit; against day 2 (9 600) it would not.
+    samples = [sample("2026-03-01T00:00:00", "10000"), sample("2026-03-01T20:00:00", "9600"),
+               sample("2026-03-02T00:05:00", "9600", "9600", low="9450", low_at="2026-03-01T23:59:00"), sample("2026-03-02T12:00:00", "9700")]
+    rules = validate_profile({"name": "S", "account_size": "10000", "daily_loss_limit": {"kind": "AMOUNT", "value": "500"}, "start_of_day_reference": "BALANCE"})
+    full = _check(samples, rules, DayBoundary(), D(10000))["daily"]["first_breach"]
+    assert full is not None and full["day"] == "2026-03-01" and full["time"] == "2026-03-01T23:59:00"
+    for fast in (True, False):
+        context = _Context(samples, DayBoundary(), [], rules, D(10000), None)
+        context.fast = fast
+        first = context.follow(0)
+        assert (first["outcome"], first["rule"], first["decided_at"]) == ("BROKEN", "DAILY_LOSS", full["time"])
+    # Starting on day 2 there is no earlier day in that start, so the low counts against day 2 and does not break it.
+    assert _Context(samples, DayBoundary(), [], rules, D(10000), None).follow(1)["outcome"] == "NOT_DECIDED"
