@@ -45,7 +45,7 @@ The owner later authorised closing the running MT5.
 
 ## 2. Verification without Obsidian
 
-- **Tests:** Core 262, plugin 93; the build is clean.
+- **Tests:** Core 259, plugin 93; the build is clean.
 - **Harness DOM checks with real Core output:**
   - the preset picker (FTMO 1-Step fills its rules and the report's account
     size)
