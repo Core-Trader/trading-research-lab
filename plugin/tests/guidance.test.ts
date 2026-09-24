@@ -21,7 +21,7 @@ test("Monte Carlo text uses only Core values and Core comparisons", () => {
   assert.match(guidance.read[3]!, /widest after trade 1, where it spans 30\.00 USD/);
   assert.match(guidance.tips[0]!, /3\.00% of the starting balance \(1000\.00 USD\)/);
   assert.match(guidance.tips[1]!, /less fortunate than a typical ordering/);
-  assert.ok(guidance.flags.some((flag) => flag.startsWith("Prop-firm limit comparison")));
+  assert.ok(guidance.flags.some((flag) => flag.startsWith("Prop-firm limit comparison: use the Prop-firm check page")));
   assert.ok(guidance.flags.some((flag) => flag.startsWith("Open-position (equity) risk")));
 });
 

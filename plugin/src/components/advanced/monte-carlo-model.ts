@@ -84,6 +84,6 @@ export function monteCarloGuidance(result: MonteCarloResult, equity: EquityMetri
   } else if (equity === null) {
     flags.push("Open-position (equity) risk: attach an equity log to this report to compare it with these closed-trade drawdowns.");
   }
-  flags.push("Prop-firm limit comparison: available with the prop-firm module, which needs your firm's limits and equity data.");
+  flags.push("Prop-firm limit comparison: use the Prop-firm check page. It checks the actual run (with its equity log when attached) against your firm's rules; these reshuffles cover closed trades only.");
   return { read, tips, flags };
 }

@@ -533,3 +533,66 @@ export type ForwardSummary = {
 };
 export type ForwardAttachment = ForwardSummary & { status: "READY" | "BLOCKED" };
 export type SingleTestAttachment = { dataset_ref: string; candidate_id: string; label: string; parameters: Record<string, string>; metrics: Record<string, string | null>; is_default: boolean; findings: StudyFinding[]; status: "READY" | "BLOCKED"; notes: string[] };
+
+/** Prop-firm rule check (PROP_FIRM_SPEC.md). All values are Core strings. */
+export type PropLimit = { kind: "AMOUNT" | "PERCENT"; value: string };
+export type PropReset = { kind: "REPORT_CLOCK_MIDNIGHT" } | { kind: "FIRM_RESET"; time: string; zone: string };
+export type PropRules = {
+  name: string;
+  account_size: string;
+  daily_loss_limit: PropLimit | null;
+  daily_loss_basis: "INITIAL_BALANCE" | "START_OF_DAY_REFERENCE";
+  start_of_day_reference: "BALANCE" | "HIGHER_OF_BALANCE_AND_EQUITY" | "EQUITY";
+  overall_loss_limit: PropLimit | null;
+  overall_loss_mode: "FIXED" | "TRAILING" | "TRAILING_LOCKS_AT_START";
+  trailing_reference: "BALANCE_HIGH" | "EQUITY_HIGH" | "END_OF_DAY_BALANCE_HIGH" | null;
+  profit_target: PropLimit | null;
+  minimum_trading_days: number | null;
+  maximum_calendar_days: number | null;
+  reset: PropReset;
+  breach_on: "EQUITY_TOUCH" | "BALANCE_CLOSE";
+};
+export type PropProfile = { profile_version: string; profile_id: string; profile_hash: string; saved_at: string; supersedes: string | null; values_source: string; rules: PropRules };
+export type PropVerdict = "BROKEN" | "POSSIBLY_BROKEN" | "NOT_BROKEN";
+export type PropEvidenceLevel = "EQUITY_LOGGED" | "PORTFOLIO_CONSERVATIVE" | "REALISED_ONLY";
+export type PropBreach = { time: string; day: string; value: string; limit_level: string; limit: string; loss?: string };
+export type PropTightest = { date?: string; time: string | null; headroom: string; headroom_percent_of_limit: string; loss?: string; limit?: string; floor?: string };
+export type PropRuleResult = {
+  rule: "DAILY_LOSS" | "OVERALL_LOSS";
+  verdict: PropVerdict;
+  limit: PropLimit;
+  basis?: string;
+  limit_amount?: string;
+  mode?: string;
+  trailing_reference?: string | null;
+  first_breach: PropBreach | null;
+  tightest: PropTightest | null;
+  optimistic?: { first_breach: PropBreach | null; tightest: PropTightest | null };
+};
+export type PropDailyRow = { date: string; reference: string; lowest: string; lowest_at: string | null; loss: string; limit: string; headroom: string; headroom_percent_of_limit: string; broken: boolean };
+export type PropChallengeOutcome = "PASSED" | "TARGET_NOT_REACHED" | "MINIMUM_DAYS_NOT_REACHED" | "TOO_SLOW" | "BROKEN_BEFORE_PASS" | "POSSIBLY_BROKEN_BEFORE_PASS";
+export type PropEvaluation = {
+  calculation_version: string;
+  profile: { profile_id: string; profile_hash: string; name: string; saved_at: string; values_source: string; rules: PropRules };
+  target: { kind: "DATASET"; dataset_ref: string } | { kind: "COMBINATION"; combination_id: string; tracks: string[][]; starting_capital: string };
+  currency: string | null;
+  evidence_level: PropEvidenceLevel;
+  day_boundary: { version: string; kind: string; time?: string; zone?: string; report_clock_zone: string | null; day_label: string };
+  account_size: string;
+  verdict: PropVerdict;
+  rules: PropRuleResult[];
+  profit_target: { target: PropLimit; amount: string; level: string; reached: boolean; time: string | null; day: string | null; trading_days: number | null; calendar_days: number | null; basis: string } | null;
+  trading_days: { total: number; definition: string };
+  challenge: {
+    outcome: PropChallengeOutcome;
+    pass_time: string | null;
+    minimum_trading_days: { required: number | null; total: number; met: boolean };
+    maximum_calendar_days: { allowed: number | null; days_to_pass: number | null; met: boolean | null };
+  } | null;
+  daily: PropDailyRow[];
+  series: Array<{ time: string; balance: string; equity: string; low: string; floor: string | null }>;
+  breach_markers: Array<{ rule: string; time: string }>;
+  findings: Array<{ severity: string; code: string; message: string }>;
+  warnings: string[];
+};
+export type PropTarget = { kind: "DATASET"; dataset_ref: string } | { kind: "COMBINATION"; tracks: string[][]; starting_capital?: string };

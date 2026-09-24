@@ -4,7 +4,7 @@
  * research state and publishes a small report summary here; the sidebar only
  * reads it and sends requests. No calculations live here.
  */
-export type WorkspacePage = "overview" | "data" | "portfolio" | "parameters" | "analysis" | "research" | "advanced" | "help";
+export type WorkspacePage = "overview" | "data" | "portfolio" | "parameters" | "analysis" | "research" | "advanced" | "prop" | "help";
 
 export type PageInfo = { id: WorkspacePage; label: string; description: string; icon: string };
 export type PageGroup = { label: string; pages: PageInfo[] };
@@ -16,6 +16,7 @@ export const PAGE_GROUPS: PageGroup[] = [
     { id: "analysis", label: "Analysis", description: "Verified results, risk and equity", icon: "line-chart" },
     { id: "portfolio", label: "Portfolio", description: "Combine EA backtests on one account", icon: "layers" },
     { id: "parameters", label: "Parameters", description: "Optimisation trade-offs and neighbourhoods", icon: "sliders-horizontal" },
+    { id: "prop", label: "Prop-firm check", description: "Check a run against your firm's rules", icon: "shield-check" },
     { id: "advanced", label: "Advanced", description: "Scenarios, simulation and evidence", icon: "flask-conical" },
   ] },
   { label: "Documents", pages: [{ id: "research", label: "Research notes", description: "Strategies, experiments and reports", icon: "notebook-pen" }] },

@@ -19,6 +19,7 @@ import { M4Documents } from "./components/research/documents-panel";
 import { MonteCarloAnalysis, WhatIfAnalysis } from "./components/advanced/scenario-panels";
 import { Diagnostics, type RunDiagnostics } from "./components/advanced/diagnostics-panel";
 import { PortfolioLab } from "./components/portfolio/portfolio-lab";
+import { PropCheckPage } from "./components/prop/prop-page";
 import { EquityAttach, EquityHowTo } from "./components/analysis/equity-panel";
 import { ParameterExplorer } from "./components/exploration/parameter-explorer";
 import { upsertChoiceBlock } from "./vault/choice-block";
@@ -763,6 +764,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     </section>}
     {activePage === "help" && <HelpPage />}
     {activePage === "portfolio" && <PortfolioLab service={service} linkedNotes={linkedNotes} />}
+    {activePage === "prop" && <PropCheckPage service={service} currentDatasetRef={evidence?.dataset_ref ?? null} />}
     {activePage === "parameters" && <ParameterExplorer service={service} experiment={experiment} onRecordChoice={recordParameterChoice} />}
     {activePage === "advanced" && <section className="trl-page" aria-label="Advanced research">
       <header className="trl-page__header"><div><h3>Advanced research</h3><p>Optional, qualified studies. Results are research evidence, not trading recommendations.</p></div></header>
