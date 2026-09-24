@@ -1,6 +1,7 @@
 import { plain } from "./plain-language.ts";
 import { formatPercent, formatTimestamp, roundDecimalString } from "./display-format.ts";
-import type { DailyDrawdownResult, DatasetEvidence, PerformanceMetrics, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { DailyDrawdownResult, DatasetEvidence, PerformanceMetrics, SignificanceResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import { belowMinimum } from "../application/research-settings.ts";
 
 export const UNAVAILABLE = "Unavailable";
 
@@ -15,12 +16,15 @@ export type DashboardInputs = {
   experiment: DocumentReference;
   report: DocumentReference;
   performance?: PerformanceMetrics | null;
+  /** Significance of the average trade (G6) and your own minimum trades (G5). */
+  significance?: SignificanceResult | null;
+  minTrades?: number | null;
   /** Failure messages from automatic dashboard calculations, per source. */
   errors?: { closeEvents?: string | null; dailyDrawdown?: string | null; displaySeries?: string | null; performance?: string | null };
 };
 
 export type KpiSource = "statistics" | "closeEvents" | "dailyDrawdown" | "performance";
-export type KpiTone = "positive" | "negative" | "neutral";
+export type KpiTone = "positive" | "negative" | "neutral" | "warning";
 
 export type Kpi = {
   id: "net-pnl" | "close-events" | "win-rate" | "worst-day" | "balance-change" | "max-drawdown" | "return-drawdown" | "profit-factor" | "expectancy" | "avg-win-loss" | "stagnation" | "sqn";
@@ -70,7 +74,7 @@ export function buildDashboardModel(inputs: DashboardInputs): DashboardModel | n
       ? { id: "net-pnl", label: "Net close-event P/L", source: "closeEvents", state: "ready", value: money(summary.net_pnl), detail: "Sum of verified close events", tone: signTone(summary.net_pnl) }
       : { id: "net-pnl", label: "Net close-event P/L", source: "closeEvents", ...pending("closeEvents") },
     summary
-      ? { id: "close-events", label: "Close events", source: "closeEvents", state: "ready", value: String(summary.count), detail: `${summary.win_count} wins · ${summary.loss_count} losses · ${summary.breakeven_count} breakeven`, tone: "neutral" }
+      ? { id: "close-events", label: "Close events", source: "closeEvents", state: "ready", value: String(summary.count), detail: [`${summary.win_count} wins · ${summary.loss_count} losses · ${summary.breakeven_count} breakeven`, belowMinimum(summary.count, inputs.minTrades ?? null) ? `fewer than your minimum of ${inputs.minTrades}` : "", significanceLine(inputs.significance ?? null)].filter(Boolean).join(" · "), tone: belowMinimum(summary.count, inputs.minTrades ?? null) ? "warning" : "neutral" }
       : { id: "close-events", label: "Close events", source: "closeEvents", ...pending("closeEvents") },
     summary
       ? { id: "win-rate", label: "Win rate", source: "closeEvents", state: "ready", value: percent(summary.win_rate), detail: "Winning verified close events", tone: "neutral", exact: summary.win_rate === null ? undefined : `Core value: ${summary.win_rate}%` }
@@ -149,4 +153,12 @@ function performanceKpis(performance: PerformanceMetrics | null, currency: strin
     { id: "stagnation", label: "Longest stagnation", source: "performance", state: "ready", value: `${r2(stagnation.duration_days)} days`, detail: `${stagnation.close_events} close events · ${stagnation.status === "ONGOING" ? "still ongoing" : "ended by a new high"} · from ${formatTimestamp(stagnation.start.timestamp).slice(0, 10)}`, tone: "neutral", exact: exact("", `${stagnation.duration_days} days; ${stagnation.share_of_report_period_percent ?? "—"}% of the report period`) },
     { id: "sqn", label: "SQN (Van Tharp)", source: "performance", state: "ready", value: close.sqn_capped_100 === null ? "—" : r2(close.sqn_capped_100), detail: close.sqn === null ? "Needs at least 2 close events with varying results" : `N capped at 100 · raw SQN ${r2(close.sqn)} (N = ${close.close_event_count}) · no quality band`, tone: "neutral", exact: exact("", close.sqn_capped_100 === null ? null : `capped ${close.sqn_capped_100}; raw ${close.sqn}; √N × mean ÷ sample stdev of close-event P/L`) },
   ];
+}
+
+/** One line for the Overview (G6): what the significance check says, in words. */
+export function significanceLine(result: SignificanceResult | null): string {
+  if (!result || !result.mean_test.interval) return "";
+  if (result.validity === "NOT_VALID") return "average-trade test not valid (wins and losses not random)";
+  const level = `${Math.round(Number(result.confidence) * 100)} %`;
+  return Number(result.mean_test.interval.low) > 0 ? `average trade above zero at ${level}` : `average trade not distinguishable from zero at ${level}`;
 }

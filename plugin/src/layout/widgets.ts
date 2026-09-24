@@ -19,6 +19,7 @@ export const OVERVIEW_WIDGETS: readonly WidgetDefinition[] = [
 
 export const ANALYSIS_WIDGETS: readonly WidgetDefinition[] = [
   { id: "analysis.results", title: "Verified results", defaultSpan: 3, spans: [3] },
+  { id: "analysis.significance", title: "Is the average trade distinguishable from zero?", defaultSpan: 3, spans: [3] },
   { id: "analysis.trades", title: "Trade and event analysis", defaultSpan: 3, spans: [3] },
   { id: "analysis.daily", title: "Time, balance, and risk foundation", defaultSpan: 3, spans: [3] },
   { id: "analysis.equity", title: "Equity (floating drawdown)", defaultSpan: 3, spans: [3] },

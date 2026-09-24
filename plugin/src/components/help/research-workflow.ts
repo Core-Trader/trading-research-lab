@@ -31,6 +31,11 @@ export const SOURCES = {
   pardo2008: { title: "Pardo, R. (2008), The Evaluation and Optimization of Trading Strategies, 2nd ed., Wiley", url: null },
   tharp: { title: "Van K. Tharp: SQN and R-multiples (e.g. Trade Your Way to Financial Freedom)", url: null },
   playbook: { title: "MT5 Backtesting & Optimization Best Practices (TRL's internal playbook, written from confirmed MT5 failure cases)", url: null },
+  nistT: { title: "NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.5.2 Confidence Limits for the Mean", url: "https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm" },
+  nistRandomness: { title: "NIST/SEMATECH e-Handbook of Statistical Methods, 1.2.5.1 Consequences of Non-Randomness", url: "https://www.itl.nist.gov/div898/handbook/eda/section2/eda251.htm" },
+  nistRuns: { title: "NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.5.13 Runs Test for Detecting Non-randomness", url: "https://www.itl.nist.gov/div898/handbook/eda/section3/eda35d.htm" },
+  nistAutocorrelation: { title: "NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.5.12 Autocorrelation", url: "https://www.itl.nist.gov/div898/handbook/eda/section3/eda35c.htm" },
+  asa2016: { title: "Wasserstein, R. L. & Lazar, N. A. (2016), \"The ASA's Statement on p-Values: Context, Process, and Purpose\", The American Statistician 70(2), 129–133", url: "https://doi.org/10.1080/00031305.2016.1154108" },
   firmRules: { title: "The firm's own rules page (FTMO and FundedNext pages are listed with each preset)", url: null },
 } as const;
 export type SourceKey = keyof typeof SOURCES;
@@ -83,6 +88,8 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
       { label: "S", source: "playbook", text: "Balance only moves when trades close. Compare equity drawdown with balance drawdown: TRL shows the ratio and flags when equity was much deeper." },
       { label: "S", source: "tharp", text: "SQN = √N × mean(R) ÷ standard deviation(R); TRL shows it on the Overview. It grows with consistency and with the number of trades." },
       { label: "U", text: "The minimum number of trades. Fewer trades make every metric noisier; requiring many excludes slow EAs and short windows. Sources do not agree on one number." },
+      { label: "S", source: "nistT", text: "Analysis → \"Is the average trade distinguishable from zero?\" gives a confidence interval for the average closed trade; its width shrinks with √N, so few trades leave it wide." },
+      { label: "C", text: "Set your minimum trades once in TRL's settings (or on that Analysis section): TRL then warns on the Overview, Analysis, Windows, Symbol scan and Parameters wherever a result rests on fewer trades." },
     ],
   },
   {
@@ -156,7 +163,6 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
 
 export const WORKFLOW_GAPS = [
   "Rolling walk-forward optimisation (re-optimising for each window).",
-  "Significance statistics and a minimum-trade warning.",
   "Modelling spread, slippage or execution delay inside TRL (today: What-If's fixed cost per trade).",
   "Bootstrap Monte Carlo (resampling with replacement); today TRL reorders the actual trades.",
   "Importing demo or live account statements to track real forward results.",

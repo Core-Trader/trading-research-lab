@@ -6,10 +6,11 @@ import { WorkerClient } from "./worker-client";
 import { ResearchNotesIndex } from "./vault/research-index";
 import type { MarkdownResult } from "./types";
 import { LayoutStore } from "./layout/layout-store";
+import { CONFIDENCE_OPTIONS, parseMinTrades, ThresholdStore } from "./application/research-settings";
 import { readLastReport, sameLastReport, type LastReport } from "./application/last-report";
 
 /** `layouts` holds customised page layouts (LAYOUT-1); it is read defensively. */
-type TradingResearchSettings = { pythonExecutable: string; showDeveloperDiagnostics: boolean; layouts?: unknown; lastReport?: unknown };
+type TradingResearchSettings = { pythonExecutable: string; showDeveloperDiagnostics: boolean; layouts?: unknown; lastReport?: unknown; thresholds?: unknown };
 const DEFAULT_SETTINGS: TradingResearchSettings = { pythonExecutable: "", showDeveloperDiagnostics: false };
 
 export default class TradingResearchLabPlugin extends Plugin {
@@ -21,6 +22,8 @@ export default class TradingResearchLabPlugin extends Plugin {
   notesIndex!: ResearchNotesIndex;
   /** Customised page layouts, saved with the plugin settings. */
   layouts!: LayoutStore;
+  /** Your own research thresholds (minimum trades, confidence level). */
+  thresholds!: ThresholdStore;
   private lastOpenedMarkdownPath: string | null = null;
 
   /** The report the workspace reopens with (SESSION-1); references only. */
@@ -35,6 +38,7 @@ export default class TradingResearchLabPlugin extends Plugin {
   async onload(): Promise<void> {
     this.settings = { ...DEFAULT_SETTINGS, ...(await this.loadData() as Partial<TradingResearchSettings> ?? {}) };
     this.worker = new WorkerClient(this.settings.pythonExecutable, this.workerWorkspacePath());
+    this.thresholds = new ThresholdStore(this.settings.thresholds, async (thresholds) => { this.settings.thresholds = thresholds; await this.saveData(this.settings); });
     this.layouts = new LayoutStore(this.settings.layouts, async (layouts) => { this.settings.layouts = layouts; await this.saveData(this.settings); });
     this.rememberMarkdownFile(this.app.workspace.getActiveFile());
     this.registerEvent(this.app.workspace.on("file-open", (file) => this.rememberMarkdownFile(file)));
@@ -143,5 +147,20 @@ class TradingResearchSettingsTab extends PluginSettingTab {
         this.plugin.settings.showDeveloperDiagnostics = value;
         await this.plugin.saveData(this.plugin.settings);
       }));
+    containerEl.createEl("h3", { text: "Your research thresholds" });
+    new Setting(containerEl)
+      .setName("Minimum trades")
+      .setDesc("TRL warns wherever a result rests on fewer closed trades than this. No published number applies, so it is yours to choose; empty turns the warning off.")
+      .addText((text) => text.setPlaceholder("none").setValue(this.plugin.thresholds.snapshot.minTrades === null ? "" : String(this.plugin.thresholds.snapshot.minTrades)).onChange((value) => {
+        const parsed = parseMinTrades(value);
+        if (parsed !== undefined) this.plugin.thresholds.set({ minTrades: parsed });
+      }));
+    new Setting(containerEl)
+      .setName("Confidence level")
+      .setDesc("Used by the significance check on Analysis. 95 % is preselected as a common convention, not a rule.")
+      .addDropdown((dropdown) => {
+        for (const option of CONFIDENCE_OPTIONS) dropdown.addOption(option, `${Math.round(Number(option) * 100)} %`);
+        dropdown.setValue(this.plugin.thresholds.snapshot.confidence).onChange((value) => this.plugin.thresholds.set({ confidence: value as (typeof CONFIDENCE_OPTIONS)[number] }));
+      });
   }
 }

@@ -23,6 +23,8 @@ Where the tutorial's wording differs from MT5's documentation or TRL's sources, 
 - **[S]** Equity Drawdown Maximal is the drop from the highest local equity value to the next lowest equity value. It includes floating losses but is measured from an equity peak, so it is not simply the worst floating loss. *(Source: [MetaTrader 5 Help: Testing Report](https://www.metatrader5.com/en/terminal/help/algotrading/testing_report).)*
 - **[S]** Balance moves only when trades close. An averaging, grid or DCA EA can show a calm balance curve while equity is deep underwater; compare the two drawdowns. TRL shows both once an equity log is attached. *(Source: MT5 Backtesting & Optimization Best Practices (TRL's internal playbook, written from confirmed MT5 failure cases).)*
 - **[U]** The Profit Factor you treat as too fragile, and the minimum number of trades. The tutorial's rules of thumb have no published source; a higher bar rejects more noise but also more slow EAs.
+- **[S]** On Analysis, "Is the average trade distinguishable from zero?" tests the average closed trade and shows its confidence interval; if the interval includes zero, the report cannot separate a small edge from none. *(Source: [NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.5.2 Confidence Limits for the Mean](https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm).)*
+- **[S]** The same section checks that wins and losses are in random order; if they are not, the usual statistical tests are invalid and TRL says so. *(Source: [NIST/SEMATECH e-Handbook of Statistical Methods, 1.2.5.1 Consequences of Non-Randomness](https://www.itl.nist.gov/div898/handbook/eda/section2/eda251.htm).)*
 
 ## 2. Optimise, then check for a cliff
 

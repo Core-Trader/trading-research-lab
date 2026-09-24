@@ -681,3 +681,38 @@ export type WindowsResult = {
   notes: string[];
 };
 export type WindowsRequest = { mode: "SPLIT"; dataset_ref: string; months: number; start?: string } | { mode: "SEPARATE"; dataset_refs: string[] };
+
+/** analysis.significance (PROPOSAL_SIGNIFICANCE.md G1–G4); values are Core decimal strings. */
+export type SignificanceConfidence = "0.90" | "0.95" | "0.99";
+export type SignificanceResult = {
+  calculation_version: string;
+  dataset_ref: string;
+  currency: string | null;
+  basis: string;
+  confidence: SignificanceConfidence;
+  mean_test: {
+    count: number;
+    degrees_of_freedom: number;
+    mean: string | null;
+    standard_deviation: string | null;
+    standard_error: string | null;
+    t_statistic: string | null;
+    p_value_one_sided: string | null;
+    interval: { confidence: SignificanceConfidence; critical_t: string; low: string; high: string } | null;
+    reason: "TOO_FEW_TRADES" | "NO_VARIATION" | null;
+  };
+  runs_test: {
+    wins: number;
+    losses: number;
+    breakeven_excluded: number;
+    runs: number;
+    expected_runs: string | null;
+    z: string | null;
+    critical_z: string | null;
+    p_value_two_sided: string | null;
+    status: "TOO_FEW" | "RANDOMNESS_REJECTED" | "NOT_REJECTED";
+  };
+  lag1_autocorrelation: string | null;
+  validity: "VALID" | "NOT_VALID" | "UNCHECKED" | "NOT_AVAILABLE";
+  notes: string[];
+};

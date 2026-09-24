@@ -324,9 +324,9 @@ function PropResult({ result }: { result: PropEvaluation }): React.ReactElement 
       ["Profile", <><code>{result.profile.profile_id}</code> · hash <code>{result.profile.profile_hash.slice(0, 16)}…</code> · entered {result.profile.saved_at}</>],
       ["Checked", result.target.kind === "DATASET" ? <code>{result.target.dataset_ref}</code> : <>combination <code>{result.target.combination_id}</code>, capital {result.target.starting_capital}</>],
       ["Day boundary", <><code>{result.day_boundary.version}</code> · {plain(result.day_boundary.kind)}{result.day_boundary.zone ? ` ${result.day_boundary.time} ${result.day_boundary.zone}; report clock ${result.day_boundary.report_clock_zone}` : ""}</>],
-      ["Evidence", <code>{result.evidence_level}</code>],
+      ["Evidence", <span title={`TRL code: ${result.evidence_level}`}>{EVIDENCE_TEXT[result.evidence_level]}</span>],
       ["Calculation", <code>{result.calculation_version}</code>],
-      ["Findings", result.findings.map((item) => item.code).join(", ") || "none"],
+      ["Findings", result.findings.map((item) => plain(item.code)).join("; ") || "none"],
       ["Notes", plainSentence(result.warnings.join(" "))],
     ]} />
   </section>;
@@ -439,7 +439,7 @@ function RollingStarts({ result }: { result: PropRolling }): React.ReactElement 
       </figure>
     </ChartFrame>
     <GuidanceBlock guidance={rollingGuidance(result)} />
-    <AuditTrail items={[["Calculation", <code>{result.calculation_version}</code>], ["Profile", <code>{result.profile.profile_id}</code>], ["Evidence", <code>{result.evidence_level}</code>], ["Horizon", result.horizon_days === null ? "none (until pass, breach, or the end of the data)" : `${result.horizon_days} calendar days`], ["Findings", result.findings.map((finding) => finding.code).join(", ") || "none"]]} />
+    <AuditTrail items={[["Calculation", <code>{result.calculation_version}</code>], ["Profile", <code>{result.profile.profile_id}</code>], ["Evidence", <span title={`TRL code: ${result.evidence_level}`}>{EVIDENCE_TEXT[result.evidence_level]}</span>], ["Horizon", result.horizon_days === null ? "none (until pass, breach, or the end of the data)" : `${result.horizon_days} calendar days`], ["Findings", result.findings.map((finding) => plain(finding.code)).join("; ") || "none"]]} />
   </section>;
 }
 
@@ -472,6 +472,6 @@ function ChainStarts({ result }: { result: PropChain }): React.ReactElement {
       </figure>
     </ChartFrame>
     <GuidanceBlock guidance={chainGuidance(result)} />
-    <AuditTrail items={[["Calculation", <code>{result.calculation_version}</code>], ["Phases", result.profiles.map((profile, index) => `${index + 1}. ${profile.name} (${profile.profile_id})`).join(" · ")], ["Evidence", <code>{result.evidence_level}</code>]]} />
+    <AuditTrail items={[["Calculation", <code>{result.calculation_version}</code>], ["Phases", result.profiles.map((profile, index) => `${index + 1}. ${profile.name} (${profile.profile_id})`).join(" · ")], ["Evidence", <span title={`TRL code: ${result.evidence_level}`}>{EVIDENCE_TEXT[result.evidence_level]}</span>]]} />
   </section>;
 }

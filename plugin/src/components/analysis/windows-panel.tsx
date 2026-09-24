@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useThresholds } from "../thresholds-context";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
 import type { DatasetEvidence, WindowsRequest, WindowsResult } from "../../types";
 import { AuditTrail } from "../audit-trail";
+import { plain } from "../plain-language";
 import { ChartFrame } from "../chart-frame";
 import { slotIndex } from "../chart-geometry";
 import { CollapsibleSection } from "../collapsible-section";
@@ -36,7 +38,8 @@ export function WindowsPanel({ service, datasetRef, analysis, notes }: Props): R
   const [start, setStart] = useState("");
   const [library, setLibrary] = useState<DatasetEvidence[]>([]);
   const [picked, setPicked] = useState<string[]>([datasetRef]);
-  const [minTrades, setMinTrades] = useState("");
+  const [thresholds] = useThresholds();
+  const [minTrades, setMinTrades] = useState(thresholds.minTrades === null ? "" : String(thresholds.minTrades));  // G5: pre-filled from your minimum
   const [maxLosing, setMaxLosing] = useState("");
   const [result, setResult] = useState<WindowsResult | null>(null);
   const [active, setActive] = useState<number | null>(null);
@@ -158,7 +161,7 @@ export function WindowsPanel({ service, datasetRef, analysis, notes }: Props): R
         <div className="trl-m0__actions"><button type="button" disabled={!target || busy !== null} onClick={() => void record()}>Record in experiment note</button></div>
         {recorded && <p className="trl-exploration__notice" role="status">{recorded}<DismissButton onDismiss={() => setRecorded(null)} /></p>}
       </div>
-      <AuditTrail items={[["Calculation", <code>{result.calculation_version}</code>], ["Evaluation", <code>{result.evaluation_id}</code>], ["Mode", result.configuration.mode === "SPLIT" ? `split, ${result.configuration.months} months from ${result.configuration.start}` : `${result.windows.length} separate reports`], ["Findings", result.findings.map((item) => item.code).join(", ") || "none"]]} />
+      <AuditTrail items={[["Calculation", <code>{result.calculation_version}</code>], ["Evaluation", <code>{result.evaluation_id}</code>], ["Mode", result.configuration.mode === "SPLIT" ? `split, ${result.configuration.months} months from ${result.configuration.start}` : `${result.windows.length} separate reports`], ["Findings", result.findings.map((item) => plain(item.code)).join("; ") || "none"]]} />
     </>}
   </CollapsibleSection>;
 }

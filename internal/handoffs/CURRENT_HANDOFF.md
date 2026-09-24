@@ -174,6 +174,8 @@ Research-note access is done (NOTES-1):
 - the sidebar recent-notes card
 - name clash checks
 
+Gap closed (SIG-1): the significance check on Analysis (t, one-sided p, a confidence interval, and a runs-test validity gate), the Overview line, and "your minimum trades" across the pages. Plain language (UIX-5): no raw Core codes on screen. 7 workflow gaps remain (PROPOSAL_SIGNIFICANCE.md lists the order).
+
 Help now has an Optimisation checklist (DOC-002): the owner's tutorial,
 corrected, labelled, and mapped to TRL tools; it adds the gap "combining
 equity logs in Portfolio".

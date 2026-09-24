@@ -20,6 +20,7 @@ from decimal import Decimal, ROUND_HALF_EVEN
 import math
 
 from .errors import CoreError
+from .identities import stable_uuid
 from .trade_analysis import close_event_summary
 
 
@@ -188,3 +189,41 @@ def significance(dataset: dict[str, object], confidence: str) -> dict[str, objec
             "The p-value is one-sided: the chance of an average at least this high if the true average trade were zero.",
         ],
     }
+
+
+_VALIDITY_TEXT = {
+    "VALID": "the runs check found no pattern in wins and losses",
+    "NOT_VALID": "not valid for this report: the runs check found wins and losses are not in random order (NIST 1.2.5.1)",
+    "UNCHECKED": "the runs check needs more than 10 wins and 10 losses, so randomness was not checked",
+    "NOT_AVAILABLE": "not available",
+}
+
+
+def significance_note(dataset: dict[str, object], confidence: str, reason: str) -> dict[str, str]:
+    """Markdown for "Significance checked" in an Experiment note (G7)."""
+    result = significance(dataset, confidence)
+    test, runs = result["mean_test"], result["runs_test"]
+    currency = result["currency"] or ""
+    level = f"{Decimal(confidence) * 100:.0f} %"
+    record_id = stable_uuid("significance-note", str(result["dataset_ref"]), confidence, CALCULATION_VERSION)
+    lines = [
+        "### Significance checked",
+        "",
+        f"- Report: `{result['dataset_ref']}`; closed trades: {test['count']} (net of commission and swap)",
+    ]
+    if test["reason"] is None:
+        interval = test["interval"]
+        lines += [
+            f"- Average trade: {test['mean']} {currency}; {level} confidence interval {interval['low']} to {interval['high']} {currency}",
+            f"- t-statistic: {test['t_statistic']} (equals the uncapped SQN); one-sided p-value: {test['p_value_one_sided']}",
+        ]
+    else:
+        lines.append("- Average-trade test: not available (" + ("too few trades" if test["reason"] == "TOO_FEW_TRADES" else "every trade had the same result") + ")")
+    lines += [
+        f"- Validity: {_VALIDITY_TEXT[result['validity']]}; runs {runs['runs']} (wins {runs['wins']}, losses {runs['losses']})",
+        f"- Lag-1 autocorrelation (descriptive): {result['lag1_autocorrelation'] or 'not available'}",
+        "- If this report is the best of many tested settings, the p-value overstates the evidence (Bailey et al. 2014).",
+        f"- Your conclusion: {reason.strip() or '(none given)'}",
+        f"- Calculation: `{CALCULATION_VERSION}`, `{record_id}`",
+    ]
+    return {"record_id": record_id, "markdown": "\n".join(lines)}

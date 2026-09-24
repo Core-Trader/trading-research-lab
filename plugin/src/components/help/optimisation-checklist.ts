@@ -47,6 +47,8 @@ export const CHECKLIST_STEPS: ChecklistStep[] = [
       { label: "S", source: "mt5Report", text: "Equity Drawdown Maximal is the drop from the highest local equity value to the next lowest equity value. It includes floating losses but is measured from an equity peak, so it is not simply the worst floating loss." },
       { label: "S", source: "playbook", text: "Balance moves only when trades close. An averaging, grid or DCA EA can show a calm balance curve while equity is deep underwater; compare the two drawdowns. TRL shows both once an equity log is attached." },
       { label: "U", text: "The Profit Factor you treat as too fragile, and the minimum number of trades. The tutorial's rules of thumb have no published source; a higher bar rejects more noise but also more slow EAs." },
+      { label: "S", source: "nistT", text: "On Analysis, \"Is the average trade distinguishable from zero?\" tests the average closed trade and shows its confidence interval; if the interval includes zero, the report cannot separate a small edge from none." },
+      { label: "S", source: "nistRandomness", text: "The same section checks that wins and losses are in random order; if they are not, the usual statistical tests are invalid and TRL says so." },
     ],
   },
   {

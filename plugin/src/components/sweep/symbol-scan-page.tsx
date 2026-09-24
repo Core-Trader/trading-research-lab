@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useThresholds } from "../thresholds-context";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
 import { localPathForSelectedFile } from "../../services/local-file-path";
@@ -40,7 +41,8 @@ export function SymbolScanPage({ service, notes }: Props): React.ReactElement {
   const [activeRef, setActiveRef] = useState<string | null>(null);
   const [compareRefs, setCompareRefs] = useState<string[]>([]);
   const [axes, setAxes] = useState({ x: "equity_drawdown_pct", y: "net_profit" });
-  const [constraints, setConstraints] = useState<Constraint[]>([]);
+  const [thresholds] = useThresholds();  // G5: your minimum trades pre-fills a trades filter
+  const [constraints, setConstraints] = useState<Constraint[]>((() => thresholds.minTrades ? [{ metric: "trades", operator: ">=" as const, threshold: String(thresholds.minTrades) }] : []));
   const [evaluation, setEvaluation] = useState<SweepEvaluation | null>(null);
   const [sort, setSort] = useState<SortState>({ key: "net_profit", direction: "desc" });
   const [compareMetric, setCompareMetric] = useState("net_profit");

@@ -4,6 +4,7 @@ import * as nodePath from "path";
 import loggerInclude from "../../../../mql5/Include/TRL_EquityLogger.mqh";
 import loggerExample from "../../../../mql5/Experts/TRL_EquityLogger_Example.mq5";
 import { DismissButton } from "../dismiss-button";
+import { SourcedPoint } from "../sourced-points";
 import { WidgetSurface } from "../layout/widget-surface";
 import { HELP_WIDGETS } from "../../layout/widgets";
 import { LOGGER_FILES, looksLikeMql5Folder, relativeParts, type SaveTarget } from "./help-model";
@@ -133,13 +134,6 @@ function HelpSection({ id, title, summary, children }: { id: string; title: stri
   </details>;
 }
 
-function Check({ point }: { point: WorkflowPoint }): React.ReactElement {
-  const source = point.source ? SOURCES[point.source] : null;
-  return <li className={`trl-workflow__check is-${point.label.toLowerCase()}`}>
-    <span className="trl-workflow__label" title={LABEL_TEXT[point.label]}>{LABEL_TEXT[point.label]}</span> {point.text}
-    {source && <span className="trl-workflow__source"> Source: {source.url ? <a href={source.url}>{source.title}</a> : source.title}.</span>}
-  </li>;
-}
 
 /** The optimisation checklist (owner-approved 2026-09-24); content lives in optimisation-checklist.ts. */
 function OptimisationChecklist(): React.ReactElement {
@@ -151,7 +145,7 @@ function OptimisationChecklist(): React.ReactElement {
         <dt>In TRL</dt><dd>{step.tool}</dd>
         <dt>Research workflow</dt><dd>Step {step.workflowSteps.join(", ")}</dd>
       </dl>
-      <ul className="trl-workflow__checks">{step.points.map((point) => <Check key={point.text} point={point} />)}</ul>
+      <ul className="trl-workflow__checks">{step.points.map((point) => <SourcedPoint key={point.text} point={point} />)}</ul>
     </details>)}
     <p className="trl-m0__note">The same checklist ships as <code>OPTIMISATION_CHECKLIST.md</code> in TRL's <code>docs</code> folder.</p>
   </HelpSection>;
@@ -168,7 +162,7 @@ function ResearchWorkflow(): React.ReactElement {
         <dt>Where</dt><dd>{step.where}</dd>
         <dt>Inputs</dt><dd>{step.inputs}</dd>
       </dl>
-      <ul className="trl-workflow__checks">{step.checks.map((point) => <Check key={point.text} point={point} />)}</ul>
+      <ul className="trl-workflow__checks">{step.checks.map((point) => <SourcedPoint key={point.text} point={point} />)}</ul>
     </details>)}
     <details className="trl-workflow__step">
       <summary><strong>Not in TRL yet</strong> · steps that stay in MT5 or need a future feature</summary>

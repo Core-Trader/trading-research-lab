@@ -1,6 +1,11 @@
 # Proposal: significance statistics and a minimum-trade warning
 
-**Status:** DRAFT 2026-09-24. Awaiting the owner (G1–G7).
+**Status:** APPROVED and BUILT 2026-09-24 (the owner accepted G1–G7 as recommended and asked that interpretation and tips rest on verifiable sources).
+
+**Built:**
+- Core `significance.py` (`significance-1`): Student t via the regularised incomplete beta, the t-test, the interval, the runs test, and lag-1 autocorrelation; worker `analysis.significance` and `analysis.render_significance_note`.
+- Plugin: the Analysis widget "Is the average trade distinguishable from zero?" with an interval strip and labelled, sourced guidance (`significance-model.ts`); the Overview trade-count line; the thresholds store (minimum trades, confidence) in the plugin settings and the settings tab; trade filters pre-filled on Windows, Symbol scan, and Parameters; Record to note.
+- Added sources: NIST 1.3.5.2, 1.2.5.1, 1.3.5.13, 1.3.5.12, and the ASA statement (Wasserstein & Lazar 2016).
 
 This is workflow gap 2 of 8 in the Research workflow guide's "Not in TRL yet"
 list. The sources are in `internal/references/REFERENCE_REGISTER.md`.

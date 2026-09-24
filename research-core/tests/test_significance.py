@@ -81,3 +81,12 @@ def test_invalid_confidence_and_worker(tmp_path: Path) -> None:
     assert error.value.code == "E_CONFIDENCE_LEVEL"
     result = Worker(tmp_path).dispatch({"method": "analysis.significance", "params": {"dataset_ref": str(dataset["metadata"]["dataset_ref"]), "confidence": "0.99"}})
     assert result["confidence"] == "0.99" and result["validity"] == "UNCHECKED"
+
+
+def test_significance_note(tmp_path: Path) -> None:
+    dataset = _dataset(tmp_path, ["5", "-3", "4", "6"])
+    note = Worker(tmp_path).dispatch({"method": "analysis.render_significance_note", "params": {"dataset_ref": str(dataset["metadata"]["dataset_ref"]), "confidence": "0.95", "reason": "thin sample"}})
+    assert note["markdown"].startswith("### Significance checked")
+    assert "95 % confidence interval" in note["markdown"] and "Your conclusion: thin sample" in note["markdown"]
+    again = Worker(tmp_path).dispatch({"method": "analysis.render_significance_note", "params": {"dataset_ref": str(dataset["metadata"]["dataset_ref"]), "confidence": "0.95", "reason": "other"}})
+    assert again["record_id"] == note["record_id"]

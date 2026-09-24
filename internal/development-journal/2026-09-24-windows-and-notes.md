@@ -124,3 +124,23 @@ live index on a real vault (rename and delete refresh) and the sidebar card.
 - **Built as option A:** a Help section, a generated Markdown file, 5 tests
   (including one guarding the Monte Carlo claim), and one new gap entry.
 - Plugin tests: 126.
+
+## Follow-up: plain language (UIX-5) and significance (SIG-1)
+
+- **Plain language:** Core codes on screen (for example `MT5_VERIFIED`,
+  analysis bases, statuses, and codes inside warnings) now show their
+  meaning, with the code on hover.
+  - Worker errors show only the message.
+  - Five Core texts that embedded codes were reworded: four warnings and the
+    M0 note.
+- **Significance:**
+  - Core `significance-1`, tested against t-table values, a hand-worked
+    interval, autocorrelation, and a NIST-formula runs example. My first
+    expected Z was an arithmetic slip; the Core value was right.
+  - Plugin: the widget, the guidance model (each point labelled and
+    sourced), the thresholds store and settings, the Overview line, and the
+    pre-filled filters.
+  - Harness-checked on three Core-generated cases: an interval that
+    includes zero, one above zero, and streaks. Confidence switching and the
+    minimum-trade warning were also checked.
+- Tests: Core 284; plugin 141.

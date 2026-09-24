@@ -533,3 +533,12 @@
 .trl-checklist__coverage { display: inline-block; margin-left: 0.35rem; padding: 0 0.45rem; border-radius: 999px; font-size: var(--font-ui-smaller); border: 1px solid var(--background-modifier-border); color: var(--text-muted); }
 .trl-checklist__coverage.is-full { color: var(--color-green); border-color: var(--color-green); }
 .trl-checklist__coverage.is-partial { color: var(--color-orange); border-color: var(--color-orange); }
+/* Significance: interval strip (G1) */
+.trl-interval { margin: 0.75rem 0; }
+.trl-interval__axis { position: relative; height: 1.9rem; border-bottom: 1px solid var(--background-modifier-border); }
+.trl-interval__zero { position: absolute; top: 0; bottom: -0.3rem; width: 0; border-left: 2px solid var(--text-muted); }
+.trl-interval__zero > span { position: absolute; top: -0.1rem; left: 0.25rem; font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.trl-interval__bar { position: absolute; top: 0.7rem; height: 0.5rem; border-radius: 999px; background: var(--color-orange, #d9822b); opacity: 0.85; }
+.trl-interval__bar.is-above { background: var(--color-green, #3f9f5f); }
+.trl-interval__bar.is-invalid { background: var(--text-faint, #888); }
+.trl-interval__mean { position: absolute; top: 0.45rem; width: 0.75rem; height: 1rem; margin-left: -0.375rem; border-radius: 0.2rem; background: var(--text-normal); }

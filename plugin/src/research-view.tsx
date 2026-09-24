@@ -31,6 +31,9 @@ import { ResearchNotesBrowser } from "./components/research/notes-browser";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT, MT5_REPORT_HINT } from "./application/report-files";
 import { DismissButton } from "./components/dismiss-button";
 import { LayoutContext, WidgetSurface } from "./components/layout/widget-surface";
+import { ThresholdContext } from "./components/thresholds-context";
+import { SignificancePanel } from "./components/analysis/significance-panel";
+import type { SignificanceResult } from "./types";
 import { ANALYSIS_WIDGETS } from "./layout/widgets";
 import type { LastReport } from "./application/last-report";
 import { EquityPanel } from "./components/analysis/equity-panel";
@@ -111,6 +114,9 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const [equityMetricsError, setEquityMetricsError] = useState<string | null>(null);
   const [validated, setValidated] = useState<{ datasetRef: string; eventCount: number; workerWasReady: boolean; readinessMs: number; importMs: number } | null>(null);
   const [libraryEntries, setLibraryEntries] = useState<DatasetEvidence[]>([]);
+  const [significance, setSignificance] = useState<SignificanceResult | null>(null);
+  const [significanceError, setSignificanceError] = useState<string | null>(null);
+  const thresholds = useSyncExternalStore(plugin.thresholds.subscribe, () => plugin.thresholds.snapshot);
   const [setCheck, setSetCheck] = useState<SetCheckResult | null>(null);
   const setInputRef = useRef<HTMLInputElement>(null);
   const [displaySeries, setDisplaySeries] = useState<CloseEventDisplaySeries | null>(null);
@@ -708,6 +714,17 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   useEffect(() => {
     if (activePage === "data" && !importBusy) void refreshLibrary();
   }, [activePage, importBusy]);
+  // Significance (G1–G6) follows the analysed report and your confidence level.
+  useEffect(() => {
+    setSignificanceError(null);
+    if (!statistics) { setSignificance(null); return; }
+    let active = true;
+    service.significance(statistics.dataset_ref, thresholds.confidence)
+      .then((result) => { if (active) setSignificance(result); })
+      .catch((caught) => { if (active) setSignificanceError(caught instanceof Error ? caught.message : String(caught)); });
+    return () => { active = false; };
+  }, [service, statistics, thresholds.confidence]);
+
   // SESSION-1: reopen with the last loaded report until a new one is loaded.
   // Only references are saved; an analysed report is recalculated by the Core.
   const restoreSettled = useRef(false);
@@ -757,7 +774,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     else void analyseRef.current();
   }), [navigation]);
 
-  return <LayoutContext.Provider value={plugin.layouts}><section className="trl-m0">
+  return <LayoutContext.Provider value={plugin.layouts}><ThresholdContext.Provider value={plugin.thresholds}><section className="trl-m0">
     <header className="trl-m0__workspace-header trl-pagebar">
       <div><span className="trl-pagebar__brand">Trading Research Lab</span><h2>{pageInfo(activePage).label}</h2><p>{pageInfo(activePage).description}</p></div>
       <div className="trl-pagebar__controls">
@@ -779,6 +796,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       errors={cardErrors}
       displaySeries={displaySeries}
       performance={performanceMetrics}
+      significance={significance}
+      minTrades={thresholds.minTrades}
       busyStatus={importBusy ? status : null}
       onBrowseReport={() => setActivePage("data")}
       onFocusDocuments={() => setActivePage("research")}
@@ -848,6 +867,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       {!statistics && <section className="trl-page__empty"><p>Import an MT5 report before running analysis.</p><button type="button" className="mod-cta" onClick={() => setActivePage("data")}>Go to Data & import</button></section>}
       <WidgetSurface surface="analysis" label="Analysis" variant="stack" definitions={ANALYSIS_WIDGETS} unavailableNote="Appears once a report is imported." widgets={{
         "analysis.results": statistics && <Results statistics={statistics} />,
+        "analysis.significance": statistics && <SignificancePanel service={service} datasetRef={statistics.dataset_ref} result={significance} error={significanceError} analysis={{ datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id }} notes={notesApi} />,
         "analysis.trades": (evidence || statistics) && <M2Analysis
       accountMode={accountMode}
       closeEvents={closeEventAnalysis}
@@ -918,7 +938,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     />}
       {diagnostics && plugin.settings.showDeveloperDiagnostics && <Diagnostics diagnostics={diagnostics} />}
     </section>}
-  </section></LayoutContext.Provider>;
+  </section></ThresholdContext.Provider></LayoutContext.Provider>;
 }
 
 async function measure<T>(operation: () => Promise<T>): Promise<{ result: T; elapsedMs: number }> {

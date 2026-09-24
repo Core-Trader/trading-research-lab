@@ -71,6 +71,8 @@ Every point is labelled: a sourced fact (with its source), your own workflow cho
 - **[S]** Balance only moves when trades close. Compare equity drawdown with balance drawdown: TRL shows the ratio and flags when equity was much deeper. *(Source: MT5 Backtesting & Optimization Best Practices (TRL's internal playbook, written from confirmed MT5 failure cases).)*
 - **[S]** SQN = √N × mean(R) ÷ standard deviation(R); TRL shows it on the Overview. It grows with consistency and with the number of trades. *(Source: Van K. Tharp: SQN and R-multiples (e.g. Trade Your Way to Financial Freedom).)*
 - **[U]** The minimum number of trades. Fewer trades make every metric noisier; requiring many excludes slow EAs and short windows. Sources do not agree on one number.
+- **[S]** Analysis → "Is the average trade distinguishable from zero?" gives a confidence interval for the average closed trade; its width shrinks with √N, so few trades leave it wide. *(Source: [NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.5.2 Confidence Limits for the Mean](https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm).)*
+- **[C]** Set your minimum trades once in TRL's settings (or on that Analysis section): TRL then warns on the Overview, Analysis, Windows, Symbol scan and Parameters wherever a result rests on fewer trades.
 
 ## 4. Test the same settings over time
 
@@ -177,7 +179,6 @@ Every point is labelled: a sourced fact (with its source), your own workflow cho
 ## Not in TRL yet
 
 - Rolling walk-forward optimisation (re-optimising for each window).
-- Significance statistics and a minimum-trade warning.
 - Modelling spread, slippage or execution delay inside TRL (today: What-If's fixed cost per trade).
 - Bootstrap Monte Carlo (resampling with replacement); today TRL reorders the actual trades.
 - Importing demo or live account statements to track real forward results.

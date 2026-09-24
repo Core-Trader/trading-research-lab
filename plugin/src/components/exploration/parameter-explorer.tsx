@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
+import { useThresholds } from "../thresholds-context";
 import { plain, plainSentence } from "../plain-language";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
@@ -46,7 +47,8 @@ export function ParameterExplorer({ service, notes }: Props): React.ReactElement
   const [modellingMode, setModellingMode] = useState("1-minute OHLC");
   const [study, setStudy] = useState<ParameterStudy | null>(null);
   const [objectives, setObjectives] = useState<Objective[]>([]);
-  const [constraints, setConstraints] = useState<Constraint[]>([]);
+  const [thresholds] = useThresholds();  // G5: your minimum trades pre-fills a trades constraint
+  const [constraints, setConstraints] = useState<Constraint[]>((() => thresholds.minTrades ? [{ metric: "trades", operator: ">=" as const, threshold: String(thresholds.minTrades) }] : []));
   const [evaluation, setEvaluation] = useState<ParameterEvaluation | null>(null);
   const [evaluatedConfig, setEvaluatedConfig] = useState("");
   const [axes, setAxes] = useState<{ x: string; y: string; size: string | null }>({ x: "", y: "", size: null });
