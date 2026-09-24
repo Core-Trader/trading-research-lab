@@ -76,7 +76,6 @@ function NavigationSidebar({ plugin }: { plugin: TradingResearchLabPlugin }): Re
       {recent.length === 0 ? <p className="trl-sidenav__empty">None yet. Record a result to create one.</p> : <ul>{recent.map((entry) => <li key={entry.path}>
         <button type="button" title={`${entry.path}${entry.kind ? ` · ${KIND_LABEL[entry.kind]}` : ""}`} onClick={() => { void plugin.app.workspace.openLinkText(entry.path, "", false); }}><ObsidianIcon id={entry.type === "strategy" ? "folder-git-2" : entry.type === "experiment" ? "flask-round" : "file-text"} /><span className="trl-sidenav__note-title">{entry.title}</span></button>
       </li>)}</ul>}
-      <button type="button" className="trl-link-button" onClick={() => open("research")}>All research notes</button>
     </section>
   </nav>;
 }

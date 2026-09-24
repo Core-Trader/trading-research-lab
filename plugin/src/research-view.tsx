@@ -468,6 +468,23 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       return next;
     },
     promptName: (title, label, initial, existing, confirmText) => requestText(plugin.app, title, label, initial, confirmText, existing),
+    findReferences: async (reference) => {
+      const found: string[] = [];
+      for (const entry of noteEntries) {  // TRL notes only (N6)
+        const file = plugin.app.vault.getAbstractFileByPath(entry.path);
+        if (file instanceof TFile && (await plugin.app.vault.cachedRead(file)).includes(reference)) found.push(entry.path);
+      }
+      return found;
+    },
+    trash: async (paths) => {
+      let moved = 0;
+      for (const path of paths) {
+        const file = plugin.app.vault.getAbstractFileByPath(path);
+        if (file instanceof TFile) { await plugin.app.vault.trash(file, false); moved += 1; }
+      }
+      plugin.notesIndex.schedule();
+      return moved;
+    },
   }), [plugin, noteEntries]);
 
   const recordParameterChoice = async (markdown: string, evaluationId: string): Promise<void> => {
@@ -793,14 +810,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       {evidence && <WindowsPanel service={service} datasetRef={evidence.dataset_ref} analysis={statistics ? { datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id } : null} notes={notesApi} />}
     </section>}
     {activePage === "research" && <section className="trl-page" aria-label="Research documents">
-      <header className="trl-page__header"><div><h3>Research</h3><p>Link explicit Strategy, Experiment, and Report notes without overwriting your writing.</p></div></header>
-      <ResearchNotesBrowser notes={notesApi}
-        strategyPath={strategy?.path ?? null}
-        experimentPath={experiment?.path ?? null}
-        analysis={statistics ? { datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id } : null}
-        onUseStrategy={(entry) => { setStrategy({ id: entry.id, path: entry.path }); setExperiment(null); setReport(null); setDocumentStatus(`Strategy selected: ${entry.path}`); }}
-        onUseExperiment={(entry) => { if (entry.strategyId) setStrategy({ id: entry.strategyId, path: "Selected through experiment" }); setExperiment({ id: entry.id, path: entry.path }); setReport(null); setDocumentStatus(`Experiment selected: ${entry.path}`); }}
-      />
+      <header className="trl-page__header"><div><h3>Research notes</h3><p>Your Strategy, Experiment and Report notes. TRL writes only into marked blocks and never overwrites your writing.</p></div></header>
       <M4Documents
         hasAnalysis={statistics !== null && evidence !== null}
         strategy={strategy}
@@ -813,6 +823,14 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
         onSelectExperiment={() => void selectExperiment()}
         onCreateOrRegenerateReport={() => void createOrRegenerateReport()}
         onSelectReport={() => void selectReport()}
+        onOpen={(path) => notesApi.open(path)}
+      />
+      <ResearchNotesBrowser notes={notesApi}
+        strategyPath={strategy?.path ?? null}
+        experimentPath={experiment?.path ?? null}
+        analysis={statistics ? { datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id } : null}
+        onUseStrategy={(entry) => { setStrategy({ id: entry.id, path: entry.path }); setExperiment(null); setReport(null); setDocumentStatus(`Strategy selected: ${entry.path}`); }}
+        onUseExperiment={(entry) => { if (entry.strategyId) setStrategy({ id: entry.strategyId, path: "Selected through experiment" }); setExperiment({ id: entry.id, path: entry.path }); setReport(null); setDocumentStatus(`Experiment selected: ${entry.path}`); }}
       />
     </section>}
     {activePage === "help" && <HelpPage />}

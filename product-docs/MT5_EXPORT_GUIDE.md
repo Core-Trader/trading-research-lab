@@ -69,6 +69,10 @@ On the Symbol scan page you can:
 - see the trade-off frontier
 - compare up to 6 EAs' sweeps on the same symbols side by side
 - record a shortlist in your Experiment note
+- delete a sweep from the library: TRL first lists the research notes that
+  recorded a shortlist from it, and lets you keep them (the default) or move
+  them to Obsidian's trash, which can be undone; your original `.xml` file is
+  never touched
 
 TRL does not rank symbols. A sweep has no individual trades, so re-test each
 shortlisted symbol as a single test before the other analyses.

@@ -64,6 +64,8 @@
 - name clash checks
 
 N6 amends M4-POL-001: TRL lists notes that carry TRL frontmatter (read through Obsidian's metadata cache) and never reads other notes. | Owner 2026-09-24 |
+| SWEEP-3 | Sweeps can be deleted from the Symbol scan library. Before deleting, TRL lists the TRL notes whose text cites the sweep (its 16-character source hash, which recorded shortlists carry) and offers: keep them (default) or move them to Obsidian's recoverable trash. The original `.xml` is never touched. Shortlists now record the full `sweep_ref`. | Owner 2026-09-24 |
+| UIX-3 | The Research notes page is realigned: a "Working set for the loaded report" grid (label, name, actions per row) and the notes browser in fixed columns (Name, Kind, Updated, actions) with a header row. The sidebar's duplicate "All research notes" link is removed (it led to the same page as "Research notes"). | Owner feedback 2026-09-24 |
 | SWEEP-2 | Symbol scan imports several XML files at once, with per-file results; a `.set` applies only to a single-file import. | Owner 2026-09-24 |
 | SWEEP-1 | Symbol sweep import (SYMBOL_SWEEP_SPEC.md) approved and built:
 - S1–S8 as recommended

@@ -174,6 +174,10 @@ Research-note access is done (NOTES-1):
 - the sidebar recent-notes card
 - name clash checks
 
+Follow-up (UIX-3, SWEEP-3): the Research notes page is realigned, the
+duplicate sidebar link is removed, and sweeps can be deleted with a warning
+listing dependent notes (keep, or move to Obsidian's trash).
+
 Journal: `internal/development-journal/2026-09-24-windows-and-notes.md`.
 7 workflow gaps remain. Note: TRL has never imported MT5 symbol-sweep XML. The older 7-row sweep export is deliberately rejected, per the M6 optimisation decision package.
 **Next:** the owner reviews in Obsidian:

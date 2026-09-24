@@ -9,6 +9,10 @@ export type NotesApi = {
   /** Writes (or, after confirmation, replaces) a marked block in the note. */
   record: (path: string, markdown: string, recordId: string) => Promise<void>;
   rename: (path: string, title: string) => Promise<string>;
+  /** TRL notes (never others) whose text contains the reference, e.g. a sweep's hash; used to warn before a deletion. */
+  findReferences: (reference: string) => Promise<string[]>;
+  /** Moves notes to Obsidian's trash (recoverable); returns how many were moved. */
+  trash: (paths: string[]) => Promise<number>;
   /** Asks for a name with the N5 check against the given existing names. */
   promptName: (title: string, label: string, initial: string, existing: string[], confirmText: string) => Promise<string | null>;
 };

@@ -63,5 +63,18 @@ The owner accepted W1–W6 and N1–N6 as recommended
   - the tree, search, use buttons, and the unlinked group
 - **Tests:** plugin 111; the build is clean.
 
+## Follow-up: page alignment and sweep deletion (owner feedback)
+
+- The sidebar showed "Research notes" and "All research notes" leading to the
+  same page; the second link is removed (UIX-3).
+- The Research notes page is realigned: the working set is a three-column
+  grid, and the browser uses fixed columns with a header row and aligned
+  filters. Checked by screenshot at 1000×800.
+- Symbol scan library: "Delete…" opens an inline warning that lists the TRL
+  notes citing the sweep's hash, with keep (default) or trash (recoverable)
+  options (SWEEP-3). Harness-checked with and without a dependent note,
+  including the trash choice. Shortlists now carry the full `sweep_ref`.
+- Tests: Core 270, plugin 111; typecheck clean.
+
 **Still needs the owner:** a visual review in Obsidian, especially of the
 live index on a real vault (rename and delete refresh) and the sidebar card.

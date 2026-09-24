@@ -52,6 +52,7 @@ export function SymbolScanPage({ service, notes }: Props): React.ReactElement {
   const [notice, setNotice] = useState<string | null>(null);
   const [recorded, setRecorded] = useState<string | null>(null);
   const [target, setTarget] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<{ sweep: SymbolSweep; notes: string[]; trashNotes: boolean } | null>(null);
   const xmlInput = useRef<HTMLInputElement>(null);
   const setInput = useRef<HTMLInputElement>(null);
   const runs = useRef(new LatestRun()).current;
@@ -143,14 +144,24 @@ export function SymbolScanPage({ service, notes }: Props): React.ReactElement {
   const toggleCompare = (ref: string): void => setCompareRefs((current) => current.includes(ref) ? current.filter((item) => item !== ref) : current.length >= maxCompare ? current : [...current, ref]);
   const toggleShortlist = (symbol: string): void => { setRecorded(null); setShortlist((current) => current.includes(symbol) ? current.filter((item) => item !== symbol) : [...current, symbol].sort()); };
 
-  const remove = async (sweep: SymbolSweep): Promise<void> => {
-    if (!window.confirm(`Delete TRL's copy of ${sweepLabel(sweep)}? Your original file is not touched; you can import it again.`)) return;
+  // Deleting first shows which notes recorded a shortlist from this sweep (they cite its hash).
+  const askDelete = async (sweep: SymbolSweep): Promise<void> => {
+    setError(null);
+    try {
+      setDeleting({ sweep, notes: await notes.findReferences(sweep.source.sha256.slice(0, 16)), trashNotes: false });
+    } catch (caught) { setError(fail(caught)); }
+  };
+  const remove = async (sweep: SymbolSweep, trashNotes: string[]): Promise<void> => {
+    setBusy("Deleting…");
     try {
       await service.deleteSymbolSweep(sweep.sweep_ref);
+      const moved = trashNotes.length ? await notes.trash(trashNotes) : 0;
+      setDeleting(null);
+      setNotice(`Deleted ${sweepLabel(sweep)}${moved ? `; ${moved} note(s) moved to Obsidian's trash` : ""}.`);
       setCompareRefs((current) => current.filter((item) => item !== sweep.sweep_ref));
       const remaining = await refresh();
       if (activeRef === sweep.sweep_ref) { setActiveRef(remaining[0]?.sweep_ref ?? null); setEvaluation(null); }
-    } catch (caught) { setError(fail(caught)); }
+    } catch (caught) { setError(fail(caught)); } finally { setBusy(null); }
   };
 
   const recordShortlist = async (): Promise<void> => {
@@ -213,9 +224,25 @@ export function SymbolScanPage({ service, notes }: Props): React.ReactElement {
           <td>{sweep.row_count}{sweep.zero_trade_symbols.length ? <span className="trl-m0__note"> ({sweep.zero_trade_symbols.length} without trades)</span> : null}</td>
           <td>{sweep.context.deposit} · 1:{sweep.context.leverage}<br /><span className="trl-m0__note">{sweep.context.server}</span></td>
           <td title={sweep.declared_set?.note}>{sweep.declared_set ? `${sweep.declared_set.filename} (declared)` : "not recorded"}</td>
-          <td><button type="button" className="trl-link-button is-danger" onClick={() => void remove(sweep)}>Delete…</button></td>
+          <td><button type="button" className="trl-link-button is-danger" disabled={busy !== null} onClick={() => void askDelete(sweep)}>Delete…</button></td>
         </tr>)}</tbody>
       </table>
+      {deleting && <div className="trl-deletion" role="alertdialog" aria-label={`Delete ${sweepLabel(deleting.sweep)}`}>
+        <strong>Delete {sweepLabel(deleting.sweep)}?</strong>
+        <p>This removes TRL's copy of the sweep ({deleting.sweep.row_count} symbols) from the library and from any comparison. Your original .xml file is not touched, so you can import it again.</p>
+        {deleting.notes.length > 0 ? <>
+          <p className="trl-deletion__warning">Shortlists from this sweep are recorded in {deleting.notes.length} note(s):</p>
+          <ul>{deleting.notes.map((path) => <li key={path}><button type="button" className="trl-link-button" onClick={() => notes.open(path)}>{path}</button></li>)}</ul>
+          <fieldset className="trl-deletion__choice">
+            <label><input type="radio" name="trl-sweep-notes" checked={!deleting.trashNotes} onChange={() => setDeleting({ ...deleting, trashNotes: false })} /> Keep these notes (recommended): the recorded shortlists stay as text, but the sweep can no longer be opened from TRL</label>
+            <label><input type="radio" name="trl-sweep-notes" checked={deleting.trashNotes} onChange={() => setDeleting({ ...deleting, trashNotes: true })} /> Also move these whole notes to Obsidian's trash (recoverable), including anything else written in them</label>
+          </fieldset>
+        </> : <p className="trl-m0__note">No research note records a shortlist from this sweep.</p>}
+        <div className="trl-m0__actions">
+          <button type="button" className="mod-warning" disabled={busy !== null} onClick={() => void remove(deleting.sweep, deleting.trashNotes ? deleting.notes : [])}>Delete sweep</button>
+          <button type="button" disabled={busy !== null} onClick={() => setDeleting(null)}>Cancel</button>
+        </div>
+      </div>}
     </section>}
 
     {active && <section className="trl-page__surface">

@@ -39,9 +39,11 @@ export function ResearchNotesBrowser({ notes, strategyPath, experimentPath, anal
   };
   const usable = (entry: NoteEntry): boolean => entry.kind === "report-analysis" && analysis !== null && entry.datasetId === analysis.datasetId && entry.analysisRunId === analysis.analysisRunId;
 
-  const row = (entry: NoteEntry, depth: number): React.ReactElement => <div className={`trl-notes__row is-${entry.type}${entry.path === strategyPath || entry.path === experimentPath ? " is-current" : ""}`} style={{ paddingLeft: `${depth * 1.1}rem` }}>
-    <span className="trl-notes__title"><button type="button" className="trl-link-button" title={entry.path} onClick={() => notes.open(entry.path)}>{entry.title}</button></span>
-    <span className="trl-notes__meta">{entry.type === "experiment" && entry.kind ? KIND_LABEL[entry.kind] : entry.type === "strategy" ? "Strategy" : "Report"}{entry.status ? ` · ${entry.status}` : ""} · {new Date(entry.mtime).toISOString().slice(0, 10)}</span>
+  // Fixed columns (name | kind | updated | actions) keep every row aligned; only the name is indented.
+  const row = (entry: NoteEntry, depth: number): React.ReactElement => <div className={`trl-notes__row is-${entry.type}${entry.path === strategyPath || entry.path === experimentPath ? " is-current" : ""}`}>
+    <span className="trl-notes__title" style={{ paddingLeft: `${depth * 1.2}rem` }}>{depth > 0 && <span className="trl-notes__branch" aria-hidden="true">└</span>}<button type="button" className="trl-link-button" title={entry.path} onClick={() => notes.open(entry.path)}>{entry.title}</button></span>
+    <span className="trl-notes__kind">{entry.type === "experiment" && entry.kind ? KIND_LABEL[entry.kind] : entry.type === "strategy" ? "Strategy" : "Report"}{entry.status && entry.status !== "draft" ? ` · ${entry.status}` : ""}</span>
+    <span className="trl-notes__date">{new Date(entry.mtime).toISOString().slice(0, 10)}</span>
     <span className="trl-notes__actions">
       {entry.type === "strategy" && <button type="button" disabled={entry.path === strategyPath} title="New experiments created on this page go under this strategy" onClick={() => onUseStrategy(entry)}>{entry.path === strategyPath ? "In use" : "Use"}</button>}
       {entry.type === "experiment" && usable(entry) && <button type="button" disabled={entry.path === experimentPath} title="Use for this report's analysis and report" onClick={() => onUseExperiment(entry)}>{entry.path === experimentPath ? "In use" : "Use"}</button>}
@@ -61,7 +63,7 @@ export function ResearchNotesBrowser({ notes, strategyPath, experimentPath, anal
   return <section className="trl-page__surface trl-notes" aria-label="Your research notes">
     <h4>Your research notes</h4>
     <p className="trl-m0__note">{plural(counts.strategy, "strategy", "strategies")} · {plural(counts.experiment, "experiment", "experiments")} · {plural(counts.report, "report", "reports")}. Only notes TRL created (with TRL frontmatter) are listed. Click a name to open it.</p>
-    {!empty && <div className="trl-m0__scenario-fields">
+    {!empty && <div className="trl-notes__filters">
       <label className="trl-m0__field"><span>Search by name</span><input type="search" value={query} placeholder="e.g. DCA" onChange={(event) => setQuery(event.currentTarget.value)} /></label>
       <label className="trl-m0__field"><span>Type</span><select value={type} onChange={(event) => setType(event.currentTarget.value as NoteType | "all")}><option value="all">All</option><option value="strategy">Strategies</option><option value="experiment">Experiments</option><option value="report">Reports</option></select></label>
       <label className="trl-m0__field"><span>Experiment kind</span><select value={kind} onChange={(event) => setKind(event.currentTarget.value as ExperimentKind | "all")}><option value="all">All kinds</option>{EXPERIMENT_KINDS.map((item) => <option key={item} value={item}>{KIND_LABEL[item]}</option>)}</select></label>
@@ -69,6 +71,7 @@ export function ResearchNotesBrowser({ notes, strategyPath, experimentPath, anal
     {error && <p className="trl-m0__inline-error" role="alert">{error}<DismissButton onDismiss={() => setError(null)} /></p>}
     {empty && <p className="trl-m0__note">No research notes yet. Create a strategy below, or create an experiment directly from a record panel (Symbol scan, Parameters, Analysis → windows).</p>}
     {!empty && strategies.length + unlinkedExperiments.length + unlinkedReports.length === 0 && <p className="trl-m0__note">Nothing matches the search or filters.</p>}
+    {!empty && <div className="trl-notes__row trl-notes__head" aria-hidden="true"><span>Name</span><span>Kind</span><span>Updated</span><span /></div>}
     <ul className="trl-notes__tree">
       {strategies.map((node) => <li key={node.entry.path}>
         {row(node.entry, 0)}
@@ -76,7 +79,7 @@ export function ResearchNotesBrowser({ notes, strategyPath, experimentPath, anal
       </li>)}
       {(unlinkedExperiments.length > 0 || unlinkedReports.length > 0) && <li>
         <div className="trl-notes__group">Not linked to a strategy or experiment</div>
-        <ul>{unlinkedExperiments.map((item) => experimentBlock(item, 1))}{unlinkedReports.map((entry) => <li key={entry.path}>{row(entry, 1)}</li>)}</ul>
+        <ul>{unlinkedExperiments.map((item) => experimentBlock(item, 0))}{unlinkedReports.map((entry) => <li key={entry.path}>{row(entry, 0)}</li>)}</ul>
       </li>}
     </ul>
   </section>;

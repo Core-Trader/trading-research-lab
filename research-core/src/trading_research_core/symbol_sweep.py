@@ -223,7 +223,7 @@ def render_symbol_shortlist(workspace_root: Path, sweep_refs: list[str], symbols
         f"- Symbols: {', '.join(sorted(symbols))}",
         f"- Reason: {reason.strip() or '(none given)'}",
         "- From sweeps:",
-        *[f"  - {manifest['context'].get('expert')}, {manifest['context'].get('timeframe')} {manifest['context'].get('start')}–{manifest['context'].get('end')}, {manifest['context'].get('deposit')}, {manifest['modelling_mode']} (`{manifest['source']['filename']}`, `{manifest['sweep_ref'][6:22]}…`)" for manifest in loaded],
+        *[f"  - {manifest['context'].get('expert')}, {manifest['context'].get('timeframe')} {manifest['context'].get('start')}–{manifest['context'].get('end')}, {manifest['context'].get('deposit')}, {manifest['modelling_mode']} (`{manifest['source']['filename']}`, `{manifest['sweep_ref']}`)" for manifest in loaded],
         "- Next step: run a single test for each symbol with \"Every tick based on real ticks\" and your broker's commissions, then import the reports (Research workflow, step 3).",
         f"- Recorded by TRL {ADAPTER_VERSION}; the choice is yours, TRL does not rank symbols.",
     ]

@@ -1,12 +1,21 @@
 import React from "react";
-import { CollapsibleSection } from "../collapsible-section";
 
-export function M4Documents({ hasAnalysis, strategy, experiment, report, documentStatus, onCreateStrategy, onSelectStrategy, onCreateExperiment, onSelectExperiment, onCreateOrRegenerateReport, onSelectReport }: {
+type Selected = { id: string; path: string } | null;
+
+const nameOf = (path: string): string => path.split("/").pop()?.replace(/\.md$/i, "") ?? path;
+
+/**
+ * The working set for report analysis (M4): which Strategy, Experiment and
+ * Report the loaded report's analysis and report use. One aligned row each,
+ * with that row's own actions. Documents are created only on a button press.
+ */
+export function M4Documents({ hasAnalysis, strategy, experiment, report, documentStatus, onOpen, onCreateStrategy, onSelectStrategy, onCreateExperiment, onSelectExperiment, onCreateOrRegenerateReport, onSelectReport }: {
   hasAnalysis: boolean;
-  strategy: { id: string; path: string } | null;
-  experiment: { id: string; path: string } | null;
-  report: { id: string; path: string } | null;
+  strategy: Selected;
+  experiment: Selected;
+  report: Selected;
   documentStatus: string | null;
+  onOpen?: (path: string) => void;
   onCreateStrategy: () => void;
   onSelectStrategy: () => void;
   onCreateExperiment: () => void;
@@ -14,22 +23,34 @@ export function M4Documents({ hasAnalysis, strategy, experiment, report, documen
   onCreateOrRegenerateReport: () => void;
   onSelectReport: () => void;
 }): React.ReactElement {
-  return <CollapsibleSection id="trl-documents" title="Experiments and research documents">
-    <p className="trl-m0__note">Documents are created only when you press a button. Pick existing ones in <strong>Your research notes</strong> above, or open a note and use the matching current-note button. TRL lists only notes it created (with TRL frontmatter) and never reads or alters other notes.</p>
-    {!hasAnalysis && <p className="trl-m0__note">You can create or select a strategy now. Load an MT5 report and run its analysis before creating or selecting an experiment or report.</p>}
-    <div className="trl-m0__actions">
-      <button type="button" onClick={onCreateStrategy}>Create strategy</button>
-      <button type="button" onClick={onSelectStrategy}>Use current note as strategy</button>
-      <button type="button" disabled={strategy === null || !hasAnalysis} onClick={onCreateExperiment}>Create experiment</button>
-      <button type="button" disabled={!hasAnalysis} onClick={onSelectExperiment}>Use current note as experiment</button>
-      <button type="button" disabled={experiment === null || !hasAnalysis} onClick={onCreateOrRegenerateReport}>{report === null ? "Create report" : "Check and regenerate report"}</button>
-      <button type="button" disabled={experiment === null || !hasAnalysis} onClick={onSelectReport}>Use current note as report</button>
+  const current = (selected: Selected, empty: string): React.ReactElement => selected
+    ? <span className="trl-workset__value">{onOpen && selected.path.endsWith(".md") ? <button type="button" className="trl-link-button" title={`${selected.path} · id ${selected.id}`} onClick={() => onOpen(selected.path)}>{nameOf(selected.path)}</button> : <span title={`id ${selected.id}`}>{nameOf(selected.path)}</span>}</span>
+    : <span className="trl-workset__value is-empty">{empty}</span>;
+  return <section className="trl-page__surface trl-workset" aria-label="Working set for the loaded report">
+    <h4>Working set for the loaded report</h4>
+    <p className="trl-m0__note">The Strategy, Experiment and Report that this report's analysis and generated report use. Pick them in <strong>Your research notes</strong> (Use), create them here, or open a note and use "Current note".</p>
+    <div className="trl-workset__grid">
+      <span className="trl-workset__label">Strategy</span>
+      {current(strategy, "None selected")}
+      <span className="trl-workset__actions">
+        <button type="button" onClick={onCreateStrategy}>Create…</button>
+        <button type="button" onClick={onSelectStrategy} title="Use the note open in the editor">Current note</button>
+      </span>
+
+      <span className="trl-workset__label">Experiment</span>
+      {current(experiment, hasAnalysis ? (strategy ? "None selected" : "Choose a strategy first") : "Analyse a report first")}
+      <span className="trl-workset__actions">
+        <button type="button" disabled={strategy === null || !hasAnalysis} onClick={onCreateExperiment}>Create…</button>
+        <button type="button" disabled={!hasAnalysis} onClick={onSelectExperiment} title="Use the note open in the editor">Current note</button>
+      </span>
+
+      <span className="trl-workset__label">Report</span>
+      {current(report, hasAnalysis ? (experiment ? "None yet" : "Choose an experiment first") : "Analyse a report first")}
+      <span className="trl-workset__actions">
+        <button type="button" disabled={experiment === null || !hasAnalysis} onClick={onCreateOrRegenerateReport}>{report === null ? "Create…" : "Check and regenerate"}</button>
+        <button type="button" disabled={experiment === null || !hasAnalysis} onClick={onSelectReport} title="Use the note open in the editor">Current note</button>
+      </span>
     </div>
-    <dl className="trl-m0__diagnostic-grid">
-      <dt>Strategy</dt><dd>{strategy ? <><code>{strategy.id}</code> — {strategy.path}</> : "Create or select a strategy."}</dd>
-      <dt>Experiment</dt><dd>{experiment ? <><code>{experiment.id}</code> — {experiment.path}</> : hasAnalysis ? "Create or select an experiment after choosing a strategy." : "Load and analyse an MT5 report first."}</dd>
-      <dt>Report</dt><dd>{report ? <><code>{report.id}</code> — {report.path}</> : hasAnalysis ? "Create or select a report after choosing an experiment." : "Load and analyse an MT5 report first."}</dd>
-      {documentStatus && <><dt>Document status</dt><dd>{documentStatus}</dd></>}
-    </dl>
-  </CollapsibleSection>;
+    {documentStatus && <p className="trl-m0__note" role="status">{documentStatus}</p>}
+  </section>;
 }
