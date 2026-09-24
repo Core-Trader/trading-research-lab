@@ -76,7 +76,7 @@ def test_unknown_or_netting_account_mode_never_creates_inferred_lifecycles() -> 
     assert rows == []
     assert result["eligible"] is False
     assert result["quality_counts"]["INFERRED"] == 0
-    assert "HEDGING" in result["warnings"][0]
+    assert "hedging account" in result["warnings"][0]
 
 
 def test_same_policy_writes_stable_m2_artifact_identity(tmp_path: Path) -> None:

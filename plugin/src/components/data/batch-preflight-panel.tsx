@@ -1,4 +1,5 @@
 import React from "react";
+import { plainSentence } from "../plain-language";
 import type { CombinedBalanceResult, CombinedDailyResult, PortfolioPreflightResult } from "../../types";
 import { BalanceChart } from "../balance-chart";
 import { CollapsibleSection } from "../collapsible-section";
@@ -69,10 +70,10 @@ export function M5Preflight({ paths, result, combined, daily, busy, error, input
     </figure>}
 
     {blocking.length > 0 && <ul className="trl-batch__findings">{blocking.map((finding, index) => <li key={`${finding.code}-${index}`}>
-      <strong>{finding.message}</strong>
+      <strong>{plainSentence(finding.message)}</strong>
       {NEXT_STEP[finding.code] && <span>What to do: {NEXT_STEP[finding.code]}</span>}
     </li>)}</ul>}
-    {warnings.length > 0 && <details className="trl-batch__warnings"><summary>{warnings.length} note{warnings.length === 1 ? "" : "s"} (not blocking)</summary><ul>{warnings.map((finding, index) => <li key={`${finding.code}-${index}`}>{finding.message}</li>)}</ul></details>}
+    {warnings.length > 0 && <details className="trl-batch__warnings"><summary>{warnings.length} note{warnings.length === 1 ? "" : "s"} (not blocking)</summary><ul>{warnings.map((finding, index) => <li key={`${finding.code}-${index}`}>{plainSentence(finding.message)}</li>)}</ul></details>}
 
     {result?.status === "ELIGIBLE" && !combined && <button type="button" className="mod-cta" disabled={working} onClick={onCreate}>Create combined balance history</button>}
     {combined && <section className="trl-m0__analysis-result">
@@ -85,7 +86,7 @@ export function M5Preflight({ paths, result, combined, daily, busy, error, input
       </div>
       <BalanceChart points={combined.balance_points.map((point, index) => ({ source_sequence: index + 1, timestamp: point.timestamp, balance: point.balance }))} currency={combined.currency} />
       {!daily && <button type="button" disabled={working} onClick={onDaily}>Calculate combined daily drawdown</button>}
-      {daily && <details className="trl-batch__warnings"><summary>Daily drawdown notes</summary><ul>{daily.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></details>}
+      {daily && <details className="trl-batch__warnings"><summary>Daily drawdown notes</summary><ul>{daily.warnings.map((warning) => <li key={warning}>{plainSentence(warning)}</li>)}</ul></details>}
       <p className="trl-m0__note">Realised balance only; intratrade equity is unavailable. No research document was created. Artifact <code>{combined.artifacts.table}</code>.</p>
     </section>}
   </CollapsibleSection>;

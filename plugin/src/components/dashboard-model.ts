@@ -1,3 +1,4 @@
+import { plain } from "./plain-language.ts";
 import { formatPercent, formatTimestamp, roundDecimalString } from "./display-format.ts";
 import type { DailyDrawdownResult, DatasetEvidence, PerformanceMetrics, StatisticsResult, TradeAnalysisResult } from "../types";
 
@@ -86,8 +87,8 @@ export function buildDashboardModel(inputs: DashboardInputs): DashboardModel | n
     dataset: {
       filename: evidence.original_filename,
       detail: `${evidence.event_count} source events · ${evidence.source_quality}`,
-      adapter: `${evidence.adapter.adapter_id} v${evidence.adapter.adapter_version}`,
-      status: evidence.raw_snapshot_status,
+      adapter: `Read by ${evidence.adapter.adapter_id} version ${evidence.adapter.adapter_version}`,
+      status: `Source copy: ${plain(evidence.raw_snapshot_status).toLowerCase()}`,
     },
     balance: {
       opening: money(statistics.opening_balance),

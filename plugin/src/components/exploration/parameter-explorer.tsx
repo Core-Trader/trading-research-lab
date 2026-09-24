@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
+import { plain, plainSentence } from "../plain-language";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
 import { localPathForSelectedFile } from "../../services/local-file-path";
@@ -336,6 +337,6 @@ export function ParameterExplorer({ service, notes }: Props): React.ReactElement
       <button type="button" className="mod-cta" disabled={!target || busy !== null || stale} onClick={() => void recordChoice()}>Record {candidateLabel(selectedCandidate)} as my choice</button>
     </section>}
 
-    {evaluation && <ul className="trl-batch__warnings">{evaluation.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
+    {evaluation && <ul className="trl-batch__warnings">{evaluation.warnings.map((warning) => <li key={warning}>{plainSentence(warning)}</li>)}</ul>}
   </section>;
 }

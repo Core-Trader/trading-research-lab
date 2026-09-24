@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { plainSentence } from "./components/plain-language";
 import { createRoot, type Root } from "react-dom/client";
 import { ItemView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import type TradingResearchLabPlugin from "./main";
@@ -803,7 +804,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
           <dt>Source events</dt><dd>{validated.eventCount}</dd>
           <dt>Checks</dt><dd>Copied unchanged and hash-verified{evidence.source_checks?.includes("HTML_DEALS_TOTALS_MATCH") ? "; HTML deal totals match the deals" : ""}{evidence.equity ? "; equity log attached" : ""}</dd>
         </dl>}
-        {validated && evidence && evidence.warnings.length > 0 && <ul className="trl-batch__warnings">{evidence.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
+        {validated && evidence && evidence.warnings.length > 0 && <ul className="trl-batch__warnings">{evidence.warnings.map((warning) => <li key={warning}>{plainSentence(warning)}</li>)}</ul>}
         <p className="trl-m0__note" role="status">{status}</p>
       </section>
       {validated && evidence && <section className="trl-page__surface trl-import__step" aria-label="Step 2: companion files">

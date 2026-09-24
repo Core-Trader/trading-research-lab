@@ -1,4 +1,5 @@
 import React from "react";
+import { plain, plainSentence } from "../plain-language";
 import type { DailyDrawdownResult, EquityAvailabilityResult, StatisticsResult, TradeAnalysisResult } from "../../types";
 import { BalanceChart } from "../balance-chart";
 import { AuditTrail } from "../audit-trail";
@@ -13,7 +14,7 @@ export function Results({ statistics }: { statistics: StatisticsResult }): React
       <dt>Change</dt><dd>{money(statistics.reported_balance_change)} {statistics.currency ?? ""}</dd>
     </dl>
     <BalanceChart points={statistics.balance_curve.points} currency={statistics.currency} />
-    <AuditTrail items={[["Dataset", <code>{statistics.dataset_ref}</code>], ["Equity curve in the report", <>{statistics.equity_curve.status}: {statistics.equity_curve.reason}</>]]} />
+    <AuditTrail items={[["Dataset", <code>{statistics.dataset_ref}</code>], ["Equity curve in the report", <>{plain(statistics.equity_curve.status)}: {plainSentence(statistics.equity_curve.reason ?? "")}</>]]} />
   </CollapsibleSection>;
 }
 
@@ -54,8 +55,8 @@ export function AnalysisResult({ title, result }: { title: string; result: Trade
       <dt>Wins / losses / breakeven</dt><dd>{metrics.win_count} / {metrics.loss_count} / {metrics.breakeven_count}</dd>
       <dt>Evidence</dt><dd>{result.quality_counts.MT5_VERIFIED} verified by MT5 · {result.quality_counts.INFERRED} inferred{result.quality_counts.UNPAIRED ? ` · ${result.quality_counts.UNPAIRED} unpaired` : ""}{result.quality_counts.AMBIGUOUS ? ` · ${result.quality_counts.AMBIGUOUS} ambiguous` : ""}</dd>
     </dl>
-    {result.warnings.length > 0 && <ul className="trl-batch__warnings">{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
-    <AuditTrail items={[["Analysis basis", <code>{result.analysis_basis}</code>], ...(result.policy ? [["Policy", <><code>{result.policy.policy_id}</code>; {result.policy.account_mode} ({result.policy.account_mode_source})</>] as [string, React.ReactNode]] : []), ["Quality codes", <>MT5_VERIFIED {result.quality_counts.MT5_VERIFIED}; INFERRED {result.quality_counts.INFERRED}; UNPAIRED {result.quality_counts.UNPAIRED}; AMBIGUOUS {result.quality_counts.AMBIGUOUS}</>], ["Artifact", <code>{result.artifacts.table}</code>]]} />
+    {result.warnings.length > 0 && <ul className="trl-batch__warnings">{result.warnings.map((warning) => <li key={warning}>{plainSentence(warning)}</li>)}</ul>}
+    <AuditTrail items={[["Based on", <span title={`TRL code: ${result.analysis_basis}`}>{plain(result.analysis_basis)}</span>], ...(result.policy ? [["Policy", <>version <code>{result.policy.policy_id}</code>; {plain(result.policy.account_mode)} ({plain(result.policy.account_mode_source).toLowerCase()})</>] as [string, React.ReactNode]] : []), ["Trade quality", <>{(["MT5_VERIFIED", "INFERRED", "UNPAIRED", "AMBIGUOUS"] as const).map((code) => <span key={code} title={`TRL code: ${code}`}>{plain(code)}: {result.quality_counts[code]}; </span>)}</>], ["Artifact", <code>{result.artifacts.table}</code>]]} />
   </section>;
 }
 
@@ -75,8 +76,8 @@ export function M3Analysis({ drawdown, equity, onRun }: {
         <dt>Worst decline</dt><dd>{money(drawdown.worst_day.maximum_drawdown)} {drawdown.currency ?? "source currency"}{drawdown.worst_day.maximum_drawdown_percent !== null ? ` (${pct(drawdown.worst_day.maximum_drawdown_percent)})` : ""}</dd>
         <dt>Day's reference / high</dt><dd>{money(drawdown.worst_day.daily_reference_balance)} / {money(drawdown.worst_day.daily_high_water_balance)} {drawdown.currency ?? "source currency"}</dd>
       </dl>
-      {drawdown.warnings.length > 0 && <ul className="trl-batch__warnings">{drawdown.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
-      <AuditTrail items={[["Time basis", <><code>{drawdown.time_basis}</code>: no timezone conversion</>], ["Analysis basis", <code>{drawdown.analysis_basis}</code>], ["Policy", <code>{drawdown.policy_id}</code>], ["Artifact", <code>{drawdown.artifacts.table}</code>]]} />
+      {drawdown.warnings.length > 0 && <ul className="trl-batch__warnings">{drawdown.warnings.map((warning) => <li key={warning}>{plainSentence(warning)}</li>)}</ul>}
+      <AuditTrail items={[["Clock", <span title={`TRL code: ${drawdown.time_basis}`}>{plain(drawdown.time_basis)}</span>], ["Based on", <span title={`TRL code: ${drawdown.analysis_basis}`}>{plain(drawdown.analysis_basis)}</span>], ["Policy version", <code>{drawdown.policy_id}</code>], ["Artifact", <code>{drawdown.artifacts.table}</code>]]} />
     </section>}
     {equity && <p className="trl-m0__note">Open-position (equity) drawdown: {equity.status === "AVAILABLE" ? "available from the attached equity log; see the Equity section." : "not available yet; see the Equity section for how to add an equity log."}</p>}
   </CollapsibleSection>;

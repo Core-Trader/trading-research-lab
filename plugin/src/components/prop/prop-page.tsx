@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { plain, plainSentence } from "../plain-language";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
 import type { DatasetEvidence, PropChain, PropEvaluation, PropPreset, PropProfile, PropRolling, PropTarget, SavedCombinationEntry } from "../../types";
@@ -322,11 +323,11 @@ function PropResult({ result }: { result: PropEvaluation }): React.ReactElement 
     <AuditTrail items={[
       ["Profile", <><code>{result.profile.profile_id}</code> · hash <code>{result.profile.profile_hash.slice(0, 16)}…</code> · entered {result.profile.saved_at}</>],
       ["Checked", result.target.kind === "DATASET" ? <code>{result.target.dataset_ref}</code> : <>combination <code>{result.target.combination_id}</code>, capital {result.target.starting_capital}</>],
-      ["Day boundary", <><code>{result.day_boundary.version}</code> · {result.day_boundary.kind}{result.day_boundary.zone ? ` ${result.day_boundary.time} ${result.day_boundary.zone}; report clock ${result.day_boundary.report_clock_zone}` : ""}</>],
+      ["Day boundary", <><code>{result.day_boundary.version}</code> · {plain(result.day_boundary.kind)}{result.day_boundary.zone ? ` ${result.day_boundary.time} ${result.day_boundary.zone}; report clock ${result.day_boundary.report_clock_zone}` : ""}</>],
       ["Evidence", <code>{result.evidence_level}</code>],
       ["Calculation", <code>{result.calculation_version}</code>],
       ["Findings", result.findings.map((item) => item.code).join(", ") || "none"],
-      ["Notes", result.warnings.join(" ")],
+      ["Notes", plainSentence(result.warnings.join(" "))],
     ]} />
   </section>;
 }

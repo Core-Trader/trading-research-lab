@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { plain, plainSentence } from "../plain-language";
 import type { PortfolioExploration } from "../../types";
 import { formatTimestamp, roundDecimalString } from "../display-format";
 import { TradeOffScatter } from "../tradeoff/trade-off-scatter";
@@ -62,6 +63,6 @@ export function CombinationExplorer({ exploration, labels, selectedId, onPick }:
       gainLabel: "net P/L",
       costLabel: "max drawdown",
     })} />
-    <ul className="trl-batch__warnings">{exploration.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+    <ul className="trl-batch__warnings">{exploration.warnings.map((warning) => <li key={warning}>{plainSentence(warning)}</li>)}</ul>
   </section>;
 }

@@ -1,4 +1,5 @@
 import React from "react";
+import { plain, plainSentence } from "../plain-language";
 import type { RMultipleMetrics } from "../../types";
 import { CollapsibleSection } from "../collapsible-section";
 import { roundDecimalString } from "../display-format";
@@ -38,7 +39,7 @@ export function RMultiplePanel({ source, amount, result, busy, error, enabled, o
     {!enabled && <p className="trl-m0__note">Import a report first.</p>}
     {error && <p className="trl-m0__inline-error" role="alert">{error}</p>}
     {result && <section className="trl-m0__analysis-result">
-      <h4>R-multiple distribution <span className={`trl-badge is-${result.r_quality === "INFERRED" ? "inferred" : "user"}`} title={`Core value: 1R = ${result.one_r}`}>1R {r2(result.one_r)} {result.currency ?? ""} · {result.r_quality}</span></h4>
+      <h4>R-multiple distribution <span className={`trl-badge is-${result.r_quality === "INFERRED" ? "inferred" : "user"}`} title={`Core value: 1R = ${result.one_r}`}>1R {r2(result.one_r)} {result.currency ?? ""} · {plain(result.r_quality)}</span></h4>
       <div className="trl-kpi-row">
         <Tile label="Expectancy (R)" value={`${r2(result.expectancy_r)} R`} detail="Mean R per close event" exact={result.expectancy_r} tone={result.expectancy_r} />
         <Tile label="SQN (Van Tharp)" value={r2(result.sqn_capped_100)} detail={`raw ${r2(result.sqn)} · N = ${result.close_event_count} · no quality band`} exact={result.sqn} />
@@ -48,7 +49,7 @@ export function RMultiplePanel({ source, amount, result, busy, error, enabled, o
         <Tile label={`Top ${result.top_events_share_percent.event_count} winners' share`} value={result.top_events_share_percent.value === null ? "—" : `${r2(result.top_events_share_percent.value)}%`} detail={result.top_events_share_percent.value === null ? "Net P/L is not positive" : "Of total net P/L; can exceed 100% because losses offset gains"} exact={result.top_events_share_percent.value} />
       </div>
       <RHistogram histogram={result.histogram} expectancy={result.expectancy_r} />
-      <ul className="trl-batch__warnings">{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+      <ul className="trl-batch__warnings">{result.warnings.map((warning) => <li key={warning}>{plainSentence(warning)}</li>)}</ul>
     </section>}
   </CollapsibleSection>;
 }

@@ -121,7 +121,7 @@ export class WorkerClient {
       clearTimeout(pending.timer);
       this.pending.delete(response.request_id);
       if (response.success) pending.resolve(response.result);
-      else pending.reject(new Error(`${response.error.code}: ${response.error.message}`));
+      else pending.reject(Object.assign(new Error(response.error.message), { code: response.error.code }));  // the code stays available; the screen shows the message (UIX-5)
     }
   }
 

@@ -215,7 +215,7 @@ def _cell_text(cell: ET.Element, ns: dict[str, str]) -> str:
 def _limitations() -> list[str]:
     return [
         "MT5-reported metrics and parameter values are preserved as source facts; TRL does not recompute them.",
-        "Modelling mode is USER_SUPPLIED because this XML does not establish it.",
+        "The modelling mode is as you declared it, because this XML does not state it.",
         "No forward/out-of-sample label is supplied; parameter selection, robustness claims, and recommendations are unavailable.",
         "Sorting and filtering are inspection only. This result is not portfolio, broker, prop-firm, or live-trading analysis.",
     ]

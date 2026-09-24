@@ -73,7 +73,7 @@ def test_combined_daily_drawdown_stays_realised_balance_only(monkeypatch: pytest
     monkeypatch.setattr(portfolio_preflight, "read_dataset", lambda _root, _ref: dataset)
     result = portfolio_preflight.combined_daily_drawdown(tmp_path, ["one.xlsx", "two.xlsx"])
     assert result["analysis_basis"] == "REALISED_BALANCE_ONLY"
-    assert "GAP_UNDETERMINED" in result["warnings"][-1]
+    assert "cannot tell whether there are gaps" in result["warnings"][-1]
 
 
 def _preflight(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, spans: list[tuple[str, str, str, str]]) -> dict[str, object]:

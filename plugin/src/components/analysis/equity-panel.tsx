@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { plain, plainSentence } from "../plain-language";
 import type { ResearchService } from "../../application/research-service";
 import { localPathForSelectedFile } from "../../services/local-file-path";
 import type { EquityAvailabilityResult, EquityLogAttachment, EquityMetrics } from "../../types";
@@ -104,7 +105,7 @@ export function EquityPanel({ service, datasetRef, availability, metrics, error,
       </dl>
       {metrics.equity_deeper_than_balance && metrics.equity_to_balance_drawdown_ratio !== null && <p className="trl-equity__gap" role="note">Equity drawdown is {Number(metrics.equity_to_balance_drawdown_ratio).toFixed(1)}× the realised-balance drawdown: open positions went deeper than closed trades show.</p>}
       <EquityChart points={metrics.display_series} currency={currency} />
-      <ul className="trl-batch__warnings">{metrics.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+      <ul className="trl-batch__warnings">{metrics.warnings.map((warning) => <li key={warning}>{plainSentence(warning)}</li>)}</ul>
     </>}
   </CollapsibleSection>;
 }

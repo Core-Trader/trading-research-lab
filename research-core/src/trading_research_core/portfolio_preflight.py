@@ -139,7 +139,7 @@ def combined_daily_drawdown(workspace_root: Path, source_paths: list[str]) -> di
     events = sorted(events, key=lambda event: (str(event["source_timestamp"]), int(event["source_sequence"])))
     for sequence, event in enumerate(events, start=1): event["source_sequence"] = sequence
     result, rows = realised_balance_daily_drawdown({"metadata": {"dataset_ref": f"batch:{preflight['preflight_id']}", "settings": {"Currency": preflight["members"][0]["currency"]}}, "events": events})
-    result["warnings"].append("Batch boundary coverage is GAP_UNDETERMINED; daily rows use observed report-clock dates only and are not a continuous equity or prop-firm result.")
+    result["warnings"].append("TRL cannot tell whether there are gaps between the reports; daily rows use observed report-clock dates only and are not a continuous equity or prop-firm result.")
     return {**result, "batch_id": preflight["preflight_id"], "rows": rows, "preflight": preflight}
 
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { plain, plainSentence } from "../plain-language";
 import type { PortfolioCombination } from "../../types";
 import { BalanceChart } from "../balance-chart";
 import { DrawdownChart } from "../drawdown-chart";
@@ -67,7 +68,7 @@ export function CombinedDashboard({ combination, labels }: { combination: Portfo
         <p className="trl-m0__note">Pearson correlation of daily close-event P/L on days where either track traded (at least 10 days required). Values near 1 mean the tracks tend to win and lose on the same days.</p>
       </section>}
     </div>
-    <ul className="trl-batch__warnings">{combination.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+    <ul className="trl-batch__warnings">{combination.warnings.map((warning) => <li key={warning}>{plainSentence(warning)}</li>)}</ul>
   </section>;
 }
 

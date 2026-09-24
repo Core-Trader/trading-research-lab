@@ -93,7 +93,7 @@ def reconstruct_lifecycles(dataset: dict[str, object], *, account_mode: str) -> 
             "summary": _metrics([]),
             "quality_counts": {"MT5_VERIFIED": 0, "INFERRED": 0, "UNPAIRED": 0, "AMBIGUOUS": 0},
             "warnings": [
-                "No inferred lifecycles were created: M2 inference requires an explicit USER_SUPPLIED HEDGING declaration.",
+                "No inferred lifecycles were created: rebuilding trades needs you to declare the account as a hedging account.",
                 f"Received account-mode declaration: {normalized_mode or 'UNDECLARED'}.",
             ],
         }, []

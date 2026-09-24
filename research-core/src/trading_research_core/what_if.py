@@ -96,7 +96,7 @@ def fixed_close_event_cost_scenario(
         "scenario_summary": scenario_metrics,
         "net_pnl_delta": _format(_decimal(scenario_metrics["net_pnl"]) - _decimal(source_metrics["net_pnl"])),
         "warnings": [
-            "Additional cost is a USER_SUPPLIED analytical assumption, not verified broker data.",
+            "The additional cost is your own assumption, not verified broker data.",
             "Scenario output is a historical close-event sensitivity result, not a forecast, execution model, or trading recommendation.",
             "No balance curve, drawdown, equity, position sizing, margin, prop-firm, or currency-conversion result was calculated.",
         ],

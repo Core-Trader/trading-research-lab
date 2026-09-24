@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { plain, plainSentence } from "../plain-language";
 import type { EquityMetrics, FixedCostScenarioResult, MonteCarloResult } from "../../types";
 import { AuditTrail } from "../audit-trail";
 import { ChartFrame } from "../chart-frame";
@@ -36,7 +37,7 @@ export function WhatIfAnalysis({ cost, error, result, enabled, onCostChange, onR
       <OutcomeBar label="Now" summary={result.source_summary} />
       <OutcomeBar label="With extra cost" summary={result.scenario_summary} />
       <p className="trl-m0__note">Bars show wins, losses and breakeven trades (green, red, grey); hover for counts. The cost is your assumption; spread, slippage and position sizing are not modelled beyond it.</p>
-      <AuditTrail items={[["Analysis basis", <code>{result.analysis_basis}</code>], ["Policy", <code>{result.policy_id}</code>], ["Input artifact", <code>{result.configuration.input_artifact}</code>], ["Artifact", <code>{result.artifacts.table}</code>], ["Notes", result.warnings.join(" ")]]} />
+      <AuditTrail items={[["Based on", <span title={`TRL code: ${result.analysis_basis}`}>{plain(result.analysis_basis)}</span>], ["Policy version", <code>{result.policy_id}</code>], ["Input artifact", <code>{result.configuration.input_artifact}</code>], ["Artifact", <code>{result.artifacts.table}</code>], ["Notes", plainSentence(result.warnings.join(" "))]]} />
     </section>}
   </CollapsibleSection>;
 }
@@ -88,7 +89,7 @@ export function MonteCarloAnalysis({ seed, pathCount, error, result, enabled, eq
       <PathFan result={result} />
       <GuidanceBlock guidance={monteCarloGuidance(result, equity)} />
       <details className="trl-audit"><summary>Exact values</summary><DrawdownPercentileTable percentiles={result.drawdown_percentiles} currency={currency} /></details>
-      <AuditTrail items={[["Analysis basis", <code>{result.analysis_basis}</code>], ["Method", <><code>{result.configuration.sampling_method}</code>; <code>{result.configuration.prng}</code></>], ["Input artifact", <code>{result.configuration.input_artifact}</code>], ["Least / worst drawdown path", <>#{result.least_drawdown_path.path_index} / #{result.worst_drawdown_path.path_index}</>], ["Notes", result.warnings.join(" ")]]} />
+      <AuditTrail items={[["Based on", <span title={`TRL code: ${result.analysis_basis}`}>{plain(result.analysis_basis)}</span>], ["Method", <><span title={`TRL code: ${result.configuration.sampling_method}`}>{plain(result.configuration.sampling_method)}</span>; random generator <code>{result.configuration.prng}</code></>], ["Input artifact", <code>{result.configuration.input_artifact}</code>], ["Least / worst drawdown path", <>#{result.least_drawdown_path.path_index} / #{result.worst_drawdown_path.path_index}</>], ["Notes", plainSentence(result.warnings.join(" "))]]} />
     </section>}
   </CollapsibleSection>;
 }

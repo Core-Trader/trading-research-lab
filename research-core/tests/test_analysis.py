@@ -21,6 +21,6 @@ def test_balance_only_statistics_do_not_invent_equity() -> None:
     assert result["reported_balance_change"] == "10"
     assert result["realised_net_from_closing_events"] == "10"
     assert result["equity_curve"]["status"] == "UNAVAILABLE"
-    assert "UNAVAILABLE" in markdown_summary(result)
+    assert "Equity curve: not available" in markdown_summary(result)
     assert uuid.UUID(str(result["analysis_run_id"])).version == 5
     assert result["analysis_run_id"] == basic_statistics(dataset)["analysis_run_id"]
