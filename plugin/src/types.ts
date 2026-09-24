@@ -603,3 +603,24 @@ export type PropEvaluation = {
   warnings: string[];
 };
 export type PropTarget = { kind: "DATASET"; dataset_ref: string } | { kind: "COMBINATION"; tracks: string[][]; starting_capital?: string };
+
+export type PropRollingOutcome = "PASSED" | "BROKEN" | "POSSIBLY_BROKEN" | "OUT_OF_TIME" | "SURVIVED" | "NOT_DECIDED";
+export type PropRollingStart = { start_day: string; start_time: string; open_at_start: boolean; outcome: PropRollingOutcome; rule: "DAILY_LOSS" | "OVERALL_LOSS" | null; decided_at: string | null; decided_day: string | null; calendar_days: number; optimistic_outcome?: PropRollingOutcome };
+export type PropRolling = {
+  calculation_version: string;
+  profile: { profile_id: string; profile_hash: string; name: string };
+  currency: string | null;
+  evidence_level: PropEvidenceLevel;
+  horizon_days: number | null;
+  mode: "CHALLENGE" | "SURVIVAL";
+  summary: {
+    starts: number; decided: number; counts: Partial<Record<PropRollingOutcome, number>>; success_outcome: "PASSED" | "SURVIVED";
+    success_share_percent: string | null;
+    days_to_pass: { minimum: number; median: number; maximum: number } | null;
+    days_to_breach: { minimum: number; median: number; maximum: number } | null;
+    open_at_start: number;
+  };
+  starts: PropRollingStart[];
+  findings: Array<{ severity: string; code: string; message: string }>;
+  warnings: string[];
+};

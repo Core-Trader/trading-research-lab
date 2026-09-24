@@ -29,6 +29,7 @@ from .mt5_set import intake_parameter_schema
 from .parameter_exploration import add_single_test, attach_forward, create_study, evaluate as exploration_evaluate, render_choice
 from .equity_log import attach_equity_log, equity_metrics
 from .prop_presets import list_presets as prop_list_presets
+from .prop_rolling import rolling_starts as prop_rolling_starts
 from .prop_check import delete_profile as prop_delete_profile, evaluate as prop_evaluate, list_profiles as prop_list_profiles, save_profile as prop_save_profile
 from .set_check import check_set_against_report
 from .neighbourhood import attach_neighbourhood_run, neighbourhood, render_neighbourhood_set, write_neighbourhood_set
@@ -98,6 +99,7 @@ class Worker:
                     "prop.save_profile",
                     "prop.delete_profile",
                     "prop.evaluate",
+                    "prop.rolling_starts",
                     "scenario.fixed_close_event_cost",
                     "scenario.monte_carlo_order_permutation",
                     "optimisation.intake_parameter_grid",
@@ -267,6 +269,9 @@ class Worker:
             return prop_save_profile(self.workspace_root, profile, supersedes if isinstance(supersedes, str) and supersedes else None, preset_id if isinstance(preset_id, str) and preset_id else None)
         if method == "prop.delete_profile":
             return prop_delete_profile(self.workspace_root, _required_string(params, "profile_id"))
+        if method == "prop.rolling_starts":
+            zone = params.get("report_clock_zone")
+            return prop_rolling_starts(self.workspace_root, _required_string(params, "profile_id"), params.get("target"), zone if isinstance(zone, str) and zone.strip() else None, params.get("survival_days"))
         if method == "prop.evaluate":
             zone = params.get("report_clock_zone")
             return prop_evaluate(self.workspace_root, _required_string(params, "profile_id"), params.get("target"), zone if isinstance(zone, str) and zone.strip() else None)

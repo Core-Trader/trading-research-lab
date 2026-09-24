@@ -412,3 +412,12 @@
 .trl-prop-daily__limit { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed var(--color-red); pointer-events: none; }
 .trl-chart-frame.is-expanded .trl-prop-daily__plot { height: 60vh; }
 .trl-tradeoff__key-result strong { font-weight: 600; }
+.trl-prop-rolling__strip { position: relative; display: flex; gap: 1px; height: 2.2rem; }
+.trl-prop-rolling__cell { flex: 1 1 0; min-width: 1px; border-radius: 1px; background: var(--background-modifier-border); }
+.trl-prop-rolling__cell.is-active { outline: 1px solid var(--text-normal); }
+.trl-prop-rolling__cell.is-passed, .trl-prop-rolling__key.is-passed, .trl-prop-rolling__cell.is-survived, .trl-prop-rolling__key.is-survived { background: var(--color-green); }
+.trl-prop-rolling__cell.is-broken, .trl-prop-rolling__key.is-broken { background: var(--color-red); }
+.trl-prop-rolling__cell.is-possibly-broken, .trl-prop-rolling__key.is-possibly-broken { background: var(--color-orange); }
+.trl-prop-rolling__cell.is-out-of-time, .trl-prop-rolling__key.is-out-of-time { background: var(--color-yellow); }
+.trl-prop-rolling__key { display: inline-block; width: 0.8rem; height: 0.8rem; margin: 0 0.2rem 0 0.4rem; vertical-align: middle; border-radius: 2px; background: var(--background-modifier-border); }
+.trl-chart-frame.is-expanded .trl-prop-rolling__strip { height: 30vh; }

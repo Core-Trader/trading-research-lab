@@ -1,4 +1,4 @@
-import type { PropEvaluation, PropPreset, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -182,6 +182,11 @@ export class ResearchService {
   /** Profiles are never overwritten: an edit is a new profile that names the one it supersedes. */
   savePropProfile(profile: Record<string, unknown>, supersedes: string | null, presetId: string | null = null): Promise<{ profile: PropProfile; created: boolean }> {
     return this.worker.request("prop.save_profile", { profile, ...(supersedes ? { supersedes } : {}), ...(presetId ? { preset_id: presetId } : {}) });
+  }
+
+  /** Every day of the run as a challenge start, followed to its first decision (P8). */
+  propRollingStarts(profileId: string, target: PropTarget, reportClockZone: string | null): Promise<PropRolling> {
+    return this.worker.request("prop.rolling_starts", reportClockZone ? { profile_id: profileId, target, report_clock_zone: reportClockZone } : { profile_id: profileId, target }, LONG_RUNNING_MS);
   }
 
   /** Firm presets with their source and retrieval date; copied into editable profiles. */

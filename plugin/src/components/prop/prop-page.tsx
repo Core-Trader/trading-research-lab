@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
-import type { DatasetEvidence, PropEvaluation, PropPreset, PropProfile, PropTarget, SavedCombinationEntry } from "../../types";
+import type { DatasetEvidence, PropEvaluation, PropPreset, PropProfile, PropRolling, PropTarget, SavedCombinationEntry } from "../../types";
 import { AuditTrail } from "../audit-trail";
 import { ChartFrame } from "../chart-frame";
 import { slotIndex, nearestIndex } from "../chart-geometry";
 import { DismissButton } from "../dismiss-button";
 import { formatTimestamp, roundDecimalString } from "../display-format";
 import { GuidanceBlock, KpiTile } from "../guidance";
-import { CHALLENGE_TEXT, emptyForm, formFromPreset, EVIDENCE_TEXT, formFromRules, limitText, limitUsedPercent, modeText, profileFromForm, propChartGeometry, propGuidance, RULE_LABELS, verdictHeadline, ZONE_SUGGESTIONS, type LimitKind, type ProfileForm } from "./prop-model";
+import { CHALLENGE_TEXT, ROLLING_LABEL, rollingGuidance, emptyForm, formFromPreset, EVIDENCE_TEXT, formFromRules, limitText, limitUsedPercent, modeText, profileFromForm, propChartGeometry, propGuidance, RULE_LABELS, verdictHeadline, ZONE_SUGGESTIONS, type LimitKind, type ProfileForm } from "./prop-model";
 import { money } from "../display-format";
 
 type Props = { service: ResearchService; currentDatasetRef: string | null };
@@ -38,6 +38,7 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
   const [choiceKey, setChoiceKey] = useState<string>("");
   const [clockZone, setClockZone] = useState("");
   const [result, setResult] = useState<PropEvaluation | null>(null);
+  const [rolling, setRolling] = useState<PropRolling | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const runs = useRef(new LatestRun()).current;
@@ -82,7 +83,22 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
   };
   const remove = async (): Promise<void> => {
     if (!profile || !window.confirm(`Delete the profile "${profile.rules.name}"? Results are not stored, so nothing else changes.`)) return;
-    try { await service.deletePropProfile(profile.profile_id); setProfileId(""); setResult(null); await refresh(); } catch (caught) { fail(caught); }
+    try { await service.deletePropProfile(profile.profile_id); setProfileId(""); setResult(null); setRolling(null); await refresh(); } catch (caught) { fail(caught); }
+  };
+  const rollStarts = async (): Promise<void> => {
+    if (!profile || !choice) return;
+    const token = runs.begin();
+    setBusy("Following every start day to its first decision…");
+    setError(null);
+    try {
+      if (needsClock && clockZone.trim()) rememberClock(choice.key, clockZone.trim());
+      const rolled = await service.propRollingStarts(profile.profile_id, choice.target, needsClock ? clockZone.trim() || null : null);
+      if (runs.isCurrent(token)) setRolling(rolled);
+    } catch (caught) {
+      if (runs.isCurrent(token)) { setRolling(null); fail(caught); }
+    } finally {
+      if (runs.isCurrent(token)) setBusy(null);
+    }
   };
   const check = async (): Promise<void> => {
     if (!profile || !choice) return;
@@ -94,7 +110,7 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
       const evaluated = await service.propEvaluate(profile.profile_id, choice.target, needsClock ? clockZone.trim() || null : null);
       if (runs.isCurrent(token)) setResult(evaluated);
     } catch (caught) {
-      if (runs.isCurrent(token)) { setResult(null); fail(caught); }
+      if (runs.isCurrent(token)) { setResult(null); setRolling(null); fail(caught); }
     } finally {
       if (runs.isCurrent(token)) setBusy(null);
     }
@@ -109,7 +125,7 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
       <h4>1. Rules</h4>
       {profiles.length === 0 && !editing && <p className="trl-m0__note">No profiles yet. Create one with your firm's numbers.</p>}
       {profiles.length > 0 && <label className="trl-m0__field">Profile
-        <select value={profileId} onChange={(event) => { setProfileId(event.currentTarget.value); setResult(null); }}>
+        <select value={profileId} onChange={(event) => { setProfileId(event.currentTarget.value); setResult(null); setRolling(null); }}>
           {profiles.map((item) => <option key={item.profile_id} value={item.profile_id}>{item.rules.name} · {r2(item.rules.account_size)}</option>)}
         </select>
       </label>}
@@ -125,7 +141,7 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
     <section className="trl-page__surface">
       <h4>2. What to check</h4>
       {choices.length === 0 ? <p className="trl-m0__note">No reports yet. Import one on the Data page or in the Portfolio report library.</p> : <label className="trl-m0__field">Report or saved combination
-        <select value={choiceKey} onChange={(event) => { setChoiceKey(event.currentTarget.value); setResult(null); }}>
+        <select value={choiceKey} onChange={(event) => { setChoiceKey(event.currentTarget.value); setResult(null); setRolling(null); }}>
           <optgroup label="Reports">{choices.filter((item) => item.target.kind === "DATASET").map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</optgroup>
           {combinations.length > 0 && <optgroup label="Saved combinations">{choices.filter((item) => item.target.kind === "COMBINATION").map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</optgroup>}
         </select>
@@ -138,11 +154,13 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
       </label>}
       <div className="trl-m0__actions">
         <button type="button" className="mod-cta" disabled={!profile || !choice || busy !== null || (needsClock && !clockZone.trim())} onClick={() => void check()}>Check against the rules</button>
+        <button type="button" disabled={!profile || !choice || busy !== null || (needsClock && !clockZone.trim())} title="Use every day of the run as a challenge start" onClick={() => void rollStarts()}>Rolling start dates</button>
         {busy && <span className="trl-m0__note" role="status">{busy}</span>}
       </div>
     </section>
 
     {result && <PropResult result={result} />}
+    {rolling && <RollingStarts result={rolling} />}
   </section>;
 }
 
@@ -331,4 +349,44 @@ function DailyLossChart({ result }: { result: PropEvaluation }): React.ReactElem
       <figcaption className="trl-m0__note">Bar height = the share of that day's limit used; the line is the limit. Red bars broke it. Hover a bar for the day's figures.</figcaption>
     </figure>
   </ChartFrame>;
+}
+
+function RollingStarts({ result }: { result: PropRolling }): React.ReactElement {
+  const [active, setActive] = useState<number | null>(null);
+  const summary = result.summary;
+  const starts = result.starts;
+  const item = active === null ? null : starts[active] ?? null;
+  const count = (key: keyof typeof ROLLING_LABEL): number => summary.counts[key] ?? 0;
+  const success = result.mode === "SURVIVAL" ? "SURVIVED" : "PASSED";
+  return <section className="trl-page__surface" aria-label="Rolling start dates">
+    <h4>Rolling start dates · {result.profile.name}</h4>
+    <div className="trl-kpi-row">
+      <KpiTile label={result.mode === "SURVIVAL" ? `Survived ${result.horizon_days} days` : "Passed"} value={summary.success_share_percent === null ? "—" : `${r2(summary.success_share_percent)}%`} detail={`${count(success)} of ${summary.decided} decided starts`} tone={count(success) > 0 ? "positive" : "neutral"} exact={summary.success_share_percent} />
+      <KpiTile label="Broken" value={String(count("BROKEN") + count("POSSIBLY_BROKEN"))} detail={count("POSSIBLY_BROKEN") ? `${count("POSSIBLY_BROKEN")} only on the conservative bound` : summary.days_to_breach ? `median ${summary.days_to_breach.median} days` : "no start broke a rule"} tone={count("BROKEN") ? "negative" : "neutral"} />
+      {result.mode === "CHALLENGE" && <KpiTile label="Days to pass" value={summary.days_to_pass ? String(summary.days_to_pass.median) : "—"} detail={summary.days_to_pass ? `median; ${summary.days_to_pass.minimum}–${summary.days_to_pass.maximum}` : "no start passed"} />}
+      <KpiTile label="Did not finish" value={String(count("NOT_DECIDED") + count("OUT_OF_TIME"))} detail={`${count("OUT_OF_TIME")} out of time (count as not passed) · ${count("NOT_DECIDED")} ran out of data (left out of the share)`} />
+    </div>
+    <ChartFrame title="Outcome by start day">
+      <figure className="trl-prop-rolling">
+        <div className="trl-prop-rolling__strip" role="img" aria-label={`Outcome for each of ${starts.length} start days, from ${starts[0]?.start_day} to ${starts.at(-1)?.start_day}.`}
+          onPointerMove={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); if (bounds.width > 0) setActive(slotIndex((event.clientX - bounds.left) / bounds.width, starts.length)); }}
+          onPointerLeave={() => setActive(null)}>
+          {starts.map((start, index) => <span key={start.start_day} className={`trl-prop-rolling__cell is-${start.outcome.toLowerCase().replace(/_/g, "-")}${index === active ? " is-active" : ""}`} />)}
+          {item && <span className={`trl-balance-chart__tooltip${(active ?? 0) / starts.length > 0.6 ? " is-left" : ""}`} style={{ left: `${(((active ?? 0) + 0.5) / starts.length) * 100}%` }} role="status">
+            <strong>Start {item.start_day}</strong>
+            <span>{ROLLING_LABEL[item.outcome]}{item.rule ? ` (${RULE_LABELS[item.rule].toLowerCase()})` : ""}</span>
+            {item.decided_at && <span>{formatTimestamp(item.decided_at)} · day {item.calendar_days}</span>}
+            {item.open_at_start && <span>Started with open positions</span>}
+          </span>}
+        </div>
+        <div className="trl-balance-chart__x-axis" aria-hidden="true"><span>{starts[0]?.start_day}</span><span>{starts.at(-1)?.start_day}</span></div>
+        <figcaption className="trl-m0__note">
+          {(Object.keys(ROLLING_LABEL) as Array<keyof typeof ROLLING_LABEL>).filter((key) => count(key) > 0).map((key) => <React.Fragment key={key}><span className={`trl-prop-rolling__key is-${key.toLowerCase().replace(/_/g, "-")}`} /> {ROLLING_LABEL[key]} ({count(key)}) </React.Fragment>)}
+          · Hover a day for its outcome.
+        </figcaption>
+      </figure>
+    </ChartFrame>
+    <GuidanceBlock guidance={rollingGuidance(result)} />
+    <AuditTrail items={[["Calculation", <code>{result.calculation_version}</code>], ["Profile", <code>{result.profile.profile_id}</code>], ["Evidence", <code>{result.evidence_level}</code>], ["Horizon", result.horizon_days === null ? "none (until pass, breach, or the end of the data)" : `${result.horizon_days} calendar days`], ["Findings", result.findings.map((finding) => finding.code).join(", ") || "none"]]} />
+  </section>;
 }

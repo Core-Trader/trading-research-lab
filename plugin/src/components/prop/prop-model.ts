@@ -206,3 +206,26 @@ export const ZONE_SUGGESTIONS: Array<{ value: string; label: string }> = [
   { value: "UTC+02:00", label: "Fixed UTC+2, no daylight saving" },
   { value: "UTC+03:00", label: "Fixed UTC+3, no daylight saving" },
 ];
+
+export const ROLLING_LABEL: Record<import("../../types").PropRollingOutcome, string> = {
+  PASSED: "Passed", BROKEN: "Broken", POSSIBLY_BROKEN: "Possibly broken", OUT_OF_TIME: "Out of time", SURVIVED: "Survived", NOT_DECIDED: "Not decided (data ended)",
+};
+
+/** Reading of the Core rolling-start summary; wording only. */
+export function rollingGuidance(result: import("../../types").PropRolling): Guidance {
+  const summary = result.summary;
+  const read: string[] = [];
+  const tips: string[] = [];
+  const flags: string[] = [];
+  const counts = Object.entries(summary.counts).map(([key, value]) => `${value} ${ROLLING_LABEL[key as keyof typeof ROLLING_LABEL].toLowerCase()}`).join(", ");
+  read.push(`Each of the ${summary.starts} days with data was used as a challenge start and followed until the first decision: ${counts}.`);
+  if (result.mode === "SURVIVAL") read.push(`This profile has no profit target, so each start is followed for ${result.horizon_days} calendar days: "survived" means no loss rule was broken in that time.`);
+  else if (result.horizon_days !== null) read.push(`A start that has not passed within ${result.horizon_days} calendar days is out of time.`);
+  if (summary.success_share_percent !== null) read.push(`${r2(summary.success_share_percent)}% of the ${summary.decided} decided starts ${result.mode === "SURVIVAL" ? "survived" : "passed"}. Starts where the data ended first are left out of the share.`);
+  else read.push("No start reached a decision before the data ended, so there is no share to report. A longer test, or a target this run can reach, is needed.");
+  if (summary.days_to_pass) tips.push(`Passing starts took ${summary.days_to_pass.minimum} to ${summary.days_to_pass.maximum} calendar days (median ${summary.days_to_pass.median}).`);
+  if (summary.days_to_breach) tips.push(`Broken starts failed after ${summary.days_to_breach.minimum} to ${summary.days_to_breach.maximum} calendar days (median ${summary.days_to_breach.median}).`);
+  if (summary.open_at_start > 0) flags.push(`${summary.open_at_start} of ${summary.starts} starts began with positions already open and inherit their floating profit or loss; a real challenge starts flat.`);
+  for (const warning of result.warnings) flags.push(warning);
+  return { read, tips, flags };
+}

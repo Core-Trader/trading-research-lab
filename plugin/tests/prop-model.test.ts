@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { emptyForm, formFromPreset, formFromRules, limitUsedPercent, profileFromForm, propChartGeometry, propGuidance, verdictHeadline } from "../src/components/prop/prop-model.ts";
-import type { PropEvaluation, PropPreset, PropRules } from "../src/types.ts";
+import { emptyForm, formFromPreset, formFromRules, limitUsedPercent, profileFromForm, propChartGeometry, propGuidance, rollingGuidance, verdictHeadline } from "../src/components/prop/prop-model.ts";
+import type { PropEvaluation, PropPreset, PropRolling, PropRules } from "../src/types.ts";
 
 const rules: PropRules = {
   name: "P", account_size: "10000", daily_loss_limit: { kind: "PERCENT", value: "5" }, daily_loss_basis: "INITIAL_BALANCE", start_of_day_reference: "HIGHER_OF_BALANCE_AND_EQUITY",
@@ -68,4 +68,18 @@ test("a preset fills an editable form with the run's account size and remembers 
   assert.equal(form.accountSize, "100000");
   assert.deepEqual(profileFromForm(form), { ...rules, name: "FTMO 1-Step · FTMO Challenge", account_size: "100000" });
   assert.equal(profileFromForm({ ...form, bestDay: " " }).best_day_max_percent, null);
+});
+
+test("rolling guidance restates the Core summary and never reports a share without decided starts", () => {
+  const rolling = (summary: Partial<PropRolling["summary"]>): PropRolling => ({
+    calculation_version: "prop-rolling-1", profile: { profile_id: "p", profile_hash: "h", name: "P" }, currency: "USD", evidence_level: "EQUITY_LOGGED", horizon_days: null, mode: "CHALLENGE",
+    summary: { starts: 10, decided: 8, counts: { PASSED: 6, BROKEN: 2, NOT_DECIDED: 2 }, success_outcome: "PASSED", success_share_percent: "75.00000000", days_to_pass: { minimum: 3, median: 9, maximum: 20 }, days_to_breach: null, open_at_start: 4, ...summary },
+    starts: [], findings: [], warnings: ["W"],
+  });
+  const guidance = rollingGuidance(rolling({}));
+  assert.ok(guidance.read.some((line) => line.includes("6 passed, 2 broken, 2 not decided (data ended)")));
+  assert.ok(guidance.read.some((line) => line.startsWith("75.00% of the 8 decided starts passed")));
+  assert.ok(guidance.tips.some((tip) => tip.includes("3 to 20 calendar days (median 9)")));
+  assert.ok(guidance.flags.some((flag) => flag.startsWith("4 of 10 starts began with positions already open")));
+  assert.ok(rollingGuidance(rolling({ decided: 0, success_share_percent: null, counts: { NOT_DECIDED: 10 } })).read.some((line) => line.startsWith("No start reached a decision")));
 });
