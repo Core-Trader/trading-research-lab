@@ -7,6 +7,8 @@ import { buildDashboardModel, type DashboardInputs, type Kpi } from "./dashboard
 import { CloseEventBars, DailyPnlCalendar, MonthlyPnlTable } from "./pnl-visuals";
 import type { CloseEventDisplaySeries } from "../types";
 import { money } from "./display-format";
+import { WidgetSurface } from "./layout/widget-surface";
+import { OVERVIEW_WIDGETS } from "../layout/widgets";
 
 type DashboardSummaryProps = DashboardInputs & {
   displaySeries: CloseEventDisplaySeries | null;
@@ -60,29 +62,29 @@ export function DashboardSummary({
       <span className="trl-dashboard__status">{dataset.status}</span>
     </header>
     {busy && <p className="trl-dashboard__progress" role="status">{busyStatus} The results below belong to the previous import until this run completes.</p>}
-    <section className="trl-dashboard__workflow" aria-label="Research workflow">
+    <WidgetSurface surface="overview" label="Overview" variant="grid" definitions={OVERVIEW_WIDGETS} widgets={{
+    "overview.workflow": <section className="trl-dashboard__workflow" aria-label="Research workflow">
       <div className="trl-dashboard__workflow-step"><span className="trl-dashboard__step-number">1</span><div><strong>Import</strong><p>Verified source evidence is ready.</p></div><button type="button" disabled={busy} onClick={onBrowseReport}>Import another</button></div>
       <div className="trl-dashboard__workflow-step"><span className="trl-dashboard__step-number">2</span><div><strong>Analyse</strong><p>{closeEvents ? "Verified close-event analysis is ready." : "Run verified close-event analysis next."}</p></div>{!closeEvents && <button type="button" className="mod-cta" disabled={busy} onClick={onRunTradeAnalysis}>Run analysis</button>}</div>
       <div className="trl-dashboard__workflow-step"><span className="trl-dashboard__step-number">3</span><div><strong>Document</strong><p>{documents.linkedCount} of 3 linked: Strategy → Experiment → Report.</p></div><button type="button" onClick={onFocusDocuments}>Open documents</button></div>
-    </section>
-    <section className="trl-kpi-row" aria-label="Key results">
+    </section>,
+    "overview.kpis": <section className="trl-kpi-row" aria-label="Key results">
       {kpis.map((kpi) => <KpiTile key={kpi.id} kpi={kpi} action={actionFor(kpi)} />)}
-    </section>
-    <div className="trl-dashboard__grid">
-      <DashboardCard title="Verified balance curve" state={{ kind: "ready" }} className="trl-dashboard__card--chart">
+    </section>,
+      "overview.balance": <DashboardCard title="Verified balance curve" state={{ kind: "ready" }} className="trl-dashboard__card--chart">
         <BalanceChart points={statistics.balance_curve.points} currency={statistics.currency} band={performance ? { startSequence: performance.stagnation.longest_by_time.start.source_sequence, endSequence: performance.stagnation.longest_by_time.end.source_sequence, label: `longest stagnation (${roundDecimalString(performance.stagnation.longest_by_time.duration_days, 2)} days${performance.stagnation.longest_by_time.status === "ONGOING" ? ", ongoing" : ""})` } : null} />
         {performance && <DrawdownChart series={performance.drawdown_series} currency={statistics.currency} maximum={performance.balance_metrics.maximum_drawdown} />}
-      </DashboardCard>
-      <DashboardCard title="Dataset" state={{ kind: "ready" }}>
+      </DashboardCard>,
+      "overview.dataset": <DashboardCard title="Dataset" state={{ kind: "ready" }}>
         <strong>{dataset.filename}</strong>
         <p>{dataset.detail}</p>
         <p className="trl-m0__note">{dataset.adapter}</p>
-      </DashboardCard>
-      <DashboardCard title="Close-event P/L" state={seriesState} action={seriesAction} className="trl-dashboard__card--chart">
+      </DashboardCard>,
+      "overview.close-events": <DashboardCard title="Close-event P/L" state={seriesState} action={seriesAction} className="trl-dashboard__card--chart">
         {displaySeries && <CloseEventBars series={displaySeries} />}
         {performance && <p className="trl-streaks">Longest winning streak: <strong>{performance.close_event_metrics.longest_winning_streak.count}</strong>{performance.close_event_metrics.longest_winning_streak.net_pnl ? ` (${money(performance.close_event_metrics.longest_winning_streak.net_pnl)} ${model.currency})` : ""} · Longest losing streak: <strong>{performance.close_event_metrics.longest_losing_streak.count}</strong>{performance.close_event_metrics.longest_losing_streak.net_pnl ? ` (${money(performance.close_event_metrics.longest_losing_streak.net_pnl)} ${model.currency})` : ""}. Breakeven events end a streak.</p>}
-      </DashboardCard>
-      <DashboardCard title="Research documents" state={{ kind: "ready" }}>
+      </DashboardCard>,
+      "overview.documents": <DashboardCard title="Research documents" state={{ kind: "ready" }}>
         <strong>{documents.linkedCount} of 3 linked</strong>
         <ul className="trl-doc-links">
           <li className={documents.strategy ? "is-linked" : ""}>Strategy — {documents.strategy ? "linked" : "not linked"}</li>
@@ -91,14 +93,14 @@ export function DashboardSummary({
         </ul>
         <button type="button" onClick={onFocusDocuments}>{documents.linkedCount === 0 ? "Start Strategy → Experiment → Report" : "Open document workflow"}</button>
         {!closeEvents && <p className="trl-m0__note">Tip: run trade analysis first so the report includes verified close events.</p>}
-      </DashboardCard>
-      <DashboardCard title="Daily P/L calendar" state={seriesState} className="trl-dashboard__card--wide">
+      </DashboardCard>,
+      "overview.calendar": <DashboardCard title="Daily P/L calendar" state={seriesState} className="trl-dashboard__card--wide">
         {displaySeries && <DailyPnlCalendar series={displaySeries} />}
-      </DashboardCard>
-      <DashboardCard title="Monthly results" state={seriesState} className="trl-dashboard__card--wide">
+      </DashboardCard>,
+      "overview.monthly": <DashboardCard title="Monthly results" state={seriesState} className="trl-dashboard__card--wide">
         {displaySeries && <MonthlyPnlTable series={displaySeries} />}
-      </DashboardCard>
-    </div>
+      </DashboardCard>,
+    }} />
   </section>;
 }
 

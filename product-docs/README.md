@@ -10,4 +10,12 @@
 - [PROP_FIRM_CHECK.md](PROP_FIRM_CHECK.md): checking a backtest against your
   prop firm's rules.
 
+## Arranging pages
+
+On **Overview**, **Analysis**, and **Help & downloads**, press **Customise
+layout** to drag sections into a new order (or use ↑ ↓), hide the ones you do
+not use, and, on Overview, choose each card's width. Changes are saved as you
+go; **Reset to default** undoes them. Pages with numbered steps keep their
+order, because each step needs the one before.
+
 <!-- Maintainers: this folder ships with releases. Keep it to user help only. -->

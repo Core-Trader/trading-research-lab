@@ -78,3 +78,16 @@ The owner accepted W1–W6 and N1–N6 as recommended
 
 **Still needs the owner:** a visual review in Obsidian, especially of the
 live index on a real vault (rename and delete refresh) and the sidebar card.
+
+## Follow-up: layouts (LAYOUT-1)
+
+- The Data & import library picker loaded on focus, so the first press opened
+  an empty list. It now loads when the page is shown and after each import.
+- Help sections fold, with the state remembered per device.
+- Customisable layouts are built as recommended: Overview is a grid (order,
+  hide, width); Analysis and Help are single columns (order, hide). The
+  design is in `LAYOUT_SPEC.md`, including the path to custom dashboards.
+- Harness checks:
+  - width, ↑/↓, hide, drag and drop, reset, and saving
+  - edit tiles keep the grid's shape at 1200px and fold at 800px
+- Tests: plugin 118 (7 new layout-model tests); the typecheck is clean.

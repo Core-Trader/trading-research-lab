@@ -29,6 +29,8 @@ import type { NotesApi } from "./vault/notes-api";
 import { ResearchNotesBrowser } from "./components/research/notes-browser";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT, MT5_REPORT_HINT } from "./application/report-files";
 import { DismissButton } from "./components/dismiss-button";
+import { LayoutContext, WidgetSurface } from "./components/layout/widget-surface";
+import { ANALYSIS_WIDGETS } from "./layout/widgets";
 import { EquityPanel } from "./components/analysis/equity-panel";
 
 export { writeGeneratedNote } from "./vault/research-vault";
@@ -708,7 +710,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     else void analyseRef.current();
   }), [navigation]);
 
-  return <section className="trl-m0">
+  return <LayoutContext.Provider value={plugin.layouts}><section className="trl-m0">
     <header className="trl-m0__workspace-header trl-pagebar">
       <div><span className="trl-pagebar__brand">Trading Research Lab</span><h2>{pageInfo(activePage).label}</h2><p>{pageInfo(activePage).description}</p></div>
       <div className="trl-pagebar__controls">
@@ -797,22 +799,24 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     {activePage === "analysis" && <section className="trl-page" aria-label="Analysis">
       <header className="trl-page__header"><div><h3>Analysis</h3><p>Review verified results first. Any unavailable evidence remains explicitly unavailable.</p></div></header>
       {!statistics && <section className="trl-page__empty"><p>Import an MT5 report before running analysis.</p><button type="button" className="mod-cta" onClick={() => setActivePage("data")}>Go to Data & import</button></section>}
-      {statistics && <Results statistics={statistics} />}
-      {(evidence || statistics) && <M2Analysis
+      <WidgetSurface surface="analysis" label="Analysis" variant="stack" definitions={ANALYSIS_WIDGETS} unavailableNote="Appears once a report is imported." widgets={{
+        "analysis.results": statistics && <Results statistics={statistics} />,
+        "analysis.trades": (evidence || statistics) && <M2Analysis
       accountMode={accountMode}
       closeEvents={closeEventAnalysis}
       lifecycles={lifecycleAnalysis}
       onAccountModeChange={setAccountMode}
       onRun={() => void runM2Analysis()}
-    />}
-      {(evidence || statistics) && <M3Analysis
+    />,
+        "analysis.daily": (evidence || statistics) && <M3Analysis
       drawdown={dailyDrawdown}
       equity={equityAvailability}
       onRun={() => void runM3Analysis()}
-    />}
-      {evidence && <EquityPanel service={service} datasetRef={evidence.dataset_ref} availability={equityAvailability} metrics={equityMetrics} error={equityMetricsError} currency={evidence.supplied_facts.currency} onChanged={() => void service.equityAvailability(evidence.dataset_ref).then(setEquityAvailability)} />}
-      {(evidence || statistics) && <RMultiplePanel source={rSource} amount={rAmount} result={rResult} busy={rBusy} error={rError} enabled={statistics !== null} onSourceChange={(value) => { setRSource(value); setRResult(null); setRError(null); }} onAmountChange={(value) => { setRAmount(value); setRError(null); }} onRun={() => void runRMultiples()} />}
-      {evidence && <WindowsPanel service={service} datasetRef={evidence.dataset_ref} analysis={statistics ? { datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id } : null} notes={notesApi} />}
+    />,
+        "analysis.equity": evidence && <EquityPanel service={service} datasetRef={evidence.dataset_ref} availability={equityAvailability} metrics={equityMetrics} error={equityMetricsError} currency={evidence.supplied_facts.currency} onChanged={() => void service.equityAvailability(evidence.dataset_ref).then(setEquityAvailability)} />,
+        "analysis.r-multiples": (evidence || statistics) && <RMultiplePanel source={rSource} amount={rAmount} result={rResult} busy={rBusy} error={rError} enabled={statistics !== null} onSourceChange={(value) => { setRSource(value); setRResult(null); setRError(null); }} onAmountChange={(value) => { setRAmount(value); setRError(null); }} onRun={() => void runRMultiples()} />,
+        "analysis.windows": evidence && <WindowsPanel service={service} datasetRef={evidence.dataset_ref} analysis={statistics ? { datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id } : null} notes={notesApi} />,
+      }} />
     </section>}
     {activePage === "research" && <section className="trl-page" aria-label="Research documents">
       <header className="trl-page__header"><div><h3>Research notes</h3><p>Your Strategy, Experiment and Report notes. TRL writes only into marked blocks and never overwrites your writing.</p></div></header>
@@ -867,7 +871,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     />}
       {diagnostics && plugin.settings.showDeveloperDiagnostics && <Diagnostics diagnostics={diagnostics} />}
     </section>}
-  </section>;
+  </section></LayoutContext.Provider>;
 }
 
 async function measure<T>(operation: () => Promise<T>): Promise<{ result: T; elapsedMs: number }> {

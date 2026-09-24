@@ -5,8 +5,10 @@ import { ALL_PAGES, NavigationStore, type WorkspacePage } from "./application/na
 import { WorkerClient } from "./worker-client";
 import { ResearchNotesIndex } from "./vault/research-index";
 import type { MarkdownResult } from "./types";
+import { LayoutStore } from "./layout/layout-store";
 
-type TradingResearchSettings = { pythonExecutable: string; showDeveloperDiagnostics: boolean };
+/** `layouts` holds customised page layouts (LAYOUT-1); it is read defensively. */
+type TradingResearchSettings = { pythonExecutable: string; showDeveloperDiagnostics: boolean; layouts?: unknown };
 const DEFAULT_SETTINGS: TradingResearchSettings = { pythonExecutable: "", showDeveloperDiagnostics: false };
 
 export default class TradingResearchLabPlugin extends Plugin {
@@ -16,11 +18,14 @@ export default class TradingResearchLabPlugin extends Plugin {
   readonly navigation = new NavigationStore();
   /** TRL research notes (trl_type frontmatter only), shared by the workspace and the sidebar. */
   notesIndex!: ResearchNotesIndex;
+  /** Customised page layouts, saved with the plugin settings. */
+  layouts!: LayoutStore;
   private lastOpenedMarkdownPath: string | null = null;
 
   async onload(): Promise<void> {
     this.settings = { ...DEFAULT_SETTINGS, ...(await this.loadData() as Partial<TradingResearchSettings> ?? {}) };
     this.worker = new WorkerClient(this.settings.pythonExecutable, this.workerWorkspacePath());
+    this.layouts = new LayoutStore(this.settings.layouts, async (layouts) => { this.settings.layouts = layouts; await this.saveData(this.settings); });
     this.rememberMarkdownFile(this.app.workspace.getActiveFile());
     this.registerEvent(this.app.workspace.on("file-open", (file) => this.rememberMarkdownFile(file)));
     this.notesIndex = new ResearchNotesIndex(this.app);

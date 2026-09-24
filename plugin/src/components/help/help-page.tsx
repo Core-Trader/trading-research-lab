@@ -4,6 +4,8 @@ import * as nodePath from "path";
 import loggerInclude from "../../../../mql5/Include/TRL_EquityLogger.mqh";
 import loggerExample from "../../../../mql5/Experts/TRL_EquityLogger_Example.mq5";
 import { DismissButton } from "../dismiss-button";
+import { WidgetSurface } from "../layout/widget-surface";
+import { HELP_WIDGETS } from "../../layout/widgets";
 import { LOGGER_FILES, looksLikeMql5Folder, relativeParts, type SaveTarget } from "./help-model";
 import { LABEL_TEXT, SOURCES, WORKFLOW_GAPS, WORKFLOW_INTRO, WORKFLOW_STEPS, type WorkflowPoint } from "./research-workflow";
 
@@ -43,9 +45,9 @@ export function HelpPage(): React.ReactElement {
   return <section className="trl-page" aria-label="Help and downloads">
     <header className="trl-page__header"><div><h3>Help & downloads</h3><p>A research workflow from symbol scan to go-live, how to record equity in MT5 backtests, and which MT5 files TRL reads.</p></div></header>
 
-    <ResearchWorkflow />
-
-    <HelpSection id="equity-logger" title="Equity logger (floating drawdown)" summary="Record open-position drawdown in MT5 backtests; save the MQL5 files">
+    <WidgetSurface surface="help" label="Help" variant="stack" definitions={HELP_WIDGETS} widgets={{
+    "help.workflow": <ResearchWorkflow />,
+    "help.equity-logger": <HelpSection id="equity-logger" title="Equity logger (floating drawdown)" summary="Record open-position drawdown in MT5 backtests; save the MQL5 files">
       <p>MT5 reports list closed trades only. The TRL equity logger records how deep open positions went during a Strategy Tester run, so TRL can show real equity drawdown and daily equity loss. You need the EA's source code (.mq5).</p>
 
       <h5>1. Get the files</h5>
@@ -90,9 +92,8 @@ TrlEquityFinish();`}</pre>
         <li>The log is in <code>%APPDATA%\MetaQuotes\Terminal\Common\Files\TRL\</code>. If you ran the test more than once, take the newest file (<code>_2</code>, <code>_3</code>…).</li>
         <li>In TRL, go to <strong>Data & import</strong> → Browse and validate report → Companion files → Browse and validate equity log. The report and log must come from the same run; TRL checks the balance after every deal.</li>
       </ol>
-    </HelpSection>
-
-    <HelpSection id="mt5-exports" title="What to export from MT5" summary="Which MT5 file each TRL feature reads">
+    </HelpSection>,
+    "help.mt5-exports": <HelpSection id="mt5-exports" title="What to export from MT5" summary="Which MT5 file each TRL feature reads">
       <div className="trl-monthly"><table>
         <thead><tr><th scope="col">To do this in TRL</th><th scope="col">Export from MT5</th><th scope="col">File</th></tr></thead>
         <tbody>
@@ -104,7 +105,8 @@ TrlEquityFinish();`}</pre>
         </tbody>
       </table></div>
       <p className="trl-m0__note">The full guides ship with TRL in its <code>docs</code> folder: <code>EQUITY_LOGGER.md</code> and <code>MT5_EXPORT_GUIDE.md</code>.</p>
-    </HelpSection>
+    </HelpSection>,
+    }} />
   </section>;
 }
 

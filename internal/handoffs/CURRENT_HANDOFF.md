@@ -174,6 +174,12 @@ Research-note access is done (NOTES-1):
 - the sidebar recent-notes card
 - name clash checks
 
+Layouts (LAYOUT-1, `internal/docs/LAYOUT_SPEC.md`): Overview, Analysis, and
+Help can be reordered, hidden, and (Overview) resized via "Customise layout";
+saved in the plugin settings. It is designed toward future custom analysis
+dashboards (global widget ids). Help sections fold (UIX-4); the Data & import
+library picker no longer glitches on the first press.
+
 Follow-up (UIX-3, SWEEP-3): the Research notes page is realigned, the
 duplicate sidebar link is removed, and sweeps can be deleted with a warning
 listing dependent notes (keep, or move to Obsidian's trash).
