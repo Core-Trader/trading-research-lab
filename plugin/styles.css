@@ -439,3 +439,4 @@
 .trl-sweep-compare th[scope="row"] { text-align: left; }
 .trl-sweep-compare th[scope="row"] label { display: inline-flex; gap: 0.3rem; align-items: center; font-weight: 400; color: var(--text-normal); }
 .trl-sweep-compare td.is-untested { color: var(--text-faint); }
+.trl-sweep__picked { padding: 0.35rem 0.5rem; border: 1px solid var(--background-modifier-border); border-radius: 0.3rem; overflow-wrap: anywhere; }

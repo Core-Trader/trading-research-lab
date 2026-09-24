@@ -9,6 +9,8 @@ import { GuidanceBlock } from "../guidance";
 import { TradeOffScatter } from "../tradeoff/trade-off-scatter";
 import { MODE_SUGGESTIONS, STATUS_TEXT, metricText, shadeMatrix, sortRows, sweepGuidance, sweepLabel, type SortState } from "./sweep-model";
 
+type ImportResult = { path: string; outcome: "imported" | "existing" | "refused"; message: string };
+
 type Props = {
   service: ResearchService;
   experiment: { id: string; path: string } | null;
@@ -16,6 +18,7 @@ type Props = {
 };
 
 const TABLE_METRICS = ["net_profit", "profit_factor", "recovery_factor", "equity_drawdown_pct", "trades", "mt5_sharpe", "expected_payoff"];
+const fileName = (path: string): string => path.split(/[\\/]/).pop() ?? path;
 const fail = (caught: unknown): string => caught instanceof Error ? caught.message : String(caught);
 
 /**
@@ -24,7 +27,8 @@ const fail = (caught: unknown): string => caught instanceof Error ? caught.messa
  * trade-offs and records the owner's shortlist, never a winner.
  */
 export function SymbolScanPage({ service, experiment, onRecordChoice }: Props): React.ReactElement {
-  const [xmlPath, setXmlPath] = useState("");
+  const [xmlPaths, setXmlPaths] = useState<string[]>([]);
+  const [importResults, setImportResults] = useState<ImportResult[] | null>(null);
   const [setPath, setSetPath] = useState("");
   const [mode, setMode] = useState("1 minute OHLC");
   const [library, setLibrary] = useState<SymbolSweep[]>([]);
@@ -92,17 +96,43 @@ export function SymbolScanPage({ service, experiment, onRecordChoice }: Props): 
     } catch (caught) { setError(fail(caught)); }
   };
 
-  const importSweep = async (): Promise<void> => {
-    setBusy("Importing the symbol sweep…");
-    setError(null);
+  // Browse XML accepts several files; a .set belongs to one EA, so it is used only when a single file is imported.
+  const pickXml = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const files = Array.from(event.currentTarget.files ?? []);
+    event.currentTarget.value = "";
+    if (files.length === 0) return;
     try {
-      const sweep = await service.intakeSymbolSweep(xmlPath.trim(), mode.trim(), setPath.trim() || null);
-      await refresh();
-      setActiveRef(sweep.sweep_ref);
-      setNotice(sweep.created === false ? `${sweepLabel(sweep)} was already in the library; opened it.` : `Imported ${sweepLabel(sweep)}: ${sweep.row_count} symbols.`);
-      setXmlPath("");
-      setSetPath("");
-    } catch (caught) { setError(fail(caught)); } finally { setBusy(null); }
+      const paths = files.map((item) => localPathForSelectedFile(item));
+      const wrong = paths.filter((path) => !path.toLowerCase().endsWith(".xml"));
+      if (wrong.length) throw new Error(`Select MT5 .xml files only (not: ${wrong.map(fileName).join(", ")}).`);
+      setXmlPaths(paths);
+      setImportResults(null);
+    } catch (caught) { setError(fail(caught)); }
+  };
+
+  const importSweeps = async (): Promise<void> => {
+    const paths = xmlPaths;
+    setError(null);
+    setImportResults(null);
+    const results: ImportResult[] = [];
+    let lastRef: string | null = null;
+    for (const [index, path] of paths.entries()) {
+      setBusy(`Importing ${index + 1} of ${paths.length}: ${fileName(path)}…`);
+      try {
+        const sweep = await service.intakeSymbolSweep(path, mode.trim(), paths.length === 1 ? setPath.trim() || null : null);
+        lastRef = sweep.sweep_ref;
+        results.push({ path, outcome: sweep.created === false ? "existing" : "imported", message: sweep.created === false ? sweepLabel(sweep) : `${sweepLabel(sweep)}: ${sweep.row_count} symbols` });
+      } catch (caught) {
+        results.push({ path, outcome: "refused", message: fail(caught) });
+      }
+    }
+    setBusy(null);
+    await refresh().catch((caught) => setError(fail(caught)));
+    if (lastRef) setActiveRef(lastRef);
+    setImportResults(results);
+    // Keep only the refused files selected, so a retry does not repeat the ones that worked.
+    setXmlPaths(results.filter((item) => item.outcome === "refused").map((item) => item.path));
+    if (results.every((item) => item.outcome !== "refused")) setSetPath("");
   };
 
   const toggleCompare = (ref: string): void => setCompareRefs((current) => current.includes(ref) ? current.filter((item) => item !== ref) : current.length >= maxCompare ? current : [...current, ref]);
@@ -142,21 +172,27 @@ export function SymbolScanPage({ service, experiment, onRecordChoice }: Props): 
     <section className="trl-page__surface">
       <h4>1. Import a symbol sweep</h4>
       <p className="trl-m0__note">In MT5, optimise with <strong>All symbols selected in Market Watch</strong>, then on the Optimization results tab right-click → Export to XML.</p>
-      <input ref={xmlInput} className="trl-m0__file-input" type="file" accept=".xml" onChange={(event) => pick(event, ".xml", setXmlPath)} />
+      <input ref={xmlInput} className="trl-m0__file-input" type="file" accept=".xml" multiple onChange={pickXml} />
       <input ref={setInput} className="trl-m0__file-input" type="file" accept=".set" onChange={(event) => pick(event, ".set", setSetPath)} />
       <div className="trl-m0__scenario-fields">
-        <label className="trl-m0__field"><span>Symbol sweep results (.xml)</span><input value={xmlPath} onChange={(event) => setXmlPath(event.currentTarget.value)} placeholder="C:\\path\\to\\sweep.xml" /></label>
-        <label className="trl-m0__field"><span>EA settings file (.set), optional: records the inputs the sweep used</span><input value={setPath} onChange={(event) => setSetPath(event.currentTarget.value)} placeholder="C:\\path\\to\\ea.set" /></label>
+        <label className="trl-m0__field"><span>Symbol sweep results (.xml): one or several files</span>{xmlPaths.length > 1
+          ? <span className="trl-sweep__picked">{xmlPaths.length} files: {xmlPaths.map(fileName).join(", ")}</span>
+          : <input value={xmlPaths[0] ?? ""} onChange={(event) => setXmlPaths(event.currentTarget.value ? [event.currentTarget.value] : [])} placeholder="C:\\path\\to\\sweep.xml" />}</label>
+        <label className="trl-m0__field"><span>EA settings file (.set), optional: records the inputs the sweep used{xmlPaths.length > 1 ? " (only with a single file)" : ""}</span><input value={setPath} disabled={xmlPaths.length > 1} onChange={(event) => setSetPath(event.currentTarget.value)} placeholder={xmlPaths.length > 1 ? "Import files one at a time to attach a .set to each" : "C:\\path\\to\\ea.set"} /></label>
         <label className="trl-m0__field"><span>Modelling mode (you declare it; the XML does not say)</span><input list="trl-sweep-modes" value={mode} onChange={(event) => setMode(event.currentTarget.value)} /><datalist id="trl-sweep-modes">{MODE_SUGGESTIONS.map((item) => <option key={item} value={item} />)}</datalist></label>
       </div>
       <div className="trl-m0__actions">
         <button type="button" disabled={busy !== null} onClick={() => xmlInput.current?.click()}>Browse XML…</button>
-        <button type="button" disabled={busy !== null} onClick={() => setInput.current?.click()}>Browse .set…</button>
-        <button type="button" className="mod-cta" disabled={busy !== null || !xmlPath.trim().toLowerCase().endsWith(".xml") || !mode.trim()} onClick={() => void importSweep()}>Import sweep</button>
+        <button type="button" disabled={busy !== null || xmlPaths.length > 1} onClick={() => setInput.current?.click()}>Browse .set…</button>
+        <button type="button" className="mod-cta" disabled={busy !== null || xmlPaths.length === 0 || !xmlPaths.every((path) => path.trim().toLowerCase().endsWith(".xml")) || !mode.trim()} onClick={() => void importSweeps()}>{xmlPaths.length > 1 ? `Import ${xmlPaths.length} sweeps` : "Import sweep"}</button>
       </div>
       {busy && <p className="trl-dashboard__progress" role="status">{busy}</p>}
       {error && <p className="trl-m0__inline-error" role="alert">{error}<DismissButton onDismiss={() => setError(null)} /></p>}
       {notice && <p className="trl-exploration__notice" role="status">{notice}<DismissButton onDismiss={() => setNotice(null)} /></p>}
+      {importResults && <ul className="trl-batch__findings" aria-label="Import results"><li>
+        <DismissButton onDismiss={() => setImportResults(null)} />
+        {importResults.map((item) => <span key={item.path} className={item.outcome === "refused" ? "is-blocked" : undefined}>{item.outcome === "imported" ? "✓ Imported" : item.outcome === "existing" ? "Already in the library" : "Not imported"}: <code>{fileName(item.path)}</code> · {item.message}</span>)}
+      </li></ul>}
     </section>
 
     {library.length > 0 && <section className="trl-page__surface">
