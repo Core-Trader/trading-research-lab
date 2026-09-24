@@ -7,6 +7,7 @@ import { DismissButton } from "../dismiss-button";
 import { WidgetSurface } from "../layout/widget-surface";
 import { HELP_WIDGETS } from "../../layout/widgets";
 import { LOGGER_FILES, looksLikeMql5Folder, relativeParts, type SaveTarget } from "./help-model";
+import { CHECKLIST_INTRO, CHECKLIST_STEPS, COVERAGE_TEXT } from "./optimisation-checklist";
 import { LABEL_TEXT, SOURCES, WORKFLOW_GAPS, WORKFLOW_INTRO, WORKFLOW_STEPS, type WorkflowPoint } from "./research-workflow";
 
 const CONTENT: Record<string, string> = { "TRL_EquityLogger.mqh": loggerInclude, "TRL_EquityLogger_Example.mq5": loggerExample };
@@ -43,10 +44,11 @@ export function HelpPage(): React.ReactElement {
   };
 
   return <section className="trl-page" aria-label="Help and downloads">
-    <header className="trl-page__header"><div><h3>Help & downloads</h3><p>A research workflow from symbol scan to go-live, how to record equity in MT5 backtests, and which MT5 files TRL reads.</p></div></header>
+    <header className="trl-page__header"><div><h3>Help & downloads</h3><p>A research workflow from symbol scan to go-live, an optimisation checklist, how to record equity in MT5 backtests, and which MT5 files TRL reads.</p></div></header>
 
     <WidgetSurface surface="help" label="Help" variant="stack" definitions={HELP_WIDGETS} widgets={{
     "help.workflow": <ResearchWorkflow />,
+    "help.optimisation": <OptimisationChecklist />,
     "help.equity-logger": <HelpSection id="equity-logger" title="Equity logger (floating drawdown)" summary="Record open-position drawdown in MT5 backtests; save the MQL5 files">
       <p>MT5 reports list closed trades only. The TRL equity logger records how deep open positions went during a Strategy Tester run, so TRL can show real equity drawdown and daily equity loss. You need the EA's source code (.mq5).</p>
 
@@ -137,6 +139,22 @@ function Check({ point }: { point: WorkflowPoint }): React.ReactElement {
     <span className="trl-workflow__label" title={LABEL_TEXT[point.label]}>{LABEL_TEXT[point.label]}</span> {point.text}
     {source && <span className="trl-workflow__source"> Source: {source.url ? <a href={source.url}>{source.title}</a> : source.title}.</span>}
   </li>;
+}
+
+/** The optimisation checklist (owner-approved 2026-09-24); content lives in optimisation-checklist.ts. */
+function OptimisationChecklist(): React.ReactElement {
+  return <HelpSection id="optimisation-checklist" title="Optimisation checklist: seven steps, mapped to TRL" summary="Your MT5 optimisation tutorial, step by step, with the TRL tool for each">
+    {CHECKLIST_INTRO.map((line) => <p key={line}>{line}</p>)}
+    {CHECKLIST_STEPS.map((step) => <details key={step.number} className="trl-workflow__step">
+      <summary><strong>{step.number}. {step.title}</strong> · {step.question} <span className={`trl-checklist__coverage is-${step.coverage.toLowerCase()}`}>{COVERAGE_TEXT[step.coverage]}</span></summary>
+      <dl className="trl-prop__summary">
+        <dt>In TRL</dt><dd>{step.tool}</dd>
+        <dt>Research workflow</dt><dd>Step {step.workflowSteps.join(", ")}</dd>
+      </dl>
+      <ul className="trl-workflow__checks">{step.points.map((point) => <Check key={point.text} point={point} />)}</ul>
+    </details>)}
+    <p className="trl-m0__note">The same checklist ships as <code>OPTIMISATION_CHECKLIST.md</code> in TRL's <code>docs</code> folder.</p>
+  </HelpSection>;
 }
 
 /** The research workflow guide (owner-approved 2026-09-24); content lives in research-workflow.ts. */

@@ -160,6 +160,7 @@ export const WORKFLOW_GAPS = [
   "Modelling spread, slippage or execution delay inside TRL (today: What-If's fixed cost per trade).",
   "Bootstrap Monte Carlo (resampling with replacement); today TRL reorders the actual trades.",
   "Importing demo or live account statements to track real forward results.",
+  "Combining equity logs in Portfolio; today it combines realised balance only.",
   "A checklist in Research notes that tracks steps 0–10.",
   "A cost breakdown view; TRL's closed-trade figures also leave out commissions charged when positions open.",
 ];

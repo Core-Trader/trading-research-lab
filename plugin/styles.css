@@ -530,3 +530,6 @@
 .trl-layout__tile-actions { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.3rem; }
 .trl-layout__tile-actions select { max-width: 8.5rem; }
 @media (max-width: 58rem) { .trl-layout--grid { grid-template-columns: 1fr; } .trl-layout--grid > .trl-layout__item { grid-column: auto; } }
+.trl-checklist__coverage { display: inline-block; margin-left: 0.35rem; padding: 0 0.45rem; border-radius: 999px; font-size: var(--font-ui-smaller); border: 1px solid var(--background-modifier-border); color: var(--text-muted); }
+.trl-checklist__coverage.is-full { color: var(--color-green); border-color: var(--color-green); }
+.trl-checklist__coverage.is-partial { color: var(--color-orange); border-color: var(--color-orange); }

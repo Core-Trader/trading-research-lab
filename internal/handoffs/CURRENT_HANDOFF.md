@@ -174,6 +174,10 @@ Research-note access is done (NOTES-1):
 - the sidebar recent-notes card
 - name clash checks
 
+Help now has an Optimisation checklist (DOC-002): the owner's tutorial,
+corrected, labelled, and mapped to TRL tools; it adds the gap "combining
+equity logs in Portfolio".
+
 Session (SESSION-1): the workspace reopens with the last loaded report and
 its working set, recalculated by the Core; only references are saved.
 

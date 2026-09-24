@@ -107,3 +107,20 @@ live index on a real vault (rename and delete refresh) and the sidebar card.
   TRL tab is shown.
 - Tests: plugin 121 (3 new last-report tests); the build is clean.
 - Not yet checked in Obsidian: the view cannot mount in the harness.
+
+## Follow-up: Optimisation checklist (DOC-002)
+
+- The owner's tutorial was evaluated against the MT5 testing report and
+  optimisation types pages (fetched 2026-09-24), the registered sources, and
+  TRL's tools.
+- **Valid:** the step order, real ticks, the PF and RF definitions, equity
+  versus balance drawdown, the cliff check, and the pitfalls.
+- **Corrected:**
+  - Monte Carlo: "% ending negative" is impossible under reordering.
+  - The name "walk-forward".
+  - The definition of Equity Drawdown Maximal.
+  - The claim about the genetic algorithm.
+- **Unsourced numbers:** now user-defined thresholds.
+- **Built as option A:** a Help section, a generated Markdown file, 5 tests
+  (including one guarding the Monte Carlo claim), and one new gap entry.
+- Plugin tests: 126.

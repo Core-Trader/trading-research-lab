@@ -7,6 +7,8 @@
   TRL can measure floating drawdown.
 - [RESEARCH_WORKFLOW.md](RESEARCH_WORKFLOW.md): a step-by-step research
   workflow from MT5 symbol scan to go-live, with sources.
+- [OPTIMISATION_CHECKLIST.md](OPTIMISATION_CHECKLIST.md): seven steps for
+  tuning an EA's inputs, each mapped to the TRL tool that does it.
 - [PROP_FIRM_CHECK.md](PROP_FIRM_CHECK.md): checking a backtest against your
   prop firm's rules.
 

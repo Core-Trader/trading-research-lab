@@ -28,6 +28,7 @@ export const ANALYSIS_WIDGETS: readonly WidgetDefinition[] = [
 
 export const HELP_WIDGETS: readonly WidgetDefinition[] = [
   { id: "help.workflow", title: "Research workflow", defaultSpan: 3, spans: [3] },
+  { id: "help.optimisation", title: "Optimisation checklist", defaultSpan: 3, spans: [3] },
   { id: "help.equity-logger", title: "Equity logger (floating drawdown)", defaultSpan: 3, spans: [3] },
   { id: "help.mt5-exports", title: "What to export from MT5", defaultSpan: 3, spans: [3] },
 ];
