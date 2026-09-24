@@ -455,3 +455,23 @@
 .trl-monthly td.is-negative { color: var(--color-red); }
 .trl-monthly td.is-positive { color: var(--color-green); }
 .trl-windows__record { margin-top: 0.8rem; padding-top: 0.6rem; border-top: 1px solid var(--background-modifier-border); }
+/* Name check (N5) and record-to (N1) */
+.trl-name-check { min-height: 1.2em; margin: 0.35rem 0; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.trl-name-check.is-blocked { color: var(--text-error); }
+.trl-name-check__similar { margin: 0 0 0.5rem; padding-left: 1rem; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.trl-name-check__heading { list-style: none; margin-left: -1rem; }
+.trl-record-to { display: grid; gap: 0.4rem; margin: 0.5rem 0; }
+.trl-record-to__row { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.trl-record-to__row select { min-width: 12rem; max-width: 100%; }
+.trl-record-to__form { display: grid; gap: 0.4rem; padding: 0.6rem; border: 1px solid var(--background-modifier-border); border-radius: 0.4rem; }
+/* Research notes browser (N3) */
+.trl-notes__tree, .trl-notes__tree ul { list-style: none; margin: 0; padding: 0; }
+.trl-notes__row { display: flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; align-items: center; padding-top: 0.25rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--background-modifier-border); }
+.trl-notes__row.is-current { background: var(--background-modifier-hover); }
+.trl-notes__title { flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; }
+.trl-notes__row.is-strategy .trl-notes__title { font-weight: 600; }
+.trl-notes__meta { color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.trl-notes__actions { display: inline-flex; gap: 0.35rem; align-items: center; }
+.trl-notes__group { margin-top: 0.5rem; color: var(--text-muted); font-size: var(--font-ui-smaller); font-weight: 600; }
+.trl-sidenav__note-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trl-sidenav__notes > .trl-link-button { margin: 0.2rem 0 0 0.25rem; font-size: var(--font-ui-smaller); }

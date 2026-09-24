@@ -2,6 +2,7 @@ import { Modal, Notice, TFile, type App } from "obsidian";
 import type TradingResearchLabPlugin from "../main";
 import { generatedNoteBlock, updateGeneratedNoteText } from "../generated-note";
 import { readDocumentReference } from "../research-documents";
+import { nameCheck, similarTitles } from "./research-notes-model";
 import type { MarkdownResult } from "../types";
 
 export async function writeGeneratedNote(plugin: TradingResearchLabPlugin, sourcePath: string, rendered: MarkdownResult): Promise<string> {
@@ -35,12 +36,13 @@ export async function createVaultDocument(plugin: TradingResearchLabPlugin, fold
   return path;
 }
 
-export function requestDocumentName(app: App, title: string, label: string, initialValue: string): Promise<string | null> {
-  return requestText(app, title, label, initialValue, "Create");
+/** N5: pass the existing names of that note type to show matches as you type, block an exact clash and warn on a near one. */
+export function requestDocumentName(app: App, title: string, label: string, initialValue: string, existing: string[] = []): Promise<string | null> {
+  return requestText(app, title, label, initialValue, "Create", existing);
 }
 
-export function requestText(app: App, title: string, label: string, initialValue: string, confirmText: string): Promise<string | null> {
-  return new Promise((resolve) => new DocumentNameModal(app, title, label, initialValue, confirmText, resolve).open());
+export function requestText(app: App, title: string, label: string, initialValue: string, confirmText: string, existing: string[] = []): Promise<string | null> {
+  return new Promise((resolve) => new DocumentNameModal(app, title, label, initialValue, confirmText, resolve, existing).open());
 }
 
 class DocumentNameModal extends Modal {
@@ -53,6 +55,7 @@ class DocumentNameModal extends Modal {
     private readonly initialValue: string,
     private readonly confirmText: string,
     private readonly resolveName: (value: string | null) => void,
+    private readonly existing: string[] = [],
   ) {
     super(app);
   }
@@ -64,15 +67,32 @@ class DocumentNameModal extends Modal {
     contentEl.createEl("label", { text: this.labelText });
     const input = contentEl.createEl("input", { type: "text", value: this.initialValue });
     input.style.width = "100%";
+    const message = contentEl.createEl("p", { cls: "trl-name-check" });
+    const similar = contentEl.createEl("ul", { cls: "trl-name-check__similar" });
     const actions = contentEl.createDiv({ cls: "trl-m0__actions" });
     const confirm = actions.createEl("button", { text: this.confirmText, cls: "mod-cta" });
     const cancel = actions.createEl("button", { text: "Cancel" });
+    const update = (): void => {
+      const check = nameCheck(input.value, this.existing);
+      confirm.disabled = input.value.trim() === "" || check.exact !== null;
+      message.setText(check.exact ? `"${check.exact}" already exists. Choose another name.` : check.near.length ? `Similar name already exists: ${check.near.join(", ")}. You can still create it.` : "");
+      message.toggleClass("is-blocked", check.exact !== null);
+      similar.empty();
+      const matches = similarTitles(input.value, this.existing);
+      if (matches.length) {
+        similar.createEl("li", { text: "Existing:", cls: "trl-name-check__heading" });
+        for (const title of matches) similar.createEl("li", { text: title });
+      }
+    };
+    input.addEventListener("input", update);
+    update();
     const submit = (): void => {
       const value = input.value.trim();
       if (!value) {
         new Notice("Enter a document name or cancel.");
         return;
       }
+      if (nameCheck(value, this.existing).exact) return;
       this.settle(value);
     };
     confirm.addEventListener("click", submit);

@@ -15,7 +15,7 @@ export function M4Documents({ hasAnalysis, strategy, experiment, report, documen
   onSelectReport: () => void;
 }): React.ReactElement {
   return <CollapsibleSection id="trl-documents" title="Experiments and research documents">
-    <p className="trl-m0__note">Documents are created only when you press a button. To reuse one, open its note from the sidebar, then use the matching current-note button. The plugin does not scan or alter unrelated notes.</p>
+    <p className="trl-m0__note">Documents are created only when you press a button. Pick existing ones in <strong>Your research notes</strong> above, or open a note and use the matching current-note button. TRL lists only notes it created (with TRL frontmatter) and never reads or alters other notes.</p>
     {!hasAnalysis && <p className="trl-m0__note">You can create or select a strategy now. Load an MT5 report and run its analysis before creating or selecting an experiment or report.</p>}
     <div className="trl-m0__actions">
       <button type="button" onClick={onCreateStrategy}>Create strategy</button>

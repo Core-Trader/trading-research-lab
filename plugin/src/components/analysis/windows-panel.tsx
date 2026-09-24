@@ -10,12 +10,16 @@ import { DismissButton } from "../dismiss-button";
 import { money, num, pct } from "../display-format";
 import { GuidanceBlock, KpiTile } from "../guidance";
 import { thresholdValue, windowBars, windowsGuidance } from "./windows-model";
+import { RecordTo } from "../research/record-to";
+import type { NotesApi } from "../../vault/notes-api";
+import type { RecordRequirement } from "../../vault/research-notes-model";
 
 type Props = {
   service: ResearchService;
   datasetRef: string;
-  experiment: { id: string; path: string } | null;
-  onRecord: (markdown: string, recordId: string) => Promise<void>;
+  /** The loaded report's analysis; report-analysis Experiments must match it. */
+  analysis: { datasetId: string; analysisRunId: string } | null;
+  notes: NotesApi;
 };
 
 const MONTH_OPTIONS = [1, 2, 3, 4, 6, 12];
@@ -26,7 +30,7 @@ const fail = (caught: unknown): string => caught instanceof Error ? caught.messa
  * Same settings over time (W1–W6): the current report split into windows, or
  * separate window reports from the library. Values and flags are Core results.
  */
-export function WindowsPanel({ service, datasetRef, experiment, onRecord }: Props): React.ReactElement {
+export function WindowsPanel({ service, datasetRef, analysis, notes }: Props): React.ReactElement {
   const [mode, setMode] = useState<"SPLIT" | "SEPARATE">("SPLIT");
   const [months, setMonths] = useState(6);
   const [start, setStart] = useState("");
@@ -41,6 +45,8 @@ export function WindowsPanel({ service, datasetRef, experiment, onRecord }: Prop
   const [error, setError] = useState<string | null>(null);
   const [recorded, setRecorded] = useState<string | null>(null);
   const runs = useRef(new LatestRun()).current;
+  const [target, setTarget] = useState<string | null>(null);
+  const requirement = useMemo<RecordRequirement>(() => ({ kinds: ["report-analysis", "general"], datasetId: analysis?.datasetId ?? null, analysisRunId: analysis?.analysisRunId ?? null }), [analysis?.datasetId, analysis?.analysisRunId]);
 
   useEffect(() => { setPicked([datasetRef]); setResult(null); }, [datasetRef]);
   useEffect(() => { if (mode === "SEPARATE" && library.length === 0) service.listRegistry().then((registry) => setLibrary(registry.entries)).catch((caught) => setError(fail(caught))); }, [mode, library.length, service]);
@@ -69,8 +75,9 @@ export function WindowsPanel({ service, datasetRef, experiment, onRecord }: Prop
     setBusy("Recording…");
     try {
       const rendered = await service.renderWindowsNote(request, minValue ?? null, losingValue ?? null, reason);
-      await onRecord(rendered.markdown, rendered.record_id);
-      setRecorded(`Recorded in ${experiment?.path}.`);
+      if (!target) throw new Error("Choose or create an experiment under Record to.");
+      await notes.record(target, rendered.markdown, rendered.record_id);
+      setRecorded(`Recorded in ${target}.`);
     } catch (caught) { setError(fail(caught)); } finally { setBusy(null); }
   };
 
@@ -146,9 +153,9 @@ export function WindowsPanel({ service, datasetRef, experiment, onRecord }: Prop
       <GuidanceBlock guidance={windowsGuidance(result)} defaultOpen={false} />
       <div className="trl-windows__record">
         <strong>Record this check</strong>
-        {experiment ? <p className="trl-m0__note">Written into a marked block of <strong>{experiment.path}</strong>.</p> : <p className="trl-m0__note">Select or create an Experiment under Research notes to record this check.</p>}
+        <RecordTo notes={notes} requirement={requirement} createKind={analysis ? "report-analysis" : "general"} bindings={analysis ? { trl_dataset_id: analysis.datasetId, trl_analysis_run_id: analysis.analysisRunId } : undefined} value={target} onChange={setTarget} />
         <label className="trl-m0__field"><span>Your conclusion (recorded verbatim)</span><textarea rows={2} value={reason} onChange={(event) => setReason(event.currentTarget.value)} placeholder="e.g. holds in 3 of 4 windows; the losing one was the summer range" /></label>
-        <div className="trl-m0__actions"><button type="button" disabled={!experiment || busy !== null} onClick={() => void record()}>Record in experiment note</button></div>
+        <div className="trl-m0__actions"><button type="button" disabled={!target || busy !== null} onClick={() => void record()}>Record in experiment note</button></div>
         {recorded && <p className="trl-exploration__notice" role="status">{recorded}<DismissButton onDismiss={() => setRecorded(null)} /></p>}
       </div>
       <AuditTrail items={[["Calculation", <code>{result.calculation_version}</code>], ["Evaluation", <code>{result.evaluation_id}</code>], ["Mode", result.configuration.mode === "SPLIT" ? `split, ${result.configuration.months} months from ${result.configuration.start}` : `${result.windows.length} separate reports`], ["Findings", result.findings.map((item) => item.code).join(", ") || "none"]]} />

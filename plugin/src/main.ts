@@ -3,6 +3,7 @@ import { ResearchView, RESEARCH_VIEW_TYPE, writeGeneratedNote } from "./research
 import { NavigationView, NAVIGATION_VIEW_TYPE } from "./navigation-view";
 import { ALL_PAGES, NavigationStore, type WorkspacePage } from "./application/navigation";
 import { WorkerClient } from "./worker-client";
+import { ResearchNotesIndex } from "./vault/research-index";
 import type { MarkdownResult } from "./types";
 
 type TradingResearchSettings = { pythonExecutable: string; showDeveloperDiagnostics: boolean };
@@ -13,6 +14,8 @@ export default class TradingResearchLabPlugin extends Plugin {
   worker!: WorkerClient;
   /** Shared by the workspace view and the left-sidebar navigation. */
   readonly navigation = new NavigationStore();
+  /** TRL research notes (trl_type frontmatter only), shared by the workspace and the sidebar. */
+  notesIndex!: ResearchNotesIndex;
   private lastOpenedMarkdownPath: string | null = null;
 
   async onload(): Promise<void> {
@@ -20,6 +23,12 @@ export default class TradingResearchLabPlugin extends Plugin {
     this.worker = new WorkerClient(this.settings.pythonExecutable, this.workerWorkspacePath());
     this.rememberMarkdownFile(this.app.workspace.getActiveFile());
     this.registerEvent(this.app.workspace.on("file-open", (file) => this.rememberMarkdownFile(file)));
+    this.notesIndex = new ResearchNotesIndex(this.app);
+    this.app.workspace.onLayoutReady(() => this.notesIndex.refresh());
+    this.registerEvent(this.app.metadataCache.on("changed", () => this.notesIndex.schedule()));
+    this.registerEvent(this.app.metadataCache.on("resolved", () => this.notesIndex.schedule()));
+    this.registerEvent(this.app.vault.on("delete", (file) => { if (this.notesIndex.isMarkdown(file)) this.notesIndex.schedule(); }));
+    this.registerEvent(this.app.vault.on("rename", (file) => { if (this.notesIndex.isMarkdown(file)) this.notesIndex.schedule(); }));
     this.registerView(RESEARCH_VIEW_TYPE, (leaf) => new ResearchView(leaf, this));
     this.registerView(NAVIGATION_VIEW_TYPE, (leaf) => new NavigationView(leaf, this));
     this.addRibbonIcon("line-chart", "Open Trading Research Lab", () => { void this.activateResearchView().then(() => this.openNavigation(true)); });

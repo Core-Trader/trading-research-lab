@@ -162,7 +162,20 @@ An autonomous session on the same day (see
 - the worker-client restart-race fix, with a real-worker integration test
 - worker memory measurements
 
-The Help page now has a **Research workflow** guide (DOC-001; `product-docs/RESEARCH_WORKFLOW.md` is generated from `plugin/src/components/help/research-workflow.ts`). Its gaps list is the owner's next topic. Gap 1, symbol-sweep import, is done: the **Symbol scan** page (SWEEP-1) was checked on the owner's three RoboForex sweeps (3 EAs × 20 symbols). 8 gaps remain. Note: TRL has never imported MT5 symbol-sweep XML. The older 7-row sweep export is deliberately rejected, per the M6 optimisation decision package.
+The Help page now has a **Research workflow** guide (DOC-001; `product-docs/RESEARCH_WORKFLOW.md` is generated from `plugin/src/components/help/research-workflow.ts`). Its gaps list is the owner's next topic. Gap 1, symbol-sweep import, is done: the **Symbol scan** page (SWEEP-1) was
+checked on the owner's three RoboForex sweeps (3 EAs × 20 symbols); it now
+takes multiple files (SWEEP-2). Gap 2, per-window comparison, is done (WIN-1:
+Analysis → "Same settings over time").
+
+Research-note access is done (NOTES-1):
+- a Record-to picker in the record panels
+- inline Experiment creation (kinds, `trl_schema: 2`)
+- the Research notes browser
+- the sidebar recent-notes card
+- name clash checks
+
+Journal: `internal/development-journal/2026-09-24-windows-and-notes.md`.
+7 workflow gaps remain. Note: TRL has never imported MT5 symbol-sweep XML. The older 7-row sweep export is deliberately rejected, per the M6 optimisation decision package.
 **Next:** the owner reviews in Obsidian:
 1. Re-attach the DCA V3 equity log.
 2. Prop-firm check with FTMO and FundedNext presets, and the report-clock

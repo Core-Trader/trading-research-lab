@@ -87,7 +87,7 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
   },
   {
     number: 4, title: "Test the same settings over time", purpose: "Check the result does not depend on one lucky period.",
-    where: "MT5 single tests for each window (the 6 months before, and the scan window split into windows), then TRL (compare the reports; the sequential batch checks they are consecutive and chains their balance)", inputs: "The same fixed .set",
+    where: "TRL Analysis → \"Same settings over time (windows)\": split one long report into N-month windows, or compare separate MT5 window reports of the same settings", inputs: "The same fixed .set (one long test is enough when you split it)",
     checks: [
       { label: "S", source: "playbook", text: "Walk-forward with fixed settings: look at the result in each window, not only the total. One losing window out of five is a different risk from none." },
       { label: "C", text: "Half-year windows, as in the playbook's example." },
@@ -155,7 +155,6 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
 ];
 
 export const WORKFLOW_GAPS = [
-  "A per-window comparison table for step 4.",
   "Rolling walk-forward optimisation (re-optimising for each window).",
   "Significance statistics and a minimum-trade warning.",
   "Modelling spread, slippage or execution delay inside TRL (today: What-If's fixed cost per trade).",

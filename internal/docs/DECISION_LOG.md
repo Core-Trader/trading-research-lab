@@ -55,6 +55,16 @@
 | PROP-4 | Chained phases (`prop.chain_starts`): 2 or 3 profiles; after a pass, the next phase starts the next day with data as a fresh account. Also: quick actions from the sidebar report card and from saved combinations; FundedNext presets from its own terms (The5ers deferred, rules incomplete); rolling starts charge a reset-spanning interval to its low's day. | Autonomous session 2026-09-24 (owner-approved plan) |
 | DEV-003 | Prop corpus P1–P3: TRL_MA_Logged, H1 2024, 100k, higher MaximumRisk, on USDJPY, XAUUSD, and EURUSD. The owner authorised closing a running MT5 (it was the RoboForex terminal). The worker-client restart race is fixed. Worker memory measured: 187 MB peak on a one-year log. | 2026-09-24 |
 | UX-003 | Firm presets appear directly in the Prop-firm check Profile list. Checking against one saves a sized, editable copy (content-addressed, so repeats reuse it); "Edit a copy…" opens it in the editor. The page-bar "☰ Sidebar" button is removed (the owner said it had no action); the ribbon icon and the "Open navigation sidebar" command remain. | Owner feedback 2026-09-24 |
+| WIN-1 | Per-window comparison (W1–W6) is built: Analysis → "Same settings over time"; split one report into N-month windows, or compare 2–12 separate reports of the same settings; the thresholds are the user's own. | Owner 2026-09-24 |
+| NOTES-1 | Research-note access (N1–N6) is built:
+- a Record-to picker with inline Experiment creation in Symbol scan, Parameters, and Windows
+- Experiment kinds (`trl_schema: 2`)
+- a notes browser on Research notes
+- a recent-notes card in the sidebar
+- name clash checks
+
+N6 amends M4-POL-001: TRL lists notes that carry TRL frontmatter (read through Obsidian's metadata cache) and never reads other notes. | Owner 2026-09-24 |
+| SWEEP-2 | Symbol scan imports several XML files at once, with per-file results; a `.set` applies only to a single-file import. | Owner 2026-09-24 |
 | SWEEP-1 | Symbol sweep import (SYMBOL_SWEEP_SPEC.md) approved and built:
 - S1–S8 as recommended
 - S2: the optional `.set` is recorded as declared and cannot be verified

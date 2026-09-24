@@ -3,11 +3,11 @@ import { createRoot, type Root } from "react-dom/client";
 import { ItemView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import type TradingResearchLabPlugin from "./main";
 import type { EquityMetrics, SetCheckResult, CloseEventDisplaySeries, PerformanceMetrics, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, MonteCarloResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "./types";
-import { experimentDocumentText, inspectReportForRegeneration, regenerateReportText, reportDocumentText, strategyDocumentText, uuidv7 } from "./research-documents";
+import { experimentNoteText, inspectReportForRegeneration, regenerateReportText, reportDocumentText, strategyDocumentText, uuidv7 } from "./research-documents";
 import { ResearchService } from "./application/research-service";
 import { LatestRun } from "./application/latest-run";
 import { localPathForSelectedFile } from "./services/local-file-path";
-import { createVaultDocument, readCurrentDocument, requestDocumentName } from "./vault/research-vault";
+import { createVaultDocument, readCurrentDocument, requestDocumentName, requestText } from "./vault/research-vault";
 import { DashboardSummary } from "./components/dashboard-summary";
 import { ALL_PAGES, pageInfo, type WorkspacePage } from "./application/navigation";
 import { HelpPage } from "./components/help/help-page";
@@ -25,6 +25,8 @@ import { WindowsPanel } from "./components/analysis/windows-panel";
 import { EquityAttach, EquityHowTo } from "./components/analysis/equity-panel";
 import { ParameterExplorer } from "./components/exploration/parameter-explorer";
 import { upsertChoiceBlock } from "./vault/choice-block";
+import type { NotesApi } from "./vault/notes-api";
+import { ResearchNotesBrowser } from "./components/research/notes-browser";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT, MT5_REPORT_HINT } from "./application/report-files";
 import { DismissButton } from "./components/dismiss-button";
 import { EquityPanel } from "./components/analysis/equity-panel";
@@ -283,7 +285,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   };
 
   const createStrategy = async (): Promise<void> => {
-    const title = await requestDocumentName(plugin.app, "Create strategy", "Strategy name", "New strategy");
+    const title = await requestDocumentName(plugin.app, "Create strategy", "Strategy name", "New strategy", noteEntries.filter((entry) => entry.type === "strategy").map((entry) => entry.title));
     if (!title) return;
     setError(null);
     try {
@@ -303,12 +305,12 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
 
   const createExperiment = async (): Promise<void> => {
     if (strategy === null || statistics === null) return;
-    const title = await requestDocumentName(plugin.app, "Create experiment", "Experiment name", "New experiment");
+    const title = await requestDocumentName(plugin.app, "Create experiment", "Experiment name", "New experiment", noteEntries.filter((entry) => entry.type === "experiment").map((entry) => entry.title));
     if (!title) return;
     setError(null);
     try {
       const id = uuidv7();
-      const path = await createVaultDocument(plugin, "Experiments", title, experimentDocumentText(id, title, strategy.id, statistics.dataset_id, statistics.analysis_run_id));
+      const path = await createVaultDocument(plugin, "Experiments", title, experimentNoteText(id, title, strategy.id, "report-analysis", { trl_dataset_id: statistics.dataset_id, trl_analysis_run_id: statistics.analysis_run_id }));
       setExperiment({ id, path });
       setReport(null);
       setDocumentStatus(`Experiment created: ${path}`);
@@ -426,6 +428,47 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     catch (caught) { setRResult(null); setRError(reasonText(caught)); }
     finally { setRBusy(false); }
   };
+
+  // TRL research notes (trl_type frontmatter only; N6) and what panels may do with them (N1, N3).
+  const noteEntries = useSyncExternalStore((listener) => plugin.notesIndex.subscribe(listener), () => plugin.notesIndex.entries);
+  const notesApi = useMemo<NotesApi>(() => ({
+    entries: noteEntries,
+    open: (path) => { void plugin.app.workspace.openLinkText(path, "", "tab"); },
+    createStrategy: async (title) => {
+      const id = uuidv7();
+      const path = await createVaultDocument(plugin, "Strategies", title, strategyDocumentText(id, title));
+      plugin.notesIndex.schedule();
+      return { id, path };
+    },
+    createExperiment: async (title, strategyId, kind, bindings) => {
+      const id = uuidv7();
+      const path = await createVaultDocument(plugin, "Experiments", title, experimentNoteText(id, title, strategyId, kind, bindings ?? {}));
+      plugin.notesIndex.refresh();
+      new Notice(`Experiment created: ${path}`);
+      return { id, path };
+    },
+    record: async (path, markdown, recordId) => {
+      const file = plugin.app.vault.getAbstractFileByPath(path);
+      if (!(file instanceof TFile)) throw new Error(`The note ${path} is not available (moved or deleted?). Choose it again under Record to.`);
+      const prior = await plugin.app.vault.read(file);
+      const { text, replaced } = upsertChoiceBlock(prior, recordId, markdown);
+      if (replaced && !window.confirm("Replace the record previously written by this analysis in this note? Text outside the marked block stays unchanged.")) throw new Error("Recording was cancelled; the note was not changed.");
+      await plugin.app.vault.modify(file, text);
+      new Notice(replaced ? `Record updated in ${path}.` : `Recorded in ${path}.`);
+    },
+    rename: async (path, title) => {
+      const file = plugin.app.vault.getAbstractFileByPath(path);
+      if (!(file instanceof TFile)) throw new Error(`The note ${path} is not available.`);
+      const safe = title.replace(/[<>:"/\\|?*]/g, "_").trim();
+      if (!safe) throw new Error("A name is required.");
+      const next = `${file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : ""}${safe}.md`;
+      if (plugin.app.vault.getAbstractFileByPath(next) !== null) throw new Error(`${next} already exists.`);
+      await plugin.app.fileManager.renameFile(file, next);  // Obsidian updates links to the note
+      plugin.notesIndex.schedule();
+      return next;
+    },
+    promptName: (title, label, initial, existing, confirmText) => requestText(plugin.app, title, label, initial, confirmText, existing),
+  }), [plugin, noteEntries]);
 
   const recordParameterChoice = async (markdown: string, evaluationId: string): Promise<void> => {
     if (experiment === null) throw new Error("Select or create an Experiment under Research first.");
@@ -747,10 +790,17 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     />}
       {evidence && <EquityPanel service={service} datasetRef={evidence.dataset_ref} availability={equityAvailability} metrics={equityMetrics} error={equityMetricsError} currency={evidence.supplied_facts.currency} onChanged={() => void service.equityAvailability(evidence.dataset_ref).then(setEquityAvailability)} />}
       {(evidence || statistics) && <RMultiplePanel source={rSource} amount={rAmount} result={rResult} busy={rBusy} error={rError} enabled={statistics !== null} onSourceChange={(value) => { setRSource(value); setRResult(null); setRError(null); }} onAmountChange={(value) => { setRAmount(value); setRError(null); }} onRun={() => void runRMultiples()} />}
-      {evidence && <WindowsPanel service={service} datasetRef={evidence.dataset_ref} experiment={experiment} onRecord={recordParameterChoice} />}
+      {evidence && <WindowsPanel service={service} datasetRef={evidence.dataset_ref} analysis={statistics ? { datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id } : null} notes={notesApi} />}
     </section>}
     {activePage === "research" && <section className="trl-page" aria-label="Research documents">
       <header className="trl-page__header"><div><h3>Research</h3><p>Link explicit Strategy, Experiment, and Report notes without overwriting your writing.</p></div></header>
+      <ResearchNotesBrowser notes={notesApi}
+        strategyPath={strategy?.path ?? null}
+        experimentPath={experiment?.path ?? null}
+        analysis={statistics ? { datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id } : null}
+        onUseStrategy={(entry) => { setStrategy({ id: entry.id, path: entry.path }); setExperiment(null); setReport(null); setDocumentStatus(`Strategy selected: ${entry.path}`); }}
+        onUseExperiment={(entry) => { if (entry.strategyId) setStrategy({ id: entry.strategyId, path: "Selected through experiment" }); setExperiment({ id: entry.id, path: entry.path }); setReport(null); setDocumentStatus(`Experiment selected: ${entry.path}`); }}
+      />
       <M4Documents
         hasAnalysis={statistics !== null && evidence !== null}
         strategy={strategy}
@@ -768,8 +818,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     {activePage === "help" && <HelpPage />}
     {activePage === "portfolio" && <PortfolioLab service={service} linkedNotes={linkedNotes} onPropCheck={(key) => navigation.requestPropCheck(`combination:${key}`)} />}
     {activePage === "prop" && <PropCheckPage service={service} currentDatasetRef={evidence?.dataset_ref ?? null} request={propRequest} />}
-    {activePage === "scan" && <SymbolScanPage service={service} experiment={experiment} onRecordChoice={recordParameterChoice} />}
-    {activePage === "parameters" && <ParameterExplorer service={service} experiment={experiment} onRecordChoice={recordParameterChoice} />}
+    {activePage === "scan" && <SymbolScanPage service={service} notes={notesApi} />}
+    {activePage === "parameters" && <ParameterExplorer service={service} notes={notesApi} />}
     {activePage === "advanced" && <section className="trl-page" aria-label="Advanced research">
       <header className="trl-page__header"><div><h3>Advanced research</h3><p>Optional, qualified studies. Results are research evidence, not trading recommendations.</p></div></header>
       <section className="trl-page__surface trl-moved-card"><h4>Parameter studies and forward checks</h4><p className="trl-m0__note">Importing MT5 optimisation results, pairing forward tests, and neighbourhood checks now live on the Parameters page.</p><button type="button" onClick={() => setActivePage("parameters")}>Open Parameters</button></section>

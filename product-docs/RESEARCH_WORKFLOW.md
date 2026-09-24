@@ -76,9 +76,9 @@ Every point is labelled: a sourced fact (with its source), your own workflow cho
 
 **Purpose:** Check the result does not depend on one lucky period.
 
-**Where:** MT5 single tests for each window (the 6 months before, and the scan window split into windows), then TRL (compare the reports; the sequential batch checks they are consecutive and chains their balance)
+**Where:** TRL Analysis → "Same settings over time (windows)": split one long report into N-month windows, or compare separate MT5 window reports of the same settings
 
-**Inputs:** The same fixed .set
+**Inputs:** The same fixed .set (one long test is enough when you split it)
 
 **Checks:**
 
@@ -176,7 +176,6 @@ Every point is labelled: a sourced fact (with its source), your own workflow cho
 
 ## Not in TRL yet
 
-- A per-window comparison table for step 4.
 - Rolling walk-forward optimisation (re-optimising for each window).
 - Significance statistics and a minimum-trade warning.
 - Modelling spread, slippage or execution delay inside TRL (today: What-If's fixed cost per trade).

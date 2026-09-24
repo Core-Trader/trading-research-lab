@@ -7,15 +7,19 @@ import { AuditTrail } from "../audit-trail";
 import { DismissButton } from "../dismiss-button";
 import { GuidanceBlock } from "../guidance";
 import { TradeOffScatter } from "../tradeoff/trade-off-scatter";
+import { RecordTo } from "../research/record-to";
+import type { NotesApi } from "../../vault/notes-api";
+import type { RecordRequirement } from "../../vault/research-notes-model";
 import { MODE_SUGGESTIONS, STATUS_TEXT, metricText, shadeMatrix, sortRows, sweepGuidance, sweepLabel, type SortState } from "./sweep-model";
 
 type ImportResult = { path: string; outcome: "imported" | "existing" | "refused"; message: string };
 
 type Props = {
   service: ResearchService;
-  experiment: { id: string; path: string } | null;
-  onRecordChoice: (markdown: string, recordId: string) => Promise<void>;
+  notes: NotesApi;
 };
+
+const REQUIREMENT: RecordRequirement = { kinds: ["symbol-scan", "general"] };
 
 const TABLE_METRICS = ["net_profit", "profit_factor", "recovery_factor", "equity_drawdown_pct", "trades", "mt5_sharpe", "expected_payoff"];
 const fileName = (path: string): string => path.split(/[\\/]/).pop() ?? path;
@@ -26,7 +30,7 @@ const fail = (caught: unknown): string => caught instanceof Error ? caught.messa
  * Watch" sweeps. Every value and status comes from the Core; TRL marks
  * trade-offs and records the owner's shortlist, never a winner.
  */
-export function SymbolScanPage({ service, experiment, onRecordChoice }: Props): React.ReactElement {
+export function SymbolScanPage({ service, notes }: Props): React.ReactElement {
   const [xmlPaths, setXmlPaths] = useState<string[]>([]);
   const [importResults, setImportResults] = useState<ImportResult[] | null>(null);
   const [setPath, setSetPath] = useState("");
@@ -47,6 +51,7 @@ export function SymbolScanPage({ service, experiment, onRecordChoice }: Props): 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [recorded, setRecorded] = useState<string | null>(null);
+  const [target, setTarget] = useState<string | null>(null);
   const xmlInput = useRef<HTMLInputElement>(null);
   const setInput = useRef<HTMLInputElement>(null);
   const runs = useRef(new LatestRun()).current;
@@ -153,8 +158,9 @@ export function SymbolScanPage({ service, experiment, onRecordChoice }: Props): 
     setBusy("Recording the shortlist…");
     try {
       const rendered = await service.renderSymbolShortlist(refs, shortlist, reason);
-      await onRecordChoice(rendered.markdown, rendered.shortlist_id);
-      setRecorded(`Recorded ${shortlist.length} symbol(s) in ${experiment?.path}.`);
+      if (!target) throw new Error("Choose or create an experiment under Record to.");
+      await notes.record(target, rendered.markdown, rendered.shortlist_id);
+      setRecorded(`Recorded ${shortlist.length} symbol(s) in ${target}.`);
     } catch (caught) { setError(fail(caught)); } finally { setBusy(null); }
   };
 
@@ -277,11 +283,10 @@ export function SymbolScanPage({ service, experiment, onRecordChoice }: Props): 
     {shortlist.length > 0 && <section className="trl-page__surface">
       <h4>5. Record your shortlist</h4>
       <p><strong>Shortlist ({shortlist.length}):</strong> {shortlist.join(", ")} <button type="button" className="trl-link-button" onClick={() => setShortlist([])}>Clear</button></p>
-      {experiment
-        ? <p className="trl-m0__note">Written into a marked block of <strong>{experiment.path}</strong>; the rest of the note is left untouched.</p>
-        : <p className="trl-m0__inline-error" role="note">Select or create an Experiment under Research notes first; the shortlist is recorded in that note.</p>}
+      <RecordTo notes={notes} requirement={REQUIREMENT} createKind="symbol-scan" value={target} onChange={setTarget} />
+      <p className="trl-m0__note">The shortlist is written into a marked block of that note; the rest of the note is left untouched.</p>
       <label className="trl-m0__field"><span>Why these symbols? (your words, recorded verbatim)</span><textarea rows={3} value={reason} onChange={(event) => setReason(event.currentTarget.value)} placeholder="e.g. profitable for two of the three EAs with equity drawdown under my limit" /></label>
-      <div className="trl-m0__actions"><button type="button" className="mod-cta" disabled={!experiment || busy !== null} onClick={() => void recordShortlist()}>Record shortlist</button></div>
+      <div className="trl-m0__actions"><button type="button" className="mod-cta" disabled={!target || busy !== null} onClick={() => void recordShortlist()}>Record shortlist</button></div>
       {recorded && <p className="trl-exploration__notice" role="status">{recorded}<DismissButton onDismiss={() => setRecorded(null)} /></p>}
       <p className="trl-m0__note"><strong>Next:</strong> re-test each shortlisted symbol in MT5 as a single test with "Every tick based on real ticks" and your broker's commissions, then import the reports on Data & import.</p>
     </section>}

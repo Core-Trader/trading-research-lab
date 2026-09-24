@@ -41,6 +41,25 @@ export function experimentDocumentText(id: string, title: string, strategyId: st
   return `---\ntrl_type: experiment\ntrl_schema: 1\ntrl_id: ${id}\ntrl_status: draft\ntrl_strategy_id: ${strategyId}\ntrl_dataset_id: ${datasetId}\ntrl_analysis_run_id: ${analysisRunId}\n---\n\n# ${title}\n\n`;
 }
 
+/** trl_schema 2 (N2): an Experiment declares its kind; report-analysis ones keep their dataset and analysis binding. */
+export function experimentNoteText(id: string, title: string, strategyId: string, kind: "report-analysis" | "symbol-scan" | "parameter-study" | "general", bindings: Record<string, string> = {}): string {
+  if (kind === "report-analysis" && (!bindings.trl_dataset_id || !bindings.trl_analysis_run_id)) throw new Error("A report-analysis experiment needs the loaded report's dataset and analysis.");
+  const extra = Object.entries(bindings).filter(([key, value]) => /^trl_[a-z0-9_]+$/.test(key) && value.trim() !== "").map(([key, value]) => `${key}: ${value.trim()}
+`).join("");
+  return `---
+trl_type: experiment
+trl_schema: 2
+trl_id: ${id}
+trl_status: draft
+trl_strategy_id: ${strategyId}
+trl_experiment_kind: ${kind}
+${extra}---
+
+# ${title}
+
+`;
+}
+
 export function reportDocumentText(payload: ReportPayload, title: string, experimentId: string): string {
   return `---\ntrl_type: report\ntrl_schema: 1\ntrl_id: ${payload.report_id}\ntrl_status: draft\ntrl_experiment_id: ${experimentId}\ntrl_dataset_id: ${payload.dataset_id}\ntrl_source_import_id: ${payload.source_import_id}\ntrl_analysis_run_id: ${payload.analysis_run_id}\ntrl_engine_version: ${payload.core_version}\ntrl_calculation_version: ${payload.calculation_version}\ntrl_configuration_hash: ${payload.configuration_hash}\ntrl_generated_block_hash: ${payload.generated_block_hash}\ntrl_report_revision: 1\n---\n\n# ${title}\n\nAdd your research commentary outside the generated section.\n\n${generatedBlock(payload)}`;
 }

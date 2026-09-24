@@ -9,13 +9,17 @@ import { defaultSettings } from "./neighbourhood-model";
 import { axisOptions, betterHint, candidateLabel, compareTable, defaultObjectives, FORWARD_PREFIX, frontierMatchesAxes, keyResultLines, scatterPoints, statusText } from "./exploration-model";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT } from "../../application/report-files";
 import { DismissButton } from "../dismiss-button";
+import { RecordTo } from "../research/record-to";
+import type { NotesApi } from "../../vault/notes-api";
+import type { RecordRequirement } from "../../vault/research-notes-model";
+
+const REQUIREMENT: RecordRequirement = { kinds: ["parameter-study", "general"] };
 import { money, num } from "../display-format";
 
 type Props = {
   service: ResearchService;
-  /** The Experiment currently selected in Research; the choice is recorded there. */
-  experiment: { id: string; path: string } | null;
-  onRecordChoice: (markdown: string, evaluationId: string) => Promise<void>;
+  /** TRL research notes; the choice is recorded in the Experiment chosen under Record to. */
+  notes: NotesApi;
 };
 
 const DEFAULT_MESSAGE: Record<ParameterStudy["default"]["status"], string> = {
@@ -34,7 +38,8 @@ const MAX_OBJECTIVES = 4;
  * from the Core; this view only configures, plots, inspects, and records the
  * owner's own choice.
  */
-export function ParameterExplorer({ service, experiment, onRecordChoice }: Props): React.ReactElement {
+export function ParameterExplorer({ service, notes }: Props): React.ReactElement {
+  const [target, setTarget] = useState<string | null>(null);
   const [xmlPath, setXmlPath] = useState("");
   const [setPath, setSetPath] = useState("");
   const [modellingMode, setModellingMode] = useState("1-minute OHLC");
@@ -167,8 +172,9 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
     setError(null);
     try {
       const rendered = await service.renderParameterChoice(study.study_ref, objectives, constraints, selected, reason, study.schema_ref ? neighbourhoodSettings : undefined);
-      await onRecordChoice(rendered.markdown, rendered.evaluation_id);
-      setNotice(`Choice recorded in ${experiment?.path ?? "the experiment note"}.`);
+      if (!target) throw new Error("Choose or create an experiment under Record to.");
+      await notes.record(target, rendered.markdown, rendered.evaluation_id);
+      setNotice(`Choice recorded in ${target}.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -324,11 +330,10 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
 
     {evaluation && selectedCandidate && <section className="trl-page__surface">
       <h4>5. Record your choice</h4>
-      {experiment
-        ? <p className="trl-m0__note">The choice is written into a marked block of <strong>{experiment.path}</strong>; the rest of the note is left untouched.</p>
-        : <p className="trl-m0__inline-error" role="note">Select or create an Experiment under Research first; the choice is recorded in that experiment's note.</p>}
+      <RecordTo notes={notes} requirement={REQUIREMENT} createKind="parameter-study" value={target} onChange={setTarget} />
+      <p className="trl-m0__note">The choice is written into a marked block of that note; the rest of the note is left untouched.</p>
       <label className="trl-m0__field"><span>Why this trade-off? (your words, recorded verbatim)</span><textarea rows={3} value={reason} onChange={(event) => setReason(event.currentTarget.value)} placeholder="e.g. accept ~20% less profit for half the equity drawdown" /></label>
-      <button type="button" className="mod-cta" disabled={!experiment || busy !== null || stale} onClick={() => void recordChoice()}>Record {candidateLabel(selectedCandidate)} as my choice</button>
+      <button type="button" className="mod-cta" disabled={!target || busy !== null || stale} onClick={() => void recordChoice()}>Record {candidateLabel(selectedCandidate)} as my choice</button>
     </section>}
 
     {evaluation && <ul className="trl-batch__warnings">{evaluation.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}

@@ -1,7 +1,26 @@
 # Proposal: per-window comparison, and research-note access
 
-**Status:** DRAFT 2026-09-24, for owner decisions W1–W6 and N1–N6. Nothing is
-built.
+**Status:** APPROVED and BUILT 2026-09-24 (owner accepted W1–W6 and N1–N6 as
+recommended).
+
+**Windows:**
+- Core: `windows.py` (`windows-1`), with `windows.split`,
+  `windows.separate`, and `windows.render_note`.
+- Plugin: an Analysis section, "Same settings over time (windows)".
+- A split window is "partial" when the report's own test period (MT5's
+  exclusive end date) does not cover it.
+
+**Notes:**
+- Plugin only:
+  - `vault/research-notes-model.ts` (pure, tested)
+  - `vault/research-index.ts` (live index from the metadata cache)
+  - `components/research/record-to.tsx` (N1)
+  - `components/research/notes-browser.tsx` (N3)
+  - the sidebar "Recent research notes" card (N4)
+  - name checks in the create and rename dialogs (N5)
+- Experiments are written as `trl_schema: 2` with `trl_experiment_kind`.
+  Older notes are read as report-analysis when they carry a dataset,
+  otherwise as general.
 
 ---
 

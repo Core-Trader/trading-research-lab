@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { PAGE_GROUPS, type WorkspacePage } from "./application/navigation";
 import type TradingResearchLabPlugin from "./main";
 import { ObsidianIcon } from "./components/obsidian-icon";
+import { KIND_LABEL, recentEntries } from "./vault/research-notes-model";
 
 export const NAVIGATION_VIEW_TYPE = "trading-research-lab-navigation";
 
@@ -32,6 +33,8 @@ function NavigationSidebar({ plugin }: { plugin: TradingResearchLabPlugin }): Re
   const navigation = plugin.navigation;
   const snapshot = useSyncExternalStore((listener) => navigation.subscribe(listener), () => navigation.current);
   const report = snapshot.report;
+  const notes = useSyncExternalStore((listener) => plugin.notesIndex.subscribe(listener), () => plugin.notesIndex.entries);
+  const recent = recentEntries(notes, 5);
   const open = (page: WorkspacePage): void => { void plugin.openPage(page); };
   const act = (action: "validate" | "analyse"): void => {
     void plugin.openPage("data").then(() => { navigation.request(action); });
@@ -67,5 +70,13 @@ function NavigationSidebar({ plugin }: { plugin: TradingResearchLabPlugin }): Re
         <button type="button" className={snapshot.workspaceOpen && snapshot.page === page.id ? "is-active" : undefined} aria-current={snapshot.workspaceOpen && snapshot.page === page.id ? "page" : undefined} title={page.description} onClick={() => open(page.id)}><ObsidianIcon id={page.icon} />{page.label}</button>
       </li>)}</ul>
     </section>)}
+
+    <section className="trl-sidenav__group trl-sidenav__notes" aria-label="Recent research notes">
+      <h6>Recent research notes</h6>
+      {recent.length === 0 ? <p className="trl-sidenav__empty">None yet. Record a result to create one.</p> : <ul>{recent.map((entry) => <li key={entry.path}>
+        <button type="button" title={`${entry.path}${entry.kind ? ` · ${KIND_LABEL[entry.kind]}` : ""}`} onClick={() => { void plugin.app.workspace.openLinkText(entry.path, "", false); }}><ObsidianIcon id={entry.type === "strategy" ? "folder-git-2" : entry.type === "experiment" ? "flask-round" : "file-text"} /><span className="trl-sidenav__note-title">{entry.title}</span></button>
+      </li>)}</ul>}
+      <button type="button" className="trl-link-button" onClick={() => open("research")}>All research notes</button>
+    </section>
   </nav>;
 }

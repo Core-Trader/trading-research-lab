@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { experimentDocumentText, inspectReportForRegeneration, readDocumentReference, regenerateReportText, reportDocumentText, strategyDocumentText, uuidv7 } from "../src/research-documents.ts";
+import { experimentDocumentText, experimentNoteText, inspectReportForRegeneration, readDocumentReference, regenerateReportText, reportDocumentText, strategyDocumentText, uuidv7 } from "../src/research-documents.ts";
 
 const payload = {
   report_id: "01234567-89ab-7cde-8123-456789abcdef",
@@ -48,4 +48,14 @@ test("changed generated content updates only managed content and revision", () =
 test("malformed markers block regeneration", () => {
   const malformed = `${reportDocumentText(payload, "My report", experimentId)}<!-- TRL:GENERATED:END -->`;
   assert.throws(() => inspectReportForRegeneration(malformed, payload, experimentId), /markers are missing, duplicated, malformed/);
+});
+
+test("schema 2 experiments declare their kind; report-analysis ones must carry the analysis binding", () => {
+  const scan = experimentNoteText("11111111-1111-7111-8111-111111111111", "DCA scan", "22222222-2222-7222-8222-222222222222", "symbol-scan");
+  assert.match(scan, /trl_schema: 2\ntrl_id: 11111111-1111-7111-8111-111111111111\ntrl_status: draft\ntrl_strategy_id: 22222222-2222-7222-8222-222222222222\ntrl_experiment_kind: symbol-scan\n---/);
+  assert.equal(readDocumentReference(scan, "experiment").values.trl_experiment_kind, "symbol-scan");
+  const analysis = experimentNoteText("1", "A", "2", "report-analysis", { trl_dataset_id: "d", trl_analysis_run_id: "r", "not a key": "x" });
+  assert.match(analysis, /trl_dataset_id: d\ntrl_analysis_run_id: r\n---/);
+  assert.doesNotMatch(analysis, /not a key/);
+  assert.throws(() => experimentNoteText("1", "A", "2", "report-analysis"), /needs the loaded report/);
 });
