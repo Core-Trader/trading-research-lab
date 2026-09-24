@@ -5,6 +5,7 @@ import loggerInclude from "../../../../mql5/Include/TRL_EquityLogger.mqh";
 import loggerExample from "../../../../mql5/Experts/TRL_EquityLogger_Example.mq5";
 import { DismissButton } from "../dismiss-button";
 import { LOGGER_FILES, looksLikeMql5Folder, relativeParts, type SaveTarget } from "./help-model";
+import { LABEL_TEXT, SOURCES, WORKFLOW_GAPS, WORKFLOW_INTRO, WORKFLOW_STEPS, type WorkflowPoint } from "./research-workflow";
 
 const CONTENT: Record<string, string> = { "TRL_EquityLogger.mqh": loggerInclude, "TRL_EquityLogger_Example.mq5": loggerExample };
 const LOGGER_VERSION = /TRL_EQUITY_LOGGER_VER\s+"([^"]+)"/.exec(loggerInclude)?.[1] ?? "unknown";
@@ -40,7 +41,9 @@ export function HelpPage(): React.ReactElement {
   };
 
   return <section className="trl-page" aria-label="Help and downloads">
-    <header className="trl-page__header"><div><h3>Help & downloads</h3><p>How to record equity in MT5 backtests, and which MT5 files TRL reads.</p></div></header>
+    <header className="trl-page__header"><div><h3>Help & downloads</h3><p>A research workflow from symbol scan to go-live, how to record equity in MT5 backtests, and which MT5 files TRL reads.</p></div></header>
+
+    <ResearchWorkflow />
 
     <section className="trl-page__surface trl-help">
       <h4>Equity logger (floating drawdown)</h4>
@@ -104,5 +107,35 @@ TrlEquityFinish();`}</pre>
       </table></div>
       <p className="trl-m0__note">The full guides ship with TRL in its <code>docs</code> folder: <code>EQUITY_LOGGER.md</code> and <code>MT5_EXPORT_GUIDE.md</code>.</p>
     </section>
+  </section>;
+}
+
+function Check({ point }: { point: WorkflowPoint }): React.ReactElement {
+  const source = point.source ? SOURCES[point.source] : null;
+  return <li className={`trl-workflow__check is-${point.label.toLowerCase()}`}>
+    <span className="trl-workflow__label" title={LABEL_TEXT[point.label]}>{LABEL_TEXT[point.label]}</span> {point.text}
+    {source && <span className="trl-workflow__source"> Source: {source.url ? <a href={source.url}>{source.title}</a> : source.title}.</span>}
+  </li>;
+}
+
+/** The research workflow guide (owner-approved 2026-09-24); content lives in research-workflow.ts. */
+function ResearchWorkflow(): React.ReactElement {
+  return <section className="trl-page__surface trl-help" aria-label="Research workflow">
+    <h4>Research workflow: from symbol scan to go-live</h4>
+    {WORKFLOW_INTRO.map((line) => <p key={line}>{line}</p>)}
+    <p className="trl-m0__note">Labels: {(Object.keys(LABEL_TEXT) as Array<keyof typeof LABEL_TEXT>).map((key) => <span key={key} className={`trl-workflow__label is-${key.toLowerCase()}`}>{LABEL_TEXT[key]}</span>)}</p>
+    {WORKFLOW_STEPS.map((step) => <details key={step.number} className="trl-workflow__step">
+      <summary><strong>{step.number}. {step.title}</strong> · {step.purpose}</summary>
+      <dl className="trl-prop__summary">
+        <dt>Where</dt><dd>{step.where}</dd>
+        <dt>Inputs</dt><dd>{step.inputs}</dd>
+      </dl>
+      <ul className="trl-workflow__checks">{step.checks.map((point) => <Check key={point.text} point={point} />)}</ul>
+    </details>)}
+    <details className="trl-workflow__step">
+      <summary><strong>Not in TRL yet</strong> · steps that stay in MT5 or need a future feature</summary>
+      <ul>{WORKFLOW_GAPS.map((gap) => <li key={gap}>{gap}</li>)}</ul>
+    </details>
+    <p className="trl-m0__note">The same guide ships as <code>RESEARCH_WORKFLOW.md</code> in TRL's <code>docs</code> folder.</p>
   </section>;
 }

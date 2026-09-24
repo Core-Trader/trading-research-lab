@@ -422,3 +422,13 @@
 .trl-prop-rolling__key { display: inline-block; width: 0.8rem; height: 0.8rem; margin: 0 0.2rem 0 0.4rem; vertical-align: middle; border-radius: 2px; background: var(--background-modifier-border); }
 .trl-chart-frame.is-expanded .trl-prop-rolling__strip { height: 30vh; }
 .trl-prop-rolling__cell.is-not-decided { background: var(--background-modifier-border); }
+.trl-workflow__step { margin: 0.4rem 0; padding: 0.45rem 0.7rem; border: 1px solid var(--background-modifier-border); border-radius: 0.4rem; }
+.trl-workflow__step summary { cursor: pointer; }
+.trl-workflow__checks { margin: 0.4rem 0 0.2rem; padding-left: 1.1rem; }
+.trl-workflow__check { margin: 0.25rem 0; }
+.trl-workflow__label { display: inline-block; margin-right: 0.35rem; padding: 0 0.35rem; border-radius: 0.3rem; font-size: var(--font-ui-smaller); background: var(--background-secondary); border: 1px solid var(--background-modifier-border); }
+.trl-workflow__label.is-s { border-color: var(--color-green); }
+.trl-workflow__label.is-w { border-color: var(--color-blue); }
+.trl-workflow__label.is-c { border-color: var(--color-purple); }
+.trl-workflow__label.is-u { border-color: var(--color-orange); }
+.trl-workflow__source { color: var(--text-muted); font-size: var(--font-ui-smaller); }

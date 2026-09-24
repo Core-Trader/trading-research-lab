@@ -5,6 +5,8 @@
   reads and how to export them.
 - [EQUITY_LOGGER.md](EQUITY_LOGGER.md): recording equity in MT5 backtests so
   TRL can measure floating drawdown.
+- [RESEARCH_WORKFLOW.md](RESEARCH_WORKFLOW.md): a step-by-step research
+  workflow from MT5 symbol scan to go-live, with sources.
 - [PROP_FIRM_CHECK.md](PROP_FIRM_CHECK.md): checking a backtest against your
   prop firm's rules.
 
