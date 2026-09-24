@@ -9,7 +9,7 @@ import { slotIndex, nearestIndex } from "../chart-geometry";
 import { DismissButton } from "../dismiss-button";
 import { formatTimestamp, roundDecimalString } from "../display-format";
 import { GuidanceBlock, KpiTile } from "../guidance";
-import { CHAIN_LABEL, CHALLENGE_TEXT, ROLLING_LABEL, chainGuidance, rollingGuidance, emptyForm, formFromPreset, EVIDENCE_TEXT, formFromRules, limitText, limitUsedPercent, modeText, profileFromForm, propChartGeometry, propGuidance, RULE_LABELS, verdictHeadline, ZONE_SUGGESTIONS, type LimitKind, type ProfileForm } from "./prop-model";
+import { CHAIN_LABEL, CHALLENGE_TEXT, ROLLING_LABEL, accountText, chainGuidance, presetIdOf, presetKey, rollingGuidance, emptyForm, formFromPreset, EVIDENCE_TEXT, formFromRules, limitText, limitUsedPercent, modeText, profileFromForm, propChartGeometry, propGuidance, RULE_LABELS, verdictHeadline, ZONE_SUGGESTIONS, type LimitKind, type ProfileForm } from "./prop-model";
 import { money } from "../display-format";
 
 type Props = { service: ResearchService; currentDatasetRef: string | null; request?: PropRequest | null };
@@ -54,7 +54,7 @@ export function PropCheckPage({ service, currentDatasetRef, request = null }: Pr
       setProfiles(listed.profiles);
       setLibrary(registry.entries);
       setCombinations(saved.entries.filter((entry) => entry.combination !== null));
-      setProfileId((current) => current || listed.profiles[0]?.profile_id || "");
+      setProfileId((current) => current || listed.profiles[0]?.profile_id || (firmPresets.presets[0] ? presetKey(firmPresets.presets[0].preset_id) : ""));
     } catch (caught) { fail(caught); }
   }, [service]);
   useEffect(() => { void refresh(); }, [refresh]);
@@ -80,7 +80,24 @@ export function PropCheckPage({ service, currentDatasetRef, request = null }: Pr
 
   const profile = profiles.find((item) => item.profile_id === profileId) ?? null;
   const choice = choices.find((item) => item.key === choiceKey) ?? null;
-  const needsClock = profile?.rules.reset.kind === "FIRM_RESET";
+  const presetById = (key: string): PropPreset | null => { const id = presetIdOf(key); return id === null ? null : presets.find((item) => item.preset_id === id) ?? null; };
+  const selectedPreset = presetById(profileId);
+  const runAccount = accountText(choice?.account);
+  const rulesOf = (key: string): { reset: PropProfile["rules"]["reset"] } | null => profiles.find((item) => item.profile_id === key)?.rules ?? presetById(key)?.rules ?? null;
+  const needsClock = rulesOf(profileId)?.reset.kind === "FIRM_RESET";
+  const selected = profile !== null || selectedPreset !== null;
+  // Checking against a firm preset saves an ordinary, editable copy sized to the run first (content-addressed: repeat checks reuse it).
+  const resolveProfile = async (key: string): Promise<string> => {
+    const preset = presetById(key);
+    if (!preset) return key;
+    if (!runAccount) throw new Error("The selected run has no starting balance to size the preset copy; use New profile… and enter the account size.");
+    const saved = await service.savePropProfile({ ...preset.rules, name: preset.name, account_size: runAccount }, null, preset.preset_id);
+    const listed = await service.listPropProfiles();
+    setProfiles(listed.profiles);
+    if (key === profileId) setProfileId(saved.profile.profile_id);
+    setLaterPhases((current) => current.map((item) => item === key ? saved.profile.profile_id : item));
+    return saved.profile.profile_id;
+  };
 
   const save = async (): Promise<void> => {
     if (!editing) return;
@@ -96,20 +113,22 @@ export function PropCheckPage({ service, currentDatasetRef, request = null }: Pr
     if (!profile || !window.confirm(`Delete the profile "${profile.rules.name}"? Results are not stored, so nothing else changes.`)) return;
     try { await service.deletePropProfile(profile.profile_id); setProfileId(""); setResult(null); setRolling(null); setChain(null); await refresh(); } catch (caught) { fail(caught); }
   };
-  const phaseIds = profile ? [profile.profile_id, ...laterPhases.filter((id) => id !== "")] : [];
-  const chainNeedsClock = phaseIds.some((id) => profiles.find((item) => item.profile_id === id)?.rules.reset.kind === "FIRM_RESET");
+  const phaseKeys = selected ? [profileId, ...laterPhases.filter((id) => id !== "")] : [];
+  const chainNeedsClock = phaseKeys.some((key) => rulesOf(key)?.reset.kind === "FIRM_RESET");
   const rollStarts = async (): Promise<void> => {
-    if (!profile || !choice) return;
+    if (!selected || !choice) return;
     const token = runs.begin();
-    setBusy(phaseIds.length > 1 ? "Following every start day through each phase…" : "Following every start day to its first decision…");
+    setBusy(phaseKeys.length > 1 ? "Following every start day through each phase…" : "Following every start day to its first decision…");
     setError(null);
     try {
       if (clockZone.trim()) rememberClock(choice.key, clockZone.trim());
+      const phaseIds: string[] = [];
+      for (const key of phaseKeys) phaseIds.push(await resolveProfile(key));
       if (phaseIds.length > 1) {
         const chained = await service.propChainStarts(phaseIds, choice.target, chainNeedsClock ? clockZone.trim() || null : null);
         if (runs.isCurrent(token)) { setChain(chained); setRolling(null); }
       } else {
-        const rolled = await service.propRollingStarts(profile.profile_id, choice.target, needsClock ? clockZone.trim() || null : null);
+        const rolled = await service.propRollingStarts(phaseIds[0]!, choice.target, needsClock ? clockZone.trim() || null : null);
         if (runs.isCurrent(token)) { setRolling(rolled); setChain(null); }
       }
     } catch (caught) {
@@ -119,13 +138,13 @@ export function PropCheckPage({ service, currentDatasetRef, request = null }: Pr
     }
   };
   const check = async (): Promise<void> => {
-    if (!profile || !choice) return;
+    if (!selected || !choice) return;
     const token = runs.begin();
     setBusy("Checking the run against the rules…");
     setError(null);
     try {
       if (needsClock && clockZone.trim()) rememberClock(choice.key, clockZone.trim());
-      const evaluated = await service.propEvaluate(profile.profile_id, choice.target, needsClock ? clockZone.trim() || null : null);
+      const evaluated = await service.propEvaluate(await resolveProfile(profileId), choice.target, needsClock ? clockZone.trim() || null : null);
       if (runs.isCurrent(token)) setResult(evaluated);
     } catch (caught) {
       if (runs.isCurrent(token)) { setResult(null); setRolling(null); setChain(null); fail(caught); }
@@ -141,18 +160,22 @@ export function PropCheckPage({ service, currentDatasetRef, request = null }: Pr
 
     <section className="trl-page__surface">
       <h4>1. Rules</h4>
-      {profiles.length === 0 && !editing && <p className="trl-m0__note">No profiles yet. Create one with your firm's numbers.</p>}
-      {profiles.length > 0 && <label className="trl-m0__field">Profile
+      {(profiles.length > 0 || presets.length > 0) && <label className="trl-m0__field">Profile
         <select value={profileId} onChange={(event) => { setProfileId(event.currentTarget.value); setResult(null); setRolling(null); setChain(null); }}>
-          {profiles.map((item) => <option key={item.profile_id} value={item.profile_id}>{item.rules.name} · {r2(item.rules.account_size)}</option>)}
+          {profiles.length > 0 && <optgroup label="My profiles">{profiles.map((item) => <option key={item.profile_id} value={item.profile_id}>{item.rules.name} · {r2(item.rules.account_size)}</option>)}</optgroup>}
+          {[...new Set(presets.map((item) => item.firm))].map((firm) => <optgroup key={firm} label={`${firm} presets (copied when you check or edit)`}>{presets.filter((item) => item.firm === firm).map((item) => <option key={item.preset_id} value={presetKey(item.preset_id)}>{item.programme} · {item.phase}</option>)}</optgroup>)}
         </select>
       </label>}
+      {profiles.length === 0 && !editing && <p className="trl-m0__note">No profiles of your own yet. Pick a firm preset above, or create one with New profile….</p>}
       {profile && !editing && <ProfileSummary profile={profile} presets={presets} />}
+      {selectedPreset && !editing && <ProfileSummary profile={{ profile_version: "preset", profile_id: presetKey(selectedPreset.preset_id), profile_hash: "", saved_at: selectedPreset.retrieved_at, supersedes: null, values_source: "PRESET", preset: selectedPreset, rules: { ...selectedPreset.rules, name: selectedPreset.name, account_size: runAccount ?? "—" } }} presets={presets} />}
       {!editing && <div className="trl-m0__actions">
-        <button type="button" onClick={() => setEditing({ form: emptyForm(choice?.account?.replace(/[\s ]/g, "") ?? ""), supersedes: null })}>New profile…</button>
+        <button type="button" onClick={() => setEditing({ form: emptyForm(runAccount ?? ""), supersedes: null })}>New profile…</button>
+        {selectedPreset && <button type="button" onClick={() => setEditing({ form: formFromPreset(selectedPreset, runAccount ?? ""), supersedes: null })}>Edit a copy…</button>}
         {profile && <button type="button" onClick={() => setEditing({ form: formFromRules(profile.rules), supersedes: profile.profile_id })}>Edit (saves a new version)…</button>}
         {profile && <button type="button" className="trl-link-button is-danger" onClick={() => void remove()}>Delete profile</button>}
       </div>}
+      {selectedPreset && !editing && <p className="trl-m0__note">Checking against this preset saves a copy sized to the selected run ({runAccount ?? "no starting balance"}) under My profiles, where you can edit it.</p>}
       {editing && <ProfileEditor form={editing.form} presets={editing.supersedes ? [] : presets} onChange={(form) => setEditing({ ...editing, form })} onSave={() => void save()} onCancel={() => setEditing(null)} />}
     </section>
 
@@ -165,11 +188,12 @@ export function PropCheckPage({ service, currentDatasetRef, request = null }: Pr
         </select>
       </label>}
       {choice && choice.target.kind === "DATASET" && !choice.logged && <p className="trl-m0__note">This report has no equity log, so the check sees closed trades only (an optimistic preview).</p>}
-      {profile && profiles.length > 1 && <div className="trl-m0__scenario-fields">
+      {selected && <div className="trl-m0__scenario-fields">
         {[0, 1].map((slot) => (slot === 0 || laterPhases[0]) && <label key={slot} className="trl-m0__field">Then phase {slot + 2} (for rolling starts; optional)
           <select value={laterPhases[slot]} onChange={(event) => { const next = [...laterPhases]; next[slot] = event.currentTarget.value; if (slot === 0 && !next[0]) next[1] = ""; setLaterPhases(next); setRolling(null); setChain(null); }}>
             <option value="">none</option>
-            {profiles.filter((item) => item.profile_id !== profile.profile_id).map((item) => <option key={item.profile_id} value={item.profile_id}>{item.rules.name}</option>)}
+            {profiles.filter((item) => item.profile_id !== profileId).length > 0 && <optgroup label="My profiles">{profiles.filter((item) => item.profile_id !== profileId).map((item) => <option key={item.profile_id} value={item.profile_id}>{item.rules.name}</option>)}</optgroup>}
+            {[...new Set(presets.map((item) => item.firm))].map((firm) => <optgroup key={firm} label={`${firm} presets`}>{presets.filter((item) => item.firm === firm && presetKey(item.preset_id) !== profileId).map((item) => <option key={item.preset_id} value={presetKey(item.preset_id)}>{item.programme} · {item.phase}</option>)}</optgroup>)}
           </select>
         </label>)}
       </div>}
@@ -179,8 +203,8 @@ export function PropCheckPage({ service, currentDatasetRef, request = null }: Pr
         <span className="trl-m0__note">MT5 test times are in the broker's server time. Many MT5 servers use EET with EU daylight saving (Europe/Athens). TRL remembers this for the selected report on this device.</span>
       </label>}
       <div className="trl-m0__actions">
-        <button type="button" className="mod-cta" disabled={!profile || !choice || busy !== null || (needsClock && !clockZone.trim())} onClick={() => void check()}>Check against the rules</button>
-        <button type="button" disabled={!profile || !choice || busy !== null || ((needsClock || chainNeedsClock) && !clockZone.trim())} title="Use every day of the run as a challenge start" onClick={() => void rollStarts()}>{phaseIds.length > 1 ? `Rolling starts through ${phaseIds.length} phases` : "Rolling start dates"}</button>
+        <button type="button" className="mod-cta" disabled={!selected || !choice || busy !== null || (needsClock && !clockZone.trim())} onClick={() => void check()}>Check against the rules</button>
+        <button type="button" disabled={!selected || !choice || busy !== null || ((needsClock || chainNeedsClock) && !clockZone.trim())} title="Use every day of the run as a challenge start" onClick={() => void rollStarts()}>{phaseKeys.length > 1 ? `Rolling starts through ${phaseKeys.length} phases` : "Rolling start dates"}</button>
         {busy && <span className="trl-m0__note" role="status">{busy}</span>}
       </div>
     </section>

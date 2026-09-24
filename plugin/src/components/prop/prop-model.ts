@@ -249,3 +249,14 @@ export function chainGuidance(result: import("../../types").PropChain): Guidance
   for (const warning of result.warnings) flags.push(warning);
   return { read, tips, flags };
 }
+
+/** Selection keys: a saved profile id, or "preset:<preset_id>" for a firm preset not yet copied. */
+export const PRESET_PREFIX = "preset:";
+export function presetKey(presetId: string): string { return PRESET_PREFIX + presetId; }
+export function presetIdOf(key: string): string | null { return key.startsWith(PRESET_PREFIX) ? key.slice(PRESET_PREFIX.length) : null; }
+
+/** A run's account size as the Core expects it (MT5 prints "100 000.00"); null when unknown. */
+export function accountText(value: string | null | undefined): string | null {
+  const text = (value ?? "").replace(/[\s\u00a0]/g, "");
+  return /^\d+(\.\d+)?$/.test(text) ? text : null;
+}

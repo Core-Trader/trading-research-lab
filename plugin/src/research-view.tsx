@@ -648,7 +648,6 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
         <select aria-label="Pages" value={activePage} onChange={(event) => setActivePage(event.currentTarget.value as WorkspacePage)}>
           {ALL_PAGES.map((page) => <option key={page.id} value={page.id}>{page.label}</option>)}
         </select>
-        <button type="button" title="Show the TRL navigation in the left sidebar" onClick={() => void plugin.openNavigation(true)}>☰ Sidebar</button>
       </div>
     </header>
     <input ref={fileInputRef} className="trl-m0__file-input" type="file" accept={MT5_REPORT_ACCEPT} onChange={selectSourceFile} />

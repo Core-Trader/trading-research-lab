@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chainGuidance, emptyForm, formFromPreset, formFromRules, limitUsedPercent, profileFromForm, propChartGeometry, propGuidance, rollingGuidance, verdictHeadline } from "../src/components/prop/prop-model.ts";
+import { accountText, chainGuidance, emptyForm, presetIdOf, presetKey, formFromPreset, formFromRules, limitUsedPercent, profileFromForm, propChartGeometry, propGuidance, rollingGuidance, verdictHeadline } from "../src/components/prop/prop-model.ts";
 import type { PropChain, PropEvaluation, PropPreset, PropRolling, PropRules } from "../src/types.ts";
 
 const rules: PropRules = {
@@ -94,4 +94,13 @@ test("chain guidance names the phases and the failures by phase from the Core su
   assert.ok(guidance.read[0]!.includes("phase 1 \"FTMO 2-Step · FTMO Challenge (phase 1)\", then phase 2"));
   assert.ok(guidance.read.some((line) => line.startsWith("25.00% of the 16 decided starts completed every phase")));
   assert.ok(guidance.tips.some((tip) => tip.startsWith("Failures by phase: 9 in phase 1, 3 in phase 2")));
+});
+
+test("preset selection keys and run account text", () => {
+  assert.equal(presetIdOf(presetKey("ftmo-2step-challenge")), "ftmo-2step-challenge");
+  assert.equal(presetIdOf("0190c0de-0000-5000-8000-000000000001"), null);
+  assert.equal(accountText("100 000.00"), "100000.00");
+  assert.equal(accountText("100 000.00"), "100000.00");
+  assert.equal(accountText(null), null);
+  assert.equal(accountText("n/a"), null);
 });
