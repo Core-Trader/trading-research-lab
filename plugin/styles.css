@@ -546,3 +546,10 @@
 .trl-mc__hint { border-left: 3px solid var(--color-orange, #d9822b); padding-left: 0.5rem; }
 .trl-m0__histogram-bar.is-loss { background: var(--color-red, #c0504d); }
 .trl-mc-hist__line.is-zero { border-left-style: dashed; }
+/* Combined equity (E3) */
+.trl-equity-combo__chart svg { width: 100%; height: 14rem; display: block; }
+.trl-equity-combo__band { fill: var(--color-red, #c0504d); opacity: 0.18; stroke: none; }
+.trl-equity-combo__close { fill: none; stroke: var(--interactive-accent, #7b6cd9); stroke-width: 1.6; }
+.trl-equity-combo__balance { fill: none; stroke: var(--text-muted, #999); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.trl-equity-combo__key { display: inline-block; width: 1rem; height: 0; vertical-align: middle; border-top: 2px solid var(--interactive-accent, #7b6cd9); }
+.trl-equity-combo__key.is-balance { border-top: 2px dashed var(--text-muted, #999); }

@@ -20,6 +20,7 @@ from .time_risk import equity_availability, realised_balance_daily_drawdown, val
 from .portfolio_preflight import combined_daily_drawdown, create_combined_realised_balance, preflight_mt5_excel_batch
 from .what_if import fixed_close_event_cost_scenario
 from .monte_carlo import order_permutation_scenario
+from .portfolio_equity import combine_equity, equity_combination_note
 from .monte_carlo_bootstrap import bootstrap_note, bootstrap_scenario, stored_bootstrap_result
 from .display_series import close_event_display_series
 from .performance_metrics import performance_metrics
@@ -77,6 +78,8 @@ class Worker:
                     "analysis.significance",
                     "analysis.render_significance_note",
                     "portfolio.combine",
+                    "portfolio.combine_equity",
+                    "portfolio.render_equity_note",
                     "portfolio.explore",
                     "portfolio.save_combination",
                     "portfolio.list_saved_combinations",
@@ -342,6 +345,21 @@ class Worker:
                 _required_string(params, "dataset_ref"),
                 _required_string(params, "additional_cost_per_close_event"),
             )
+        if method == "portfolio.render_equity_note":
+            tracks, stop_out, labels, reason = params.get("tracks"), params.get("stop_out_level"), params.get("labels", []), params.get("reason", "")
+            if not isinstance(tracks, list) or not all(isinstance(track, list) and all(isinstance(ref, str) for ref in track) for track in tracks):
+                raise CoreError("E_REQUEST_INVALID", "params.tracks must be a list of lists of dataset_ref strings.")
+            if not isinstance(labels, list) or not all(isinstance(label, str) for label in labels) or not isinstance(reason, str) or (stop_out is not None and not isinstance(stop_out, str)):
+                raise CoreError("E_REQUEST_INVALID", "params.labels, params.reason and params.stop_out_level must be strings.")
+            result = combine_equity(self.workspace_root, tracks, _required_string(params, "starting_capital"), str(params.get("window", "UNION")), stop_out)
+            return equity_combination_note(result, labels, reason)
+        if method == "portfolio.combine_equity":
+            tracks, stop_out = params.get("tracks"), params.get("stop_out_level")
+            if not isinstance(tracks, list) or not all(isinstance(track, list) and all(isinstance(ref, str) for ref in track) for track in tracks):
+                raise CoreError("E_REQUEST_INVALID", "params.tracks must be a list of lists of dataset_ref strings.")
+            if stop_out is not None and not isinstance(stop_out, str):
+                raise CoreError("E_REQUEST_INVALID", "params.stop_out_level must be a decimal string when supplied.")
+            return combine_equity(self.workspace_root, tracks, _required_string(params, "starting_capital"), str(params.get("window", "UNION")), stop_out)
         if method == "scenario.monte_carlo_bootstrap":
             path_count, block_length, limit = params.get("path_count"), params.get("block_length"), params.get("drawdown_limit")
             if isinstance(path_count, bool) or not isinstance(path_count, int):

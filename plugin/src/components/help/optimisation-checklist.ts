@@ -105,12 +105,13 @@ export const CHECKLIST_STEPS: ChecklistStep[] = [
   },
   {
     number: 6, title: "Combined portfolio", question: "Do the symbols diversify each other, or lose at the same time?",
-    tool: "TRL Portfolio: up to 10 reports as tracks over the same dates, combined into one realised balance",
-    coverage: "PARTIAL", workflowSteps: [3],
+    tool: "TRL Portfolio: up to 10 reports as tracks over the same dates, combined into one realised balance and, when every report has a TRL equity log, into one equity curve",
+    coverage: "FULL", workflowSteps: [3],
     points: [
       { label: "S", source: "playbook", text: "A low correlation number is not enough: two symbols can still share an overlapping drawdown during one event. Build the combined curve and measure it." },
       { label: "W", text: "Test every candidate symbol over the same dates, then check whether adding it makes the combined drawdown smaller or larger." },
-      { label: "C", text: "TRL combines realised balance only, so floating losses are not in the combined curve. Combining equity logs is not in TRL yet." },
+      { label: "C", text: "With an equity log on every report, Portfolio also combines equity, so floating losses count. Lows inside one log interval happened at unknown moments, so TRL shows the combined drawdown as a range: what the logs prove, up to all lows coinciding." },
+      { label: "S", source: "mt5TradingReport", text: "The combined margin level is equity ÷ margin × 100 (MT5's definition); your broker's stop-out level is your own number to enter." },
       { label: "C", text: "Each backtest ran with its own full deposit, so the combination does not show shared margin or a stop-out on one account." },
       { label: "U", text: "How much the combined drawdown must improve for a symbol to earn its place." },
     ],

@@ -1,6 +1,10 @@
 # Proposal: combining equity logs in Portfolio
 
-**Status:** DRAFT 2026-09-24. Awaiting the owner (E1–E7).
+**Status:** APPROVED and BUILT 2026-09-24 (the owner accepted E1–E7 as recommended).
+
+**Built:**
+- Core `portfolio_equity.py` (`portfolio-equity-1`): the observed bound is tightened with the interval highs (at the moment track i hit its low, the others were at most at their highs). Worker `portfolio.combine_equity` and `portfolio.render_equity_note`.
+- Plugin: `EquityCombinationSection` under the combined dashboard (missing-log list, stop-out field, KPIs, band chart, per-track table), `equity-combination-model.ts` (labelled guidance; "larger than any track" is claimed only on the observed value), and record to note.
 
 This is workflow gap 1 of the 6 that remain. The sources are in
 `internal/references/REFERENCE_REGISTER.md`.

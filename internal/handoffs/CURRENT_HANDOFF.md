@@ -174,6 +174,8 @@ Research-note access is done (NOTES-1):
 - the sidebar recent-notes card
 - name clash checks
 
+Gap closed (EQP-1): Portfolio combines equity logs (floating losses included), with the drawdown as a range. 5 workflow gaps remain.
+
 Gap closed (BOOT-1): Monte Carlo can resample single trades or blocks (% ending below zero). Guidance can be switched off everywhere (GUIDE-1). 6 workflow gaps remain.
 
 Gap closed (SIG-1): the significance check on Analysis (t, one-sided p, a confidence interval, and a runs-test validity gate), the Overview line, and "your minimum trades" across the pages. Plain language (UIX-5): no raw Core codes on screen. 7 workflow gaps remain (PROPOSAL_SIGNIFICANCE.md lists the order).

@@ -161,3 +161,25 @@ live index on a real vault (rename and delete refresh) and the sidebar card.
 - **Plugin:** the method selector, BootstrapView, the guidance model, and one
   switch for all guidance (checked: hiding and restoring).
 - **Tests:** Core 296 (12 new); plugin 147.
+
+## Follow-up: combined equity in Portfolio (EQP-1)
+
+- **Core:**
+  - `portfolio_equity.py`: a grid at the coarsest interval, carry-forward,
+    and each track's change from its own deposit.
+  - The combined drawdown is a range: the observed lower bound uses the
+    interval highs; the conservative bound uses the summed lows.
+  - Also: daily loss, margin level, and clock/interval findings.
+  - Tests: a hand-worked two-track range (50 against 150), carry-forward
+    with margin, intervals, a missing-log refusal, an end-to-end run on two
+    logged reports, and the note.
+  - Fixed on the way: an empty identity component when no stop-out level
+    is set, and a test folder that needed its parents created.
+- **Plugin:**
+  - The section, the chart, and the labelled guidance.
+  - Harness-checked on Core output from two logs with lows at different
+    moments (201 to 350 USD).
+  - Wording tightened after the check: "larger than any track" is claimed
+    only on the observed value, and the realised-against-equity sentence
+    is neutral.
+- **Tests:** Core 302; plugin 153.

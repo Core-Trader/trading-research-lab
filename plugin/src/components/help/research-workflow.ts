@@ -39,6 +39,7 @@ export const SOURCES = {
   efron1979: { title: "Efron, B. (1979), \"Bootstrap Methods: Another Look at the Jackknife\", The Annals of Statistics 7(1), 1–26", url: "https://doi.org/10.1214/aos/1176344552" },
   nistBootstrap: { title: "NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.3.4 Bootstrap Plot", url: "https://www.itl.nist.gov/div898/handbook/eda/section3/bootplot.htm" },
   kunsch1989: { title: "Künsch, H. R. (1989), \"The Jackknife and the Bootstrap for General Stationary Observations\", The Annals of Statistics 17(3), 1217–1241", url: "https://doi.org/10.1214/aos/1176347265" },
+  mt5TradingReport: { title: "MetaTrader 5 Help: Trading Report (margin level)", url: "https://www.metatrader5.com/en/terminal/help/trading_advanced/history_report" },
   firmRules: { title: "The firm's own rules page (FTMO and FundedNext pages are listed with each preset)", url: null },
 } as const;
 export type SourceKey = keyof typeof SOURCES;
@@ -169,7 +170,6 @@ export const WORKFLOW_GAPS = [
   "Rolling walk-forward optimisation (re-optimising for each window).",
   "Modelling spread, slippage or execution delay inside TRL (today: What-If's fixed cost per trade).",
   "Importing demo or live account statements to track real forward results.",
-  "Combining equity logs in Portfolio; today it combines realised balance only.",
   "A checklist in Research notes that tracks steps 0–10.",
   "A cost breakdown view; TRL's closed-trade figures also leave out commissions charged when positions open.",
 ];

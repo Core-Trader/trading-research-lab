@@ -912,7 +912,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       />
     </section>}
     {activePage === "help" && <HelpPage />}
-    {activePage === "portfolio" && <PortfolioLab service={service} linkedNotes={linkedNotes} onPropCheck={(key) => navigation.requestPropCheck(`combination:${key}`)} />}
+    {activePage === "portfolio" && <PortfolioLab service={service} linkedNotes={linkedNotes} notes={notesApi} onPropCheck={(key) => navigation.requestPropCheck(`combination:${key}`)} />}
     {activePage === "prop" && <PropCheckPage service={service} currentDatasetRef={evidence?.dataset_ref ?? null} request={propRequest} />}
     {activePage === "scan" && <SymbolScanPage service={service} notes={notesApi} />}
     {activePage === "parameters" && <ParameterExplorer service={service} notes={notesApi} />}

@@ -743,3 +743,29 @@ export type BootstrapResult = {
   tail_values: string[];
   warnings: string[];
 };
+
+/** portfolio.combine_equity (PROPOSAL_EQUITY_PORTFOLIO.md E1–E6); values are Core decimal strings. */
+export type EquityCombinationMissing = { calculation_version: string; status: "MISSING_LOGS"; configuration: Record<string, unknown>; missing: Array<{ track: string; dataset_ref: string; filename: string }> };
+export type EquityRange = { observed: string; conservative: string };
+export type EquityCombination = {
+  calculation_version: string;
+  status: "COMBINED";
+  evaluation_id: string;
+  configuration: { track_ids: string[]; starting_capital: string; window: "UNION" | "COMMON"; sizing: "AS_REPORTED"; stop_out_level: string | null };
+  currency: string;
+  grid_minutes: number;
+  window_start: string;
+  window_end: string;
+  starting_capital: string;
+  final_equity: string;
+  equity_drawdown: EquityRange & { observed_at: string | null; conservative_at: string | null };
+  realised_drawdown: string;
+  tracks: Array<{ track: number; track_id: string; equity_drawdown: EquityRange }>;
+  diversification: { sum_of_tracks: string; worst_track: string; combined_conservative: string };
+  daily: Array<{ date: string; start_of_day_reference: string; loss_observed: string; loss_conservative: string }>;
+  worst_day: { date: string; start_of_day_reference: string; loss_observed: string; loss_conservative: string } | null;
+  margin: { lowest_level_percent: string | null; lowest_level_at: string | null; peak_margin: string; intervals_below_stop_out: number | null };
+  chart: Array<{ time: string; close: string; balance: string; low_conservative: string; low_observed: string }>;
+  findings: Array<{ severity: "WARNING" | "NOTE"; code: string; message: string }>;
+  warnings: string[];
+};

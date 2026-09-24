@@ -6,19 +6,21 @@ import { localPathForSelectedFile } from "../../services/local-file-path";
 import type { DatasetDeletionPreview, DatasetEvidence, ParetoEvaluation, PortfolioCombination, PortfolioExploration, SavedCombinationEntry } from "../../types";
 import { CombinationExplorer } from "./combination-explorer";
 import { CombinedDashboard } from "./combined-dashboard";
+import { EquityCombinationSection } from "./equity-combination";
+import type { NotesApi } from "../../vault/notes-api";
 import { SavedCombinations, type SavedCombination } from "./saved-combinations";
 import { ReportDeletion, type LinkedNotes } from "./report-deletion";
 import { addToTrack, addTrack, combinationRequest, removeReport, removeTrack, renameTrack, toggleIncluded, type TrackDraft } from "./portfolio-model";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT, reportBaseName } from "../../application/report-files";
 import { DismissButton } from "../dismiss-button";
 
-type Props = { service: ResearchService; linkedNotes?: LinkedNotes; onPropCheck?: (savedKey: string) => void };
+type Props = { service: ResearchService; linkedNotes?: LinkedNotes; onPropCheck?: (savedKey: string) => void; notes?: NotesApi };
 
 /**
  * Portfolio Lab v1: build strategy tracks from imported reports and combine
  * them on one account (as reported). All results come from portfolio.combine.
  */
-export function PortfolioLab({ service, linkedNotes, onPropCheck }: Props): React.ReactElement {
+export function PortfolioLab({ service, linkedNotes, onPropCheck, notes }: Props): React.ReactElement {
   const [library, setLibrary] = useState<DatasetEvidence[]>([]);
   const [archived, setArchived] = useState<DatasetEvidence[]>([]);
   const [deleting, setDeleting] = useState<{ preview: DatasetDeletionPreview; notes: string[] } | null>(null);
@@ -277,6 +279,7 @@ export function PortfolioLab({ service, linkedNotes, onPropCheck }: Props): Reac
       <button type="button" disabled={busy !== null} onClick={() => void saveCurrent()}>{savedKeyOf(result.combination) ? "Rename saved combination" : "Save combination for comparison"}</button>
     </section>}
     {result && <CombinedDashboard combination={result.combination} labels={result.labels} />}
+    {result && <EquityCombinationSection service={service} tracks={result.combination.tracks.map((track) => track.dataset_refs)} labels={result.labels} capital={result.combination.configuration.starting_capital} window={result.combination.configuration.window} byRef={byRef} notes={notes} />}
     <SavedCombinations saved={saved} evaluation={evaluation} activeKey={activeKey} onOpen={(key) => { const item = saved.find((entry) => entry.key === key); if (item) { setResult({ combination: item.combination, labels: item.labels }); setActiveKey(key); } }} onRemove={(key) => void removeSaved(key)} onPropCheck={onPropCheck} />
     {unavailable.length > 0 && <ul className="trl-batch__findings">{unavailable.map((entry) => <li key={entry.saved.key}>
       <strong className="is-blocked">Saved combination "{entry.saved.name}" cannot be recalculated</strong>
