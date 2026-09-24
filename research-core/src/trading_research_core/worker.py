@@ -29,6 +29,7 @@ from .mt5_set import intake_parameter_schema
 from .parameter_exploration import add_single_test, attach_forward, create_study, evaluate as exploration_evaluate, render_choice
 from .equity_log import attach_equity_log, equity_metrics
 from .prop_presets import list_presets as prop_list_presets
+from .symbol_sweep import compare_symbol_sweeps, delete_symbol_sweep, evaluate_symbol_sweep, intake_symbol_sweep, list_symbol_sweeps, render_symbol_shortlist
 from .prop_rolling import chain_starts as prop_chain_starts, rolling_starts as prop_rolling_starts
 from .prop_check import delete_profile as prop_delete_profile, evaluate as prop_evaluate, list_profiles as prop_list_profiles, save_profile as prop_save_profile
 from .set_check import check_set_against_report
@@ -95,6 +96,12 @@ class Worker:
                     "dataset.check_set",
                     "analysis.equity_metrics",
                     "prop.list_presets",
+                    "sweep.intake",
+                    "sweep.list",
+                    "sweep.evaluate",
+                    "sweep.compare",
+                    "sweep.render_shortlist",
+                    "sweep.delete",
                     "prop.list_profiles",
                     "prop.save_profile",
                     "prop.delete_profile",
@@ -257,6 +264,19 @@ class Worker:
             return check_set_against_report(self.workspace_root, _required_string(params, "dataset_ref"), _required_string(params, "source_path"))
         if method == "analysis.equity_metrics":
             return equity_metrics(self.workspace_root, _required_string(params, "dataset_ref"))
+        if method == "sweep.intake":
+            set_path = params.get("set_path")
+            return intake_symbol_sweep(self.workspace_root, _required_string(params, "source_path"), _required_string(params, "modelling_mode"), set_path if isinstance(set_path, str) and set_path.strip() else None)
+        if method == "sweep.list":
+            return list_symbol_sweeps(self.workspace_root)
+        if method == "sweep.evaluate":
+            return evaluate_symbol_sweep(self.workspace_root, _required_string(params, "sweep_ref"), params.get("objectives"), params.get("constraints"))
+        if method == "sweep.compare":
+            return compare_symbol_sweeps(self.workspace_root, params.get("sweep_refs"), _required_string(params, "metric"))
+        if method == "sweep.render_shortlist":
+            return render_symbol_shortlist(self.workspace_root, params.get("sweep_refs"), params.get("symbols"), str(params.get("reason") or ""))
+        if method == "sweep.delete":
+            return delete_symbol_sweep(self.workspace_root, _required_string(params, "sweep_ref"))
         if method == "prop.list_presets":
             return prop_list_presets()
         if method == "prop.list_profiles":

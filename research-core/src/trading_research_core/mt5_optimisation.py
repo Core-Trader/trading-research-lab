@@ -181,6 +181,8 @@ def _parse(source: Path, source_hash: str) -> dict[str, Any]:
     if len(rows) < 2:
         raise CoreError("E_OPTIMISATION_LAYOUT_UNSUPPORTED", "The MT5 optimisation worksheet has no result rows.")
     headers = [_cell_text(cell, ns) for cell in rows[0].findall("./ss:Cell", ns)]
+    if headers and headers[0] == "Symbol":
+        raise CoreError("E_OPTIMISATION_IS_SYMBOL_SWEEP", "This export is a symbol sweep (\"All symbols selected in Market Watch\"), not a parameter optimisation. Import it on the Symbol scan page.")
     if not headers or headers[0] != "Pass" or len(set(headers)) != len(headers):
         raise CoreError("E_OPTIMISATION_LAYOUT_UNSUPPORTED", "The MT5 optimisation header must begin with a unique Pass column.")
     parameter_columns = [header for header in headers if header not in MT5_STATISTIC_COLUMNS]
