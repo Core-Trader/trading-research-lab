@@ -31,6 +31,7 @@ import { isMt5ReportPath, MT5_REPORT_ACCEPT, MT5_REPORT_HINT } from "./applicati
 import { DismissButton } from "./components/dismiss-button";
 import { LayoutContext, WidgetSurface } from "./components/layout/widget-surface";
 import { ANALYSIS_WIDGETS } from "./layout/widgets";
+import type { LastReport } from "./application/last-report";
 import { EquityPanel } from "./components/analysis/equity-panel";
 
 export { writeGeneratedNote } from "./vault/research-vault";
@@ -210,20 +211,23 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   };
 
   /** Uses a report already in the library as the validated report (no re-import). */
-  const useLibraryReport = (entry: DatasetEvidence): void => {
+  const useLibraryReport = (entry: DatasetEvidence): NonNullable<typeof validated> => {
     importRuns.begin();
     resetAnalysisState();
     setError(null);
     setEvidence(entry);
     setIntakeStatus(null);
     setSnapshotVerification(null);
-    setValidated({ datasetRef: entry.dataset_ref, eventCount: entry.event_count, workerWasReady: plugin.worker.isReady, readinessMs: 0, importMs: 0 });
+    const chosen = { datasetRef: entry.dataset_ref, eventCount: entry.event_count, workerWasReady: plugin.worker.isReady, readinessMs: 0, importMs: 0 };
+    setValidated(chosen);
     setStatus(`Using ${entry.original_filename} from the library. Nothing has been analysed yet.`);
+    return chosen;
   };
 
   /** Step 3: run TRL's calculations on the validated report. */
-  const analyse = async (): Promise<void> => {
-    if (!validated) return;
+  const analyse = async (target = validated, restoring = false): Promise<void> => {
+    if (!target) return;
+    const validated = target;
     const token = importRuns.begin();
     const isCurrent = (): boolean => importRuns.isCurrent(token);
     const datasetRef = validated.datasetRef;
@@ -276,7 +280,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       setStatus(unavailableCards === 0
         ? "Analysis complete. Results are on the Overview and Analysis pages. No research document was created."
         : `Analysis complete with ${unavailableCards} optional result(s) unavailable. Results are on the Overview and Analysis pages.`);
-      new Notice("Trading Research Lab analysis completed. Open Overview or Analysis to see the results.");
+      if (!restoring) new Notice("Trading Research Lab analysis completed. Open Overview or Analysis to see the results.");
     } catch (caught) {
       if (!isCurrent()) return;
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -703,6 +707,48 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   useEffect(() => {
     if (activePage === "data" && !importBusy) void refreshLibrary();
   }, [activePage, importBusy]);
+  // SESSION-1: reopen with the last loaded report until a new one is loaded.
+  // Only references are saved; an analysed report is recalculated by the Core.
+  const restoreSettled = useRef(false);
+  useEffect(() => {
+    const saved = plugin.lastReport;
+    if (!saved) { restoreSettled.current = true; return; }
+    let active = true;
+    void (async () => {
+      try {
+        setImportBusy(true);
+        setStatus("Reopening the last report…");
+        try { await plugin.worker.ensureReady(); } catch (caught) {
+          // The engine could not start: keep the saved report for the next time.
+          if (active) { setImportBusy(false); setStatus("The last report will reopen once the engine starts."); setError(caught instanceof Error ? caught.message : String(caught)); }
+          return;
+        }
+        const entry = await service.getEvidence(saved.datasetRef);
+        if (!active) return;
+        const chosen = useLibraryReport(entry);
+        const exists = (note: { id: string; path: string } | null) => note && plugin.app.vault.getAbstractFileByPath(note.path) instanceof TFile ? note : null;
+        setStrategy(exists(saved.workingSet.strategy));
+        setExperiment(exists(saved.workingSet.experiment));
+        setReport(exists(saved.workingSet.report));
+        setImportBusy(false);
+        if (saved.analysed) await analyse(chosen, true);
+        else setStatus(`Reopened ${entry.original_filename} (not analysed yet).`);
+      } catch {
+        if (!active) return;
+        setImportBusy(false);
+        setStatus("The last report could not be reopened (it may have been deleted or archived). Import or choose a report.");
+        void plugin.saveLastReport(null);
+      } finally {
+        restoreSettled.current = true;
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    if (!restoreSettled.current || !validated) return;  // a failed import keeps the previous report
+    const next: LastReport = { schema: 1, datasetRef: validated.datasetRef, analysed: statistics?.dataset_ref === validated.datasetRef, workingSet: { strategy, experiment, report } };
+    void plugin.saveLastReport(next);
+  }, [validated, statistics, strategy, experiment, report]);
   const analyseRef = useRef(analyse);
   analyseRef.current = analyse;
   useEffect(() => navigation.handleActions((action) => {

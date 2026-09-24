@@ -174,6 +174,9 @@ Research-note access is done (NOTES-1):
 - the sidebar recent-notes card
 - name clash checks
 
+Session (SESSION-1): the workspace reopens with the last loaded report and
+its working set, recalculated by the Core; only references are saved.
+
 Layouts (LAYOUT-1, `internal/docs/LAYOUT_SPEC.md`): Overview, Analysis, and
 Help can be reordered, hidden, and (Overview) resized via "Customise layout";
 saved in the plugin settings. It is designed toward future custom analysis

@@ -91,3 +91,19 @@ live index on a real vault (rename and delete refresh) and the sidebar card.
   - width, ↑/↓, hide, drag and drop, reset, and saving
   - edit tiles keep the grid's shape at 1200px and fold at 800px
 - Tests: plugin 118 (7 new layout-model tests); the typecheck is clean.
+
+## Follow-up: reopening with the last report (SESSION-1)
+
+- The owner reported that the Overview was empty after TRL was reopened.
+- Saved in the plugin settings, as references only: the report's
+  `dataset_ref`, whether it was analysed, and the working set.
+- On opening, TRL reloads the evidence from the library. An analysed report
+  is recalculated by the Core, with no success pop-up and a status line
+  instead. The same run id comes back (tested in Core
+  `test_analysis.py`), so the linked notes still match.
+- A missing engine keeps the reference. A deleted report clears it with a
+  message.
+- Obsidian loads background tabs lazily, so the engine starts only when the
+  TRL tab is shown.
+- Tests: plugin 121 (3 new last-report tests); the build is clean.
+- Not yet checked in Obsidian: the view cannot mount in the harness.

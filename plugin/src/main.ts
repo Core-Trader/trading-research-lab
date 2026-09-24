@@ -6,9 +6,10 @@ import { WorkerClient } from "./worker-client";
 import { ResearchNotesIndex } from "./vault/research-index";
 import type { MarkdownResult } from "./types";
 import { LayoutStore } from "./layout/layout-store";
+import { readLastReport, sameLastReport, type LastReport } from "./application/last-report";
 
 /** `layouts` holds customised page layouts (LAYOUT-1); it is read defensively. */
-type TradingResearchSettings = { pythonExecutable: string; showDeveloperDiagnostics: boolean; layouts?: unknown };
+type TradingResearchSettings = { pythonExecutable: string; showDeveloperDiagnostics: boolean; layouts?: unknown; lastReport?: unknown };
 const DEFAULT_SETTINGS: TradingResearchSettings = { pythonExecutable: "", showDeveloperDiagnostics: false };
 
 export default class TradingResearchLabPlugin extends Plugin {
@@ -21,6 +22,15 @@ export default class TradingResearchLabPlugin extends Plugin {
   /** Customised page layouts, saved with the plugin settings. */
   layouts!: LayoutStore;
   private lastOpenedMarkdownPath: string | null = null;
+
+  /** The report the workspace reopens with (SESSION-1); references only. */
+  get lastReport(): LastReport | null { return readLastReport(this.settings.lastReport); }
+
+  async saveLastReport(value: LastReport | null): Promise<void> {
+    if (sameLastReport(this.lastReport, value)) return;
+    this.settings.lastReport = value ?? undefined;
+    await this.saveData(this.settings);
+  }
 
   async onload(): Promise<void> {
     this.settings = { ...DEFAULT_SETTINGS, ...(await this.loadData() as Partial<TradingResearchSettings> ?? {}) };
