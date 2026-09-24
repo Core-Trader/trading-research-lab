@@ -133,8 +133,10 @@ The equity logger (PL-006/PL-008) is built and validated in MT5; see
 `internal/development-journal/2026-09-23-equity-logger.md`. Logger 1.0.1 has
 0 link mismatches on V1–V3, and the owner's DCA EA shows equity drawdown
 12.5× balance drawdown. The UI/UX pass (UIX-1) is implemented (revert tag `plugin-pre-uiux-pass`); see
-`internal/development-journal/2026-09-24-ui-ux-pass.md`. **Next:** owner review in
-Obsidian, then the prop-firm spec. The navigation sidebar (NAV-1–3) and the Help &
+`internal/development-journal/2026-09-24-ui-ux-pass.md`. Follow-up UI fixes (sidebar
+alignment, bar hover, fan paths) are in commit 4db1a65. **Next:** the owner
+decides P1–P10 in `internal/docs/PROP_FIRM_SPEC.md` (drafted 2026-09-24); build
+slices follow approval. The navigation sidebar (NAV-1–3) and the Help &
 downloads page (HELP-001) are built. **Revert point:** tag `plugin-pre-nav-sidebar`, plus the built-file
 backup and steps in `C:\DEV\TRL_Plugin_Backups\2026-09-23_pre-nav-sidebar\HOW_TO_REVERT.md`.
 The Data page is redesigned (UX-002): validate first, then companions (equity
