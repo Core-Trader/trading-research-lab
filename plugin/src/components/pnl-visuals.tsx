@@ -4,6 +4,7 @@ import { calendarMonths } from "./calendar-model";
 import { barGeometry, intensity, slotIndex } from "./chart-geometry";
 import { signTone } from "./dashboard-model";
 import { formatTimestamp } from "./display-format";
+import { money } from "./display-format";
 
 type Series = CloseEventDisplaySeries;
 
@@ -57,7 +58,7 @@ export function CloseEventBars({ series }: { series: Series }): React.ReactEleme
           {geometry.bars.map((bar, index) => <rect key={events[index]!.source_sequence} className={`trl-bars__bar is-${bar.sign}${index === active ? " is-active" : ""}`} x={bar.x} width={bar.width} y={bar.y} height={Math.max(bar.height, 0.4)} />)}
         </svg>
         {activeEvent && activeBar && <span className={`trl-balance-chart__tooltip${activeBar.x > 60 ? " is-left" : ""}`} style={{ left: `${activeBar.x + activeBar.width / 2}%` }} role="status">
-          <strong className={`is-${signTone(activeEvent.net_pnl)}`}>{activeEvent.net_pnl} {unit}</strong>
+          <strong className={`is-${signTone(activeEvent.net_pnl)}`}>{money(activeEvent.net_pnl)} {unit}</strong>
           <span>{formatTimestamp(activeEvent.timestamp)}</span>
           <span>{activeEvent.symbol} · close event #{active! + 1} of {events.length}</span>
         </span>}
@@ -82,7 +83,7 @@ export function DailyPnlCalendar({ series }: { series: Series }): React.ReactEle
       <strong>{month.label}</strong>
       <button type="button" aria-label="Next month" disabled={index >= months.length - 1} onClick={() => setIndex(index + 1)}>→</button>
     </div>
-    <p className={`trl-calendar__month-total is-${month.total ? signTone(month.total.net_pnl) : "neutral"}`}>{month.total ? `${month.total.net_pnl} ${unit} · ${month.total.close_event_count} close events` : "No close events this month"}</p>
+    <p className={`trl-calendar__month-total is-${month.total ? signTone(month.total.net_pnl) : "neutral"}`}>{month.total ? `${money(month.total.net_pnl)} ${unit} · ${month.total.close_event_count} close events` : "No close events this month"}</p>
     <table className="trl-calendar__grid">
       <thead><tr>{WEEKDAYS.map((day) => <th key={day} scope="col">{day}</th>)}<th scope="col">Week</th></tr></thead>
       <tbody>{month.weeks.map((week) => <tr key={`${week.isoYear}-${week.isoWeek}`}>
@@ -90,14 +91,14 @@ export function DailyPnlCalendar({ series }: { series: Series }): React.ReactEle
           if (cell === null) return <td key={dayIndex} className="is-outside" />;
           const tone = cell.pnl ? signTone(cell.pnl.net_pnl) : "neutral";
           const style = cell.pnl && tone !== "neutral" ? { "--trl-cell-strength": intensity(cell.pnl.net_pnl, scale) } as React.CSSProperties : undefined;
-          return <td key={dayIndex} className={cell.pnl ? `has-pnl is-${tone}` : "is-empty"} style={style} title={cell.pnl ? `${cell.date}: ${cell.pnl.net_pnl} ${unit} · ${cell.pnl.close_event_count} close events (${cell.pnl.win_count} wins, ${cell.pnl.loss_count} losses)` : `${cell.date}: no close events`}>
+          return <td key={dayIndex} className={cell.pnl ? `has-pnl is-${tone}` : "is-empty"} style={style} title={cell.pnl ? `${cell.date}: ${money(cell.pnl.net_pnl)} ${unit} · ${cell.pnl.close_event_count} close events (${cell.pnl.win_count} wins, ${cell.pnl.loss_count} losses)` : `${cell.date}: no close events`}>
             <span className="trl-calendar__day">{cell.day}</span>
-            {cell.pnl && <><span className="trl-calendar__value">{cell.pnl.net_pnl}</span><span className="trl-calendar__count">{cell.pnl.close_event_count} ev</span></>}
+            {cell.pnl && <><span className="trl-calendar__value">{money(cell.pnl.net_pnl)}</span><span className="trl-calendar__count">{cell.pnl.close_event_count} ev</span></>}
           </td>;
         })}
         <td className={`trl-calendar__week is-${week.total ? signTone(week.total.net_pnl) : "neutral"}`} title={`ISO week ${week.isoYear}-W${String(week.isoWeek).padStart(2, "0")} (whole week, may include days outside this month)`}>
           <span className="trl-calendar__day">W{week.isoWeek}</span>
-          {week.total && <span className="trl-calendar__value">{week.total.net_pnl}</span>}
+          {week.total && <span className="trl-calendar__value">{money(week.total.net_pnl)}</span>}
         </td>
       </tr>)}</tbody>
     </table>
@@ -122,7 +123,7 @@ export function MonthlyPnlTable({ series }: { series: Series }): React.ReactElem
           const tone = signTone(row.net_pnl);
           return <td key={label} className={`is-${tone}`} style={tone === "neutral" ? undefined : { "--trl-cell-strength": intensity(row.net_pnl, scale) } as React.CSSProperties} title={`${row.month}: ${row.close_event_count} close events (${row.win_count} wins, ${row.loss_count} losses)`}>{row.net_pnl}</td>;
         })}
-        <td className={`trl-monthly__total is-${signTone(year.net_pnl)}`}>{year.net_pnl}</td>
+        <td className={`trl-monthly__total is-${signTone(year.net_pnl)}`}>{money(year.net_pnl)}</td>
       </tr>)}</tbody>
     </table>
     <p className="trl-m0__note">Sum of verified close-event net P/L per report-clock month, in {unit}. "—" means no close events that month, not zero.</p>

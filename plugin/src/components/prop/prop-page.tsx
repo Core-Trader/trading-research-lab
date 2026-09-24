@@ -9,6 +9,7 @@ import { DismissButton } from "../dismiss-button";
 import { formatTimestamp, roundDecimalString } from "../display-format";
 import { GuidanceBlock, KpiTile } from "../guidance";
 import { CHALLENGE_TEXT, emptyForm, EVIDENCE_TEXT, formFromRules, limitText, limitUsedPercent, modeText, profileFromForm, propChartGeometry, propGuidance, RULE_LABELS, verdictHeadline, ZONE_SUGGESTIONS, type LimitKind, type ProfileForm } from "./prop-model";
+import { money } from "../display-format";
 
 type Props = { service: ResearchService; currentDatasetRef: string | null };
 type Choice = { key: string; label: string; target: PropTarget; account: string | null; logged: boolean };
@@ -243,7 +244,8 @@ function PropResult({ result }: { result: PropEvaluation }): React.ReactElement 
 }
 
 function PropChart({ result }: { result: PropEvaluation }): React.ReactElement | null {
-  const geometry = useMemo(() => propChartGeometry(result), [result]);
+  const [withFloor, setWithFloor] = useState(true);
+  const geometry = useMemo(() => propChartGeometry(result, withFloor), [result, withFloor]);
   const [active, setActive] = useState<number | null>(null);
   if (geometry === null) return <p className="trl-m0__note">Not enough samples to draw a chart.</p>;
   const ccy = result.currency ?? "";
@@ -269,9 +271,9 @@ function PropChart({ result }: { result: PropEvaluation }): React.ReactElement |
             <span className="trl-balance-chart__guide" style={{ left: `${x}%` }} />
             <span className={`trl-balance-chart__tooltip${x > 60 ? " is-left" : ""}`} style={{ left: `${x}%` }} role="status">
               <strong>{formatTimestamp(point.time)}</strong>
-              <span>Balance {point.balance} {ccy}</span>
-              {equityBased && <span>Equity {point.equity} · lowest {point.low}</span>}
-              {point.floor !== null && <span>Floor {point.floor}</span>}
+              <span>Balance {money(point.balance)} {ccy}</span>
+              {equityBased && <span>Equity {money(point.equity)} · lowest {money(point.low)}</span>}
+              {point.floor !== null && <span>Floor {money(point.floor)}</span>}
             </span>
           </>}
         </div>
@@ -281,6 +283,7 @@ function PropChart({ result }: { result: PropEvaluation }): React.ReactElement |
         <span className="trl-equity__key is-balance" /> Balance {equityBased && <><span className="trl-equity__key is-equity" /> Equity <span className="trl-prop__key is-low" /> Lowest equity{result.evidence_level === "PORTFOLIO_CONSERVATIVE" ? " (conservative)" : ""} </>}
         {geometry.floor && <><span className="trl-prop__key is-floor" /> Overall-loss floor </>}
         {geometry.markers.length > 0 && <><span className="trl-prop__key is-marker" /> first breach</>}
+        {result.series[0]?.floor != null && <label className="trl-mc-fan__toggle"><input type="checkbox" checked={!withFloor} onChange={() => setWithFloor(!withFloor)} /> zoom to balance and equity (hides the floor)</label>}
       </figcaption>
     </figure>
   </ChartFrame>;

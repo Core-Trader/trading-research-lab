@@ -73,7 +73,7 @@ export function limitText(limit: PropLimit | null, currency: string, base: "acco
 }
 
 export function modeText(rule: PropRuleResult): string {
-  if (rule.rule === "DAILY_LOSS") return rule.basis === "START_OF_DAY_REFERENCE" ? "measured from each day's start" : "measured from each day's start, limit sized on the account";
+  if (rule.rule === "DAILY_LOSS") return "from each day's start";
   if (rule.mode === "FIXED") return "fixed floor";
   const reference = rule.trailing_reference === "EQUITY_HIGH" ? "highest equity" : rule.trailing_reference === "END_OF_DAY_BALANCE_HIGH" ? "highest end-of-day balance" : "highest balance";
   return rule.mode === "TRAILING_LOCKS_AT_START" ? `trails the ${reference}, stops at the starting balance` : `trails the ${reference}`;
@@ -113,10 +113,11 @@ export const CHALLENGE_TEXT: Record<PropChallengeOutcome, string> = {
 export type ChartGeometry = { balance: string; equity: string; low: string; floor: string | null; markers: Array<{ rule: string; x: number; time: string }>; bottom: number; top: number };
 
 /** SVG points in a 0–100 box for the Core display series; display scaling only. */
-export function propChartGeometry(result: PropEvaluation): ChartGeometry | null {
+/** `withFloor` false scales to balance and equity only (the floor line is then omitted). */
+export function propChartGeometry(result: PropEvaluation, withFloor = true): ChartGeometry | null {
   const series = result.series;
   if (series.length < 2) return null;
-  const values = series.flatMap((point) => [point.balance, point.equity, point.low, point.floor].filter((value): value is string => value !== null).map(Number));
+  const values = series.flatMap((point) => [point.balance, point.equity, point.low, withFloor ? point.floor : null].filter((value): value is string => value !== null).map(Number));
   if (values.some((value) => !Number.isFinite(value))) return null;
   const bottom = Math.min(...values);
   const top = Math.max(...values);
@@ -128,7 +129,7 @@ export function propChartGeometry(result: PropEvaluation): ChartGeometry | null 
     const index = series.findIndex((point) => point.time >= marker.time);
     return { rule: marker.rule, time: marker.time, x: x(index < 0 ? series.length - 1 : index) };
   });
-  return { balance: line((point) => point.balance), equity: line((point) => point.equity), low: line((point) => point.low), floor: series[0]!.floor === null ? null : line((point) => point.floor), markers, bottom, top };
+  return { balance: line((point) => point.balance), equity: line((point) => point.equity), low: line((point) => point.low), floor: !withFloor || series[0]!.floor === null ? null : line((point) => point.floor), markers, bottom, top };
 }
 
 /** Bar height for a day: the share of its limit used, from the Core headroom percentage. */

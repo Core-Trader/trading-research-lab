@@ -6,6 +6,7 @@ import { DashboardCard, type CardAction, type CardState } from "./dashboard-card
 import { buildDashboardModel, type DashboardInputs, type Kpi } from "./dashboard-model";
 import { CloseEventBars, DailyPnlCalendar, MonthlyPnlTable } from "./pnl-visuals";
 import type { CloseEventDisplaySeries } from "../types";
+import { money } from "./display-format";
 
 type DashboardSummaryProps = DashboardInputs & {
   displaySeries: CloseEventDisplaySeries | null;
@@ -79,7 +80,7 @@ export function DashboardSummary({
       </DashboardCard>
       <DashboardCard title="Close-event P/L" state={seriesState} action={seriesAction} className="trl-dashboard__card--chart">
         {displaySeries && <CloseEventBars series={displaySeries} />}
-        {performance && <p className="trl-streaks">Longest winning streak: <strong>{performance.close_event_metrics.longest_winning_streak.count}</strong>{performance.close_event_metrics.longest_winning_streak.net_pnl ? ` (${performance.close_event_metrics.longest_winning_streak.net_pnl} ${model.currency})` : ""} · Longest losing streak: <strong>{performance.close_event_metrics.longest_losing_streak.count}</strong>{performance.close_event_metrics.longest_losing_streak.net_pnl ? ` (${performance.close_event_metrics.longest_losing_streak.net_pnl} ${model.currency})` : ""}. Breakeven events end a streak.</p>}
+        {performance && <p className="trl-streaks">Longest winning streak: <strong>{performance.close_event_metrics.longest_winning_streak.count}</strong>{performance.close_event_metrics.longest_winning_streak.net_pnl ? ` (${money(performance.close_event_metrics.longest_winning_streak.net_pnl)} ${model.currency})` : ""} · Longest losing streak: <strong>{performance.close_event_metrics.longest_losing_streak.count}</strong>{performance.close_event_metrics.longest_losing_streak.net_pnl ? ` (${money(performance.close_event_metrics.longest_losing_streak.net_pnl)} ${model.currency})` : ""}. Breakeven events end a streak.</p>}
       </DashboardCard>
       <DashboardCard title="Research documents" state={{ kind: "ready" }}>
         <strong>{documents.linkedCount} of 3 linked</strong>

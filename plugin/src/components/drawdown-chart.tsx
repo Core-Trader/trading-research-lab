@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import type { PerformanceMetrics } from "../types";
 import { lineGeometry, nearestIndex } from "./chart-geometry";
 import { formatTimestamp, roundDecimalString } from "./display-format";
+import { money } from "./display-format";
 
 type DrawdownPoint = PerformanceMetrics["drawdown_series"][number];
 
@@ -12,7 +13,7 @@ type DrawdownPoint = PerformanceMetrics["drawdown_series"][number];
  */
 export function DrawdownChart({ series, currency, maximum }: { series: DrawdownPoint[]; currency?: string | null; maximum: string }): React.ReactElement {
   // Negate for plotting only (drawdown 0 at the top); labels use Core strings.
-  const geometry = useMemo(() => lineGeometry(series.map((point) => (point.drawdown.startsWith("-") ? point.drawdown.slice(1) : `-${point.drawdown}`))), [series]);
+  const geometry = useMemo(() => lineGeometry(series.map((point) => (point.drawdown.startsWith("-") ? point.drawdown.slice(1) : `-${money(point.drawdown)}`))), [series]);
   const [active, setActive] = useState<number | null>(null);
   if (series.length < 2 || geometry === null) return <p className="trl-m0__note">Not enough balance points to draw the drawdown chart.</p>;
   const unit = currency ?? "source currency";
@@ -46,7 +47,7 @@ export function DrawdownChart({ series, currency, maximum }: { series: DrawdownP
         {point && position && <>
           <span className="trl-balance-chart__guide" style={{ left: `${position.x}%` }} />
           <span className={`trl-balance-chart__tooltip${position.x > 60 ? " is-left" : ""}`} style={{ left: `${position.x}%` }} role="status">
-            <strong className={point.drawdown === "0" ? "" : "is-negative"}>-{point.drawdown} {unit}</strong>
+            <strong className={point.drawdown === "0" ? "" : "is-negative"}>-{money(point.drawdown)} {unit}</strong>
             <span>{point.drawdown_percent === null ? "% unavailable" : `${roundDecimalString(point.drawdown_percent, 2)}% below the high`}</span>
             <span>{formatTimestamp(point.timestamp)}</span>
           </span>

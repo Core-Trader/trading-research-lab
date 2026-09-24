@@ -5,6 +5,7 @@ import { DrawdownChart } from "../drawdown-chart";
 import { formatTimestamp, roundDecimalString } from "../display-format";
 import { signTone } from "../dashboard-model";
 import { spanTimeline } from "./portfolio-model";
+import { money } from "../display-format";
 
 const r2 = (value: string | null | undefined): string => value === null || value === undefined ? "—" : roundDecimalString(value, 2);
 const REASON: Record<string, string> = { INSUFFICIENT_DAYS: "too few days", ZERO_VARIANCE: "no variation", NO_LOSSES: "No losses", NO_DRAWDOWN: "No drawdown" };
@@ -24,10 +25,10 @@ export function CombinedDashboard({ combination, labels }: { combination: Portfo
       <span className="trl-dashboard__status">REALISED BALANCE</span>
     </header>
     <section className="trl-kpi-row" aria-label="Combined key results">
-      <Tile label="Net P/L" value={`${combination.net_pnl} ${unit}`} detail={`${combination.close_event_count} close events`} tone={signTone(combination.net_pnl)} />
-      <Tile label="Max drawdown (balance)" value={signTone(balance.maximum_drawdown) === "neutral" ? "No drawdown" : `${balance.maximum_drawdown} ${unit}`} detail={balance.maximum_drawdown_percent ? `${r2(balance.maximum_drawdown_percent)}% of peak · ${balance.recovery_status === "RECOVERED" ? "recovered" : "not recovered"}` : "—"} tone={signTone(balance.maximum_drawdown) === "neutral" ? "neutral" : "negative"} exact={balance.maximum_drawdown_percent} />
+      <Tile label="Net P/L" value={`${money(combination.net_pnl)} ${unit}`} detail={`${combination.close_event_count} close events`} tone={signTone(combination.net_pnl)} />
+      <Tile label="Max drawdown (balance)" value={signTone(balance.maximum_drawdown) === "neutral" ? "No drawdown" : `${money(balance.maximum_drawdown)} ${unit}`} detail={balance.maximum_drawdown_percent ? `${r2(balance.maximum_drawdown_percent)}% of peak · ${balance.recovery_status === "RECOVERED" ? "recovered" : "not recovered"}` : "—"} tone={signTone(balance.maximum_drawdown) === "neutral" ? "neutral" : "negative"} exact={balance.maximum_drawdown_percent} />
       <Tile label="Return / drawdown" value={balance.return_to_drawdown === null ? REASON[balance.return_to_drawdown_reason ?? ""] ?? "—" : r2(balance.return_to_drawdown)} detail="Net change ÷ max drawdown" exact={balance.return_to_drawdown} />
-      <Tile label="Profit factor" value={close.profit_factor === null ? REASON[close.profit_factor_reason ?? ""] ?? "—" : r2(close.profit_factor)} detail={`Gross ${close.gross_profit} ÷ |${close.gross_loss}|`} exact={close.profit_factor} />
+      <Tile label="Profit factor" value={close.profit_factor === null ? REASON[close.profit_factor_reason ?? ""] ?? "—" : r2(close.profit_factor)} detail={`Gross ${money(close.gross_profit)} ÷ |${money(close.gross_loss)}|`} exact={close.profit_factor} />
       <Tile label="SQN (Van Tharp)" value={r2(close.sqn_capped_100)} detail={`raw ${r2(close.sqn)} · no quality band`} exact={close.sqn} />
       <Tile label="Longest stagnation" value={`${r2(stagnation.duration_days)} days`} detail={`${stagnation.close_events} close events · ${stagnation.status === "ONGOING" ? "ongoing" : "ended"}`} exact={stagnation.duration_days} />
     </section>
@@ -50,15 +51,15 @@ export function CombinedDashboard({ combination, labels }: { combination: Portfo
             <th scope="row" title={track.filenames.join(" → ")}>{label(track.index)}{track.filenames.length > 1 ? ` (${track.filenames.length} chained)` : ""}</th>
             <td>{formatTimestamp(track.active_start).slice(0, 10)} → {formatTimestamp(track.active_end).slice(0, 10)}</td>
             <td>{track.close_events_in_window}</td>
-            <td className={`is-${signTone(track.net_pnl)}`}>{track.net_pnl}</td>
+            <td className={`is-${signTone(track.net_pnl)}`}>{money(track.net_pnl)}</td>
             <td title={track.share_of_combined_net_percent ?? undefined}>{track.share_of_combined_net_percent === null ? "—" : `${r2(track.share_of_combined_net_percent)}%`}</td>
-            <td>{track.standalone_maximum_drawdown}</td>
+            <td>{money(track.standalone_maximum_drawdown)}</td>
             <td>{track.standalone_metrics.maximum_drawdown_percent === null ? "—" : `${r2(track.standalone_metrics.maximum_drawdown_percent)}%`}</td>
             <td>{track.standalone_metrics.profit_factor === null ? REASON[track.standalone_metrics.profit_factor_reason ?? ""] ?? "—" : r2(track.standalone_metrics.profit_factor)}</td>
             <td>{r2(track.standalone_metrics.sqn_capped_100)}</td>
           </tr>)}</tbody>
         </table></div>
-        <p className="trl-portfolio__overlap">Drawdown overlap: the sum of standalone maximum drawdowns is <strong>{combination.drawdown_overlap.sum_of_standalone_maximum_drawdowns}</strong>; together the combined maximum drawdown was <strong>{combination.drawdown_overlap.combined_maximum_drawdown}</strong>, an offset of <strong>{combination.drawdown_overlap.offset} {unit}</strong> because the tracks' drawdowns did not fully coincide.</p>
+        <p className="trl-portfolio__overlap">Drawdown overlap: the sum of standalone maximum drawdowns is <strong>{money(combination.drawdown_overlap.sum_of_standalone_maximum_drawdowns)}</strong>; together the combined maximum drawdown was <strong>{money(combination.drawdown_overlap.combined_maximum_drawdown)}</strong>, an offset of <strong>{money(combination.drawdown_overlap.offset)} {unit}</strong> because the tracks' drawdowns did not fully coincide.</p>
       </section>
       {combination.correlation.length > 0 && <section className="trl-dashboard__card trl-dashboard__card--wide">
         <h4>Daily P/L correlation</h4>

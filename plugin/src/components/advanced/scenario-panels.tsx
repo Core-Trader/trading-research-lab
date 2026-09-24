@@ -7,6 +7,7 @@ import { signTone } from "../dashboard-model";
 import { roundDecimalString } from "../display-format";
 import { GuidanceBlock, KpiTile } from "../guidance";
 import { axisPosition, fanBandGeometry, monteCarloGuidance, stripMarkers } from "./monte-carlo-model";
+import { money } from "../display-format";
 
 const r2 = (value: string | null | undefined): string => value === null || value === undefined ? "—" : roundDecimalString(value, 2);
 
@@ -98,7 +99,7 @@ function PercentileStrip({ result }: { result: MonteCarloResult }): React.ReactE
     <h5>Where the drawdowns fall</h5>
     <div className="trl-mc-strip__track">
       <span className="trl-mc-strip__middle" style={{ left: `${markers[1]!.position}%`, width: `${Math.max(0, markers[3]!.position - markers[1]!.position)}%` }} />
-      {markers.map((marker) => <span key={marker.key} className={`trl-mc-strip__marker${marker.emphasis ? " is-emphasis" : ""}`} style={{ left: `${marker.position}%` }} title={`${marker.label}: ${marker.value} ${result.currency}`}><span className="trl-mc-strip__label">{marker.label}</span></span>)}
+      {markers.map((marker) => <span key={marker.key} className={`trl-mc-strip__marker${marker.emphasis ? " is-emphasis" : ""}`} style={{ left: `${marker.position}%` }} title={`${marker.label}: ${money(marker.value)} ${result.currency}`}><span className="trl-mc-strip__label">{marker.label}</span></span>)}
     </div>
     <figcaption className="trl-m0__note">Left = smallest worst drawdown, right = largest. The band covers the middle 90% of paths; the accent marker is your actual trade order. Hover a marker for its exact value.</figcaption>
   </figure>;
@@ -117,11 +118,11 @@ export function DrawdownHistogram({ result }: { result: MonteCarloResult }): Rea
   ];
   return <ChartFrame title="Distribution of worst drawdowns">
     <section className="trl-m0__histogram" aria-label="Distribution of worst drawdowns across reshuffled paths">
-      <div className="trl-m0__histogram-bars trl-mc-hist" role="img" aria-label={`${histogram.bin_count} bins from ${low} to ${high} ${currency}`}>
-        {histogram.buckets.map((bucket, index) => <div className="trl-m0__histogram-bin" key={`${bucket.lower_bound}-${index}`} title={`${bucket.lower_bound} to ${bucket.upper_bound} ${currency}: ${bucket.count} paths`}>
+      <div className="trl-m0__histogram-bars trl-mc-hist" role="img" aria-label={`${histogram.bin_count} bins from ${money(low)} to ${money(high)} ${currency}`}>
+        {histogram.buckets.map((bucket, index) => <div className="trl-m0__histogram-bin" key={`${money(bucket.lower_bound)}-${index}`} title={`${money(bucket.lower_bound)} to ${money(bucket.upper_bound)} ${currency}: ${bucket.count} paths`}>
           <span className="trl-m0__histogram-bar" style={{ height: `${Math.max(4, (bucket.count / maximumCount) * 100)}%` }} />
         </div>)}
-        {lines.map((line) => <span key={line.key} className={`trl-mc-hist__line is-${line.key}`} style={{ left: `${axisPosition(line.value, low, high)}%` }} title={`${line.label}: ${line.value} ${currency}`}><span>{line.label}</span></span>)}
+        {lines.map((line) => <span key={line.key} className={`trl-mc-hist__line is-${line.key}`} style={{ left: `${axisPosition(line.value, low, high)}%` }} title={`${line.label}: ${money(line.value)} ${currency}`}><span>{line.label}</span></span>)}
       </div>
       <div className="trl-m0__histogram-axis"><span>{r2(low)} {currency}</span><span>Worst drawdown per path</span><span>{r2(high)} {currency}</span></div>
     </section>
@@ -132,7 +133,7 @@ export function DrawdownPercentileTable({ percentiles, currency }: { percentiles
   return <section className="trl-mc-percentiles" aria-label="Worst drawdown by percentile">
     <table>
       <thead><tr><th scope="col">Percentile of paths</th><th scope="col">Worst drawdown ({currency})</th></tr></thead>
-      <tbody>{percentiles.map((row) => <tr key={row.percentile}><th scope="row">p{row.percentile}</th><td>{row.maximum_drawdown}</td></tr>)}</tbody>
+      <tbody>{percentiles.map((row) => <tr key={row.percentile}><th scope="row">p{row.percentile}</th><td>{money(row.maximum_drawdown)}</td></tr>)}</tbody>
     </table>
     <p className="trl-m0__note">p95: 95% of this run's paths had a worst drawdown at or below this value (nearest rank). It describes these paths only.</p>
   </section>;

@@ -5,6 +5,7 @@ import type { EquityAvailabilityResult, EquityLogAttachment, EquityMetrics } fro
 import { CollapsibleSection } from "../collapsible-section";
 import { DismissButton } from "../dismiss-button";
 import { EquityChart } from "./equity-chart";
+import { money } from "../display-format";
 
 const MODES = ["Every tick based on real ticks", "Every tick", "1 minute OHLC", "Open prices only"];
 
@@ -95,10 +96,10 @@ export function EquityPanel({ service, datasetRef, availability, metrics, error,
     {error && <p className="trl-m0__inline-error" role="alert">{error}</p>}
     {metrics && <>
       <dl className="trl-m0__diagnostic-grid">
-        <dt>Max equity drawdown</dt><dd><strong>{metrics.maximum_equity_drawdown} {unit}</strong>{metrics.maximum_equity_drawdown_percent !== null ? ` (${Number(metrics.maximum_equity_drawdown_percent).toFixed(2)}% of the prior peak)` : ""}</dd>
+        <dt>Max equity drawdown</dt><dd><strong>{money(metrics.maximum_equity_drawdown)} {unit}</strong>{metrics.maximum_equity_drawdown_percent !== null ? ` (${Number(metrics.maximum_equity_drawdown_percent).toFixed(2)}% of the prior peak)` : ""}</dd>
         {availability?.status === "AVAILABLE" && <><dt>MT5 reported</dt><dd>{availability.equity.mt5_reported_equity_drawdown ?? "—"} {unit}{availability.equity.findings.includes("EQUITY_DRAWDOWN_DIFFERS") ? " — the log is shallower (see the attach notes)" : availability.equity.findings.includes("LOG_DEEPER_THAN_MT5") ? " — the log found a deeper tick low" : " — agrees with the log"}</dd></>}
-        <dt>Realised-balance drawdown</dt><dd>{metrics.balance_maximum_drawdown} {unit}</dd>
-        <dt>Worst day (equity)</dt><dd>{metrics.worst_day.date}: −{metrics.worst_day.loss} {unit}{metrics.worst_day.loss_percent_of_initial !== null ? ` (${Number(metrics.worst_day.loss_percent_of_initial).toFixed(2)}% of the initial balance)` : ""}, low at {metrics.worst_day.lowest_at.replace("T", " ")}</dd>
+        <dt>Realised-balance drawdown</dt><dd>{money(metrics.balance_maximum_drawdown)} {unit}</dd>
+        <dt>Worst day (equity)</dt><dd>{metrics.worst_day.date}: −{money(metrics.worst_day.loss)} {unit}{metrics.worst_day.loss_percent_of_initial !== null ? ` (${Number(metrics.worst_day.loss_percent_of_initial).toFixed(2)}% of the initial balance)` : ""}, low at {metrics.worst_day.lowest_at.replace("T", " ")}</dd>
         <dt>Evidence</dt><dd>TRL tester log, {metrics.row_count} rows; modelling {availability?.status === "AVAILABLE" ? availability.equity.modelling_mode : "—"}</dd>
       </dl>
       {metrics.equity_deeper_than_balance && metrics.equity_to_balance_drawdown_ratio !== null && <p className="trl-equity__gap" role="note">Equity drawdown is {Number(metrics.equity_to_balance_drawdown_ratio).toFixed(1)}× the realised-balance drawdown: open positions went deeper than closed trades show.</p>}

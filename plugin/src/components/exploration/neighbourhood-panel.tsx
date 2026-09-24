@@ -6,6 +6,7 @@ import type { NeighbourPoint, NeighbourhoodResult, NeighbourhoodRole, Neighbourh
 import { canBeOrdinal, coverageText, heatmapCells, ordinalNames, statisticsNote, suggestedSetPath } from "./neighbourhood-model";
 import { DismissButton } from "../dismiss-button";
 import { ChartFrame } from "../chart-frame";
+import { num, pct } from "../display-format";
 
 type Props = {
   service: ResearchService;
@@ -133,11 +134,11 @@ export function NeighbourhoodPanel({ service, study, candidateId, objectives, se
         <thead><tr><th scope="col">Objective</th><th scope="col">This set</th><th scope="col">Neighbour median</th><th scope="col">Middle half (IQR)</th><th scope="col">Best neighbour</th><th scope="col">Better than</th></tr></thead>
         <tbody>{objectives.map((objective) => { const row = result.statistics?.[objective.metric]; return row && <tr key={objective.metric}>
           <th scope="row">{labelOf(objective.metric)} {objective.direction === "MAX" ? "↑" : "↓"}</th>
-          <td>{row.candidate_value ?? "—"}</td><td>{row.median ?? "—"}</td><td>{row.q1 !== undefined ? `${row.q1} – ${row.q3}` : "—"}</td><td>{row.best_neighbour ?? "—"}</td>
+          <td>{num(row.candidate_value)}</td><td>{num(row.median)}</td><td>{row.q1 !== undefined ? `${num(row.q1)} – ${num(row.q3)}` : "—"}</td><td>{num(row.best_neighbour)}</td>
           <td>{row.candidate_better_than != null ? `${row.candidate_better_than} of ${row.count}` : "—"}</td>
         </tr>; })}</tbody>
       </table></div>}
-      {result.context && <p className="trl-m0__note">{result.context.profit_positive_share !== null ? `${Math.round(Number(result.context.profit_positive_share) * 100)}% of tested neighbours were profitable` : ""}{result.context.worst_equity_drawdown_pct !== null ? ` · worst neighbour equity drawdown ${result.context.worst_equity_drawdown_pct}%` : ""}.</p>}
+      {result.context && <p className="trl-m0__note">{result.context.profit_positive_share !== null ? `${(Number(result.context.profit_positive_share) * 100).toFixed(2)}% of tested neighbours were profitable` : ""}{result.context.worst_equity_drawdown_pct !== null ? ` · worst neighbour equity drawdown ${pct(result.context.worst_equity_drawdown_pct)}` : ""}.</p>}
 
       {points.length > 0 && <>
         <h5>{result.neighbours.length > 0 ? `Tested neighbours (${result.neighbours.length})` : "Nearest tested settings (outside the neighbourhood)"}</h5>

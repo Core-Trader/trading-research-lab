@@ -1,6 +1,7 @@
 import React, { useMemo, useState, type ReactNode } from "react";
 import { keyboardOrder, nearestPoint, scatterLayout, type PlacedPoint, type TradeOffPoint, type TradeOffStatus } from "./scatter-layout";
 import { ChartFrame } from "../chart-frame";
+import { num } from "../display-format";
 
 type Props = {
   points: TradeOffPoint[];
@@ -70,7 +71,7 @@ export function TradeOffScatter({ points, xLabel, yLabel, xBetter, yBetter, fron
   return <ChartFrame title={`${yLabel} vs ${xLabel}`}>
   <figure className="trl-tradeoff">
     <div className="trl-tradeoff__frame">
-      <div className="trl-tradeoff__y-axis" aria-hidden="true"><span>{layout.yMax}</span><span className="trl-tradeoff__axis-title">{yLabel}{yBetter ? ` (${yBetter} is better)` : ""}</span><span>{layout.yMin}</span></div>
+      <div className="trl-tradeoff__y-axis" aria-hidden="true"><span>{num(layout.yMax)}</span><span className="trl-tradeoff__axis-title">{yLabel}{yBetter ? ` (${yBetter} is better)` : ""}</span><span>{num(layout.yMin)}</span></div>
       <div
         className="trl-tradeoff__plot"
         tabIndex={0}
@@ -88,15 +89,15 @@ export function TradeOffScatter({ points, xLabel, yLabel, xBetter, yBetter, fron
         {card && <div className={`trl-tradeoff__card${card.left > 60 ? " is-left" : ""}${card.top > 60 ? " is-up" : ""}`} style={{ left: `${card.left}%`, top: `${card.top}%` }} role="status">
           <strong>{card.isDefault ? "★ Default · " : ""}{card.label}</strong>
           {(highlightFrontier || card.status === "CONSTRAINED" || card.status === "INCOMPLETE") && <span>{STATUS_LABEL[card.status]}{card.rank && card.status !== "PARETO" ? ` · front ${card.rank}` : ""}</span>}
-          <span>{xLabel}: {card.x}</span>
-          <span>{yLabel}: {card.y}</span>
+          <span>{xLabel}: {num(card.x)}</span>
+          <span>{yLabel}: {num(card.y)}</span>
           {sizeLabel && card.size !== undefined && <span>{sizeLabel}: {card.size ?? "—"}</span>}
           {details?.(card)}
           {onSelect && hovered && <em>Click or press Enter to select</em>}
         </div>}
       </div>
     </div>
-    <div className="trl-tradeoff__x-axis" aria-hidden="true"><span>{layout.xMin}</span><span className="trl-tradeoff__axis-title">{xLabel}{xBetter ? ` (${xBetter} is better)` : ""}</span><span>{layout.xMax}</span></div>
+    <div className="trl-tradeoff__x-axis" aria-hidden="true"><span>{num(layout.xMin)}</span><span className="trl-tradeoff__axis-title">{xLabel}{xBetter ? ` (${xBetter} is better)` : ""}</span><span>{num(layout.xMax)}</span></div>
     <ul className="trl-tradeoff__legend">
       {highlightFrontier
         ? <><li><span className="trl-tradeoff__swatch is-pareto" /> Pareto frontier {counts.PARETO}</li><li><span className="trl-tradeoff__swatch is-dominated" /> Dominated {counts.DOMINATED}</li></>

@@ -30,6 +30,6 @@ export function Diagnostics({ diagnostics }: { diagnostics: RunDiagnostics }): R
 }
 
 export function formatDuration(milliseconds: number): string {
-  if (milliseconds < 1_000) return `${milliseconds.toFixed(1)} ms`;
+  if (milliseconds < 1_000) return `${milliseconds.toFixed(2)} ms`;
   return `${(milliseconds / 1_000).toFixed(3)} s`;
 }

@@ -3,6 +3,7 @@ import { nearestIndex } from "../chart-geometry";
 import { ChartFrame } from "../chart-frame";
 import { formatTimestamp } from "../display-format";
 import { equityGeometry, type EquityPoint } from "./equity-model";
+import { money } from "../display-format";
 
 /**
  * Balance and equity from a linked TRL tester log, laid out like the balance
@@ -49,9 +50,9 @@ export function EquityChart({ points, currency }: { points: EquityPoint[]; curre
             <span className="trl-balance-chart__guide" style={{ left: `${x}%` }} />
             <span className={`trl-balance-chart__tooltip${x > 60 ? " is-left" : ""}`} style={{ left: `${x}%` }} role="status">
               <strong>{formatTimestamp(point.time)}</strong>
-              <span>Balance {point.balance} {unit}</span>
-              <span>Equity {point.equity_close} {unit}</span>
-              <span>Lowest {point.equity_min} · highest {point.equity_max}</span>
+              <span>Balance {money(point.balance)} {unit}</span>
+              <span>Equity {money(point.equity_close)} {unit}</span>
+              <span>Lowest {money(point.equity_min)} · highest {money(point.equity_max)}</span>
             </span>
           </>}
         </div>

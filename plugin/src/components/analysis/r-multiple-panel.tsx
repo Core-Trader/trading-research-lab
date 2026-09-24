@@ -3,6 +3,7 @@ import type { RMultipleMetrics } from "../../types";
 import { CollapsibleSection } from "../collapsible-section";
 import { roundDecimalString } from "../display-format";
 import { signTone } from "../dashboard-model";
+import { num } from "../display-format";
 
 export type RSource = "AVERAGE_LOSS" | "DECLARED";
 
@@ -61,7 +62,7 @@ function Tile({ label, value, detail, exact, tone }: { label: string; value: str
 function RHistogram({ histogram, expectancy }: { histogram: RMultipleMetrics["histogram"]; expectancy: string | null }): React.ReactElement {
   const bins = [
     { key: "under", label: "< -3R", count: histogram.underflow_count, tone: "negative" },
-    ...histogram.buckets.map((bucket) => ({ key: bucket.lower_r, label: `${bucket.lower_r}R to ${bucket.upper_r}R`, count: bucket.count, tone: bucket.lower_r.startsWith("-") ? "negative" : "positive" })),
+    ...histogram.buckets.map((bucket) => ({ key: bucket.lower_r, label: `${num(bucket.lower_r)}R to ${num(bucket.upper_r)}R`, count: bucket.count, tone: bucket.lower_r.startsWith("-") ? "negative" : "positive" })),
     { key: "over", label: "≥ 5R", count: histogram.overflow_count, tone: "positive" },
   ];
   const largest = Math.max(1, ...bins.map((bin) => bin.count));

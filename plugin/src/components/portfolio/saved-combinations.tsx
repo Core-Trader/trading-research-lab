@@ -6,6 +6,7 @@ import { TradeOffScatter } from "../tradeoff/trade-off-scatter";
 import type { TradeOffPoint } from "../tradeoff/scatter-layout";
 import { GuidanceBlock } from "../guidance";
 import { paretoGuidance } from "./pareto-guidance";
+import { money } from "../display-format";
 
 export type SavedCombination = { key: string; name: string; labels: string[]; combination: PortfolioCombination };
 
@@ -43,8 +44,8 @@ export function SavedCombinations({ saved, evaluation, activeKey, onOpen, onRemo
         return <tr key={item.key} className={item.key === activeKey ? "is-active" : undefined}>
           <th scope="row"><button type="button" className="trl-link-button" onClick={() => onOpen(item.key)}>{item.name}</button></th>
           <td>{item.labels.join(" + ")}</td>
-          <td className={`is-${signTone(item.combination.net_pnl)}`}>{item.combination.net_pnl}</td>
-          <td>{balance.maximum_drawdown}</td>
+          <td className={`is-${signTone(item.combination.net_pnl)}`}>{money(item.combination.net_pnl)}</td>
+          <td>{money(balance.maximum_drawdown)}</td>
           <td title={balance.maximum_drawdown_percent ?? undefined}>{balance.maximum_drawdown_percent === null ? "—" : `${r2(balance.maximum_drawdown_percent)}%`}</td>
           <td title={balance.return_to_drawdown ?? undefined}>{r2(balance.return_to_drawdown)}</td>
           <td title={close.profit_factor ?? undefined}>{r2(close.profit_factor)}</td>

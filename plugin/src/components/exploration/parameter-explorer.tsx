@@ -9,6 +9,7 @@ import { defaultSettings } from "./neighbourhood-model";
 import { axisOptions, betterHint, candidateLabel, compareTable, defaultObjectives, FORWARD_PREFIX, frontierMatchesAxes, scatterPoints, statusText } from "./exploration-model";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT } from "../../application/report-files";
 import { DismissButton } from "../dismiss-button";
+import { money, num } from "../display-format";
 
 type Props = {
   service: ResearchService;
@@ -211,7 +212,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
 
     {study && <section className="trl-page__surface">
       <h4>Study summary{study.context.title ? `: ${study.context.title}` : ""}</h4>
-      <p className="trl-m0__note">{study.pass_count} tested parameter sets{study.full_grid_size ? ` out of ${study.full_grid_size} possible in the .set ranges` : ""}{study.context.deposit ? ` · deposit ${study.context.deposit}` : ""} · modelling {study.context.modelling_mode ?? "not declared"}.</p>
+      <p className="trl-m0__note">{study.pass_count} tested parameter sets{study.full_grid_size ? ` out of ${study.full_grid_size} possible in the .set ranges` : ""}{study.context.deposit ? ` · deposit ${money(study.context.deposit)}` : ""} · modelling {study.context.modelling_mode ?? "not declared"}.</p>
       <p className={`trl-exploration__default is-${defaultStatus.toLowerCase()}`}>{DEFAULT_MESSAGE[defaultStatus]}</p>
       <div className="trl-monthly"><table>
         <thead><tr><th scope="col">Parameter</th><th scope="col">Kind</th><th scope="col">Default</th><th scope="col">Range (start–stop, step)</th><th scope="col">Values tested</th></tr></thead>
@@ -299,7 +300,7 @@ export function ParameterExplorer({ service, experiment, onRecordChoice }: Props
         details={(point) => {
           const candidate = evaluation.candidates.find((item) => item.id === point.id);
           if (!candidate) return null;
-          return <>{Object.entries(candidate.parameters).map(([name, value]) => <span key={name}>{name} = {value}</span>)}{evaluation.forward && <span>{candidate.forward ? `Forward: ${forwardCardMetrics.map((metric) => `${metric.label} ${candidate.forward!.metrics[metric.id] ?? "—"}`).join(" · ")}` : "No forward match"}</span>}{candidate.pareto.violations.map((violation) => <span key={violation.metric}>✗ {labelOf(violation.metric)} {violation.operator} {violation.threshold} (is {violation.value ?? "missing"})</span>)}</>;
+          return <>{Object.entries(candidate.parameters).map(([name, value]) => <span key={name}>{name} = {value}</span>)}{evaluation.forward && <span>{candidate.forward ? `Forward: ${forwardCardMetrics.map((metric) => `${metric.label} ${num(candidate.forward!.metrics[metric.id])}`).join(" · ")}` : "No forward match"}</span>}{candidate.pareto.violations.map((violation) => <span key={violation.metric}>✗ {labelOf(violation.metric)} {violation.operator} {violation.threshold} (is {violation.value ?? "missing"})</span>)}</>;
         }}
       />
       {!frontierMatchesAxes(JSON.parse(evaluatedConfig).objectives as Objective[], axes.x, axes.y) && <p className="trl-m0__note">The frontier line is shown only when the two axes are exactly the two objectives; frontier points are still highlighted.</p>}

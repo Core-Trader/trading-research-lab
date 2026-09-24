@@ -126,7 +126,7 @@ function performance(overrides: { profit_factor?: string | null; profit_factor_r
 test("performance tiles round Core quotients for display and keep the exact value on hover", () => {
   const model = buildDashboardModel({ ...empty, statistics, evidence, performance: performance() });
   const byId = Object.fromEntries((model?.kpis ?? []).map((kpi) => [kpi.id, kpi]));
-  assert.equal(byId["max-drawdown"]?.value, "130 USD");
+  assert.equal(byId["max-drawdown"]?.value, "130.00 USD"); // money always shows 2 decimals (display policy)
   assert.equal(byId["max-drawdown"]?.detail, "11.82% of peak · 2026-01-06 → 2026-01-08 · recovered");
   assert.equal(byId["profit-factor"]?.value, "2.31");
   assert.equal(byId["profit-factor"]?.exact, "Core value: 2.30769231");

@@ -43,3 +43,33 @@ function incrementDigits(digits: string): string {
   }
   return "1" + characters.join("");
 }
+
+/*
+ * Display precision policy (owner, 2026-09-24): between 2 and 5 decimals by
+ * relevance. Money, percentages, ratios and statistics show 2; prices show 5;
+ * whole counts stay whole; EA parameter values are inputs and are shown as
+ * entered. The exact Core value stays available where a tooltip offers it.
+ */
+const isMissing = (value: string | null | undefined): value is null | undefined => value === null || value === undefined;
+
+/** Money amounts: always 2 decimals. */
+export function money(value: string | null | undefined): string {
+  return isMissing(value) ? "—" : roundDecimalString(value, 2);
+}
+
+/** Ratios, statistics and MT5 metrics: 2 decimals; whole numbers (counts) unchanged. */
+export function num(value: string | null | undefined): string {
+  if (isMissing(value)) return "—";
+  const text = value.trim();
+  return /^[+-]?\d+$/.test(text) ? text : roundDecimalString(text, 2);
+}
+
+/** Percentages: 2 decimals with a % sign. */
+export function pct(value: string | null | undefined): string {
+  return isMissing(value) ? "—" : `${roundDecimalString(value, 2)}%`;
+}
+
+/** Instrument prices: 5 decimals. */
+export function price(value: string | null | undefined): string {
+  return isMissing(value) ? "—" : roundDecimalString(value, 5);
+}

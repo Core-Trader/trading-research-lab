@@ -5,6 +5,7 @@ import { CollapsibleSection } from "../collapsible-section";
 import { formatPercent, formatTimestamp } from "../display-format";
 import { batchTimeline } from "./batch-timeline";
 import { MT5_REPORT_ACCEPT } from "../../application/report-files";
+import { money } from "../display-format";
 
 const NEXT_STEP: Record<string, string> = {
   COVERAGE_OVERLAP: "Remove one of the overlapping reports. Sequential batches continue one account over consecutive, non-overlapping periods.",
@@ -77,10 +78,10 @@ export function M5Preflight({ paths, result, combined, daily, busy, error, input
     {combined && <section className="trl-m0__analysis-result">
       <h4>Combined realised balance</h4>
       <div className="trl-kpi-row">
-        <div className="trl-kpi"><span className="trl-kpi__label">Opening</span><strong className="trl-kpi__value">{combined.opening_balance} {unit}</strong></div>
-        <div className="trl-kpi"><span className="trl-kpi__label">Final</span><strong className="trl-kpi__value">{combined.final_reported_balance} {unit}</strong></div>
-        <div className={`trl-kpi trl-kpi--${combined.reported_balance_change.startsWith("-") ? "negative" : "positive"}`}><span className="trl-kpi__label">Change</span><strong className="trl-kpi__value">{combined.reported_balance_change} {unit}</strong><span className="trl-kpi__detail">{combined.row_count} source balance rows</span></div>
-        {daily && <div className="trl-kpi trl-kpi--negative" title={daily.worst_day.maximum_drawdown_percent ? `Core value: ${daily.worst_day.maximum_drawdown_percent}%` : undefined}><span className="trl-kpi__label">Worst daily decline</span><strong className="trl-kpi__value">{daily.worst_day.maximum_drawdown} {unit}</strong><span className="trl-kpi__detail">{daily.worst_day.date} · {formatPercent(daily.worst_day.maximum_drawdown_percent) ?? "% unavailable"} of the day's opening balance</span></div>}
+        <div className="trl-kpi"><span className="trl-kpi__label">Opening</span><strong className="trl-kpi__value">{money(combined.opening_balance)} {unit}</strong></div>
+        <div className="trl-kpi"><span className="trl-kpi__label">Final</span><strong className="trl-kpi__value">{money(combined.final_reported_balance)} {unit}</strong></div>
+        <div className={`trl-kpi trl-kpi--${combined.reported_balance_change.startsWith("-") ? "negative" : "positive"}`}><span className="trl-kpi__label">Change</span><strong className="trl-kpi__value">{money(combined.reported_balance_change)} {unit}</strong><span className="trl-kpi__detail">{combined.row_count} source balance rows</span></div>
+        {daily && <div className="trl-kpi trl-kpi--negative" title={daily.worst_day.maximum_drawdown_percent ? `Core value: ${daily.worst_day.maximum_drawdown_percent}%` : undefined}><span className="trl-kpi__label">Worst daily decline</span><strong className="trl-kpi__value">{money(daily.worst_day.maximum_drawdown)} {unit}</strong><span className="trl-kpi__detail">{daily.worst_day.date} · {formatPercent(daily.worst_day.maximum_drawdown_percent) ?? "% unavailable"} of the day's opening balance</span></div>}
       </div>
       <BalanceChart points={combined.balance_points.map((point, index) => ({ source_sequence: index + 1, timestamp: point.timestamp, balance: point.balance }))} currency={combined.currency} />
       {!daily && <button type="button" disabled={working} onClick={onDaily}>Calculate combined daily drawdown</button>}

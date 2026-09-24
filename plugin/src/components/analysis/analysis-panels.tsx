@@ -3,13 +3,14 @@ import type { DailyDrawdownResult, EquityAvailabilityResult, StatisticsResult, T
 import { BalanceChart } from "../balance-chart";
 import { AuditTrail } from "../audit-trail";
 import { CollapsibleSection } from "../collapsible-section";
+import { money, pct } from "../display-format";
 
 export function Results({ statistics }: { statistics: StatisticsResult }): React.ReactElement {
   return <CollapsibleSection title="Verified results" defaultOpen>
     <dl className="trl-m0__diagnostic-grid">
-      <dt>Opening balance</dt><dd>{statistics.opening_balance} {statistics.currency ?? ""}</dd>
-      <dt>Final balance</dt><dd>{statistics.final_reported_balance} {statistics.currency ?? ""}</dd>
-      <dt>Change</dt><dd>{statistics.reported_balance_change} {statistics.currency ?? ""}</dd>
+      <dt>Opening balance</dt><dd>{money(statistics.opening_balance)} {statistics.currency ?? ""}</dd>
+      <dt>Final balance</dt><dd>{money(statistics.final_reported_balance)} {statistics.currency ?? ""}</dd>
+      <dt>Change</dt><dd>{money(statistics.reported_balance_change)} {statistics.currency ?? ""}</dd>
     </dl>
     <BalanceChart points={statistics.balance_curve.points} currency={statistics.currency} />
     <AuditTrail items={[["Dataset", <code>{statistics.dataset_ref}</code>], ["Equity curve in the report", <>{statistics.equity_curve.status}: {statistics.equity_curve.reason}</>]]} />
@@ -48,8 +49,8 @@ export function AnalysisResult({ title, result }: { title: string; result: Trade
     <dl className="trl-m0__diagnostic-grid">
       {result.eligible === false && <><dt>Lifecycles</dt><dd>Not created for this account-mode declaration.</dd></>}
       <dt>Count</dt><dd>{metrics.count}</dd>
-      <dt>Net P/L</dt><dd>{metrics.net_pnl} {currency}</dd>
-      <dt>Gross profit / loss</dt><dd>{metrics.gross_profit} / {metrics.gross_loss} {currency}</dd>
+      <dt>Net P/L</dt><dd>{money(metrics.net_pnl)} {currency}</dd>
+      <dt>Gross profit / loss</dt><dd>{money(metrics.gross_profit)} / {money(metrics.gross_loss)} {currency}</dd>
       <dt>Wins / losses / breakeven</dt><dd>{metrics.win_count} / {metrics.loss_count} / {metrics.breakeven_count}</dd>
       <dt>Evidence</dt><dd>{result.quality_counts.MT5_VERIFIED} verified by MT5 · {result.quality_counts.INFERRED} inferred{result.quality_counts.UNPAIRED ? ` · ${result.quality_counts.UNPAIRED} unpaired` : ""}{result.quality_counts.AMBIGUOUS ? ` · ${result.quality_counts.AMBIGUOUS} ambiguous` : ""}</dd>
     </dl>
@@ -71,8 +72,8 @@ export function M3Analysis({ drawdown, equity, onRun }: {
       <dl className="trl-m0__diagnostic-grid">
         <dt>Days observed</dt><dd>{drawdown.daily_row_count}</dd>
         <dt>Worst report date</dt><dd>{drawdown.worst_day.date} ({drawdown.worst_day.coverage})</dd>
-        <dt>Worst decline</dt><dd>{drawdown.worst_day.maximum_drawdown} {drawdown.currency ?? "source currency"}{drawdown.worst_day.maximum_drawdown_percent !== null ? ` (${drawdown.worst_day.maximum_drawdown_percent}%)` : ""}</dd>
-        <dt>Day's reference / high</dt><dd>{drawdown.worst_day.daily_reference_balance} / {drawdown.worst_day.daily_high_water_balance} {drawdown.currency ?? "source currency"}</dd>
+        <dt>Worst decline</dt><dd>{money(drawdown.worst_day.maximum_drawdown)} {drawdown.currency ?? "source currency"}{drawdown.worst_day.maximum_drawdown_percent !== null ? ` (${pct(drawdown.worst_day.maximum_drawdown_percent)})` : ""}</dd>
+        <dt>Day's reference / high</dt><dd>{money(drawdown.worst_day.daily_reference_balance)} / {money(drawdown.worst_day.daily_high_water_balance)} {drawdown.currency ?? "source currency"}</dd>
       </dl>
       {drawdown.warnings.length > 0 && <ul className="trl-batch__warnings">{drawdown.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
       <AuditTrail items={[["Time basis", <><code>{drawdown.time_basis}</code>: no timezone conversion</>], ["Analysis basis", <code>{drawdown.analysis_basis}</code>], ["Policy", <code>{drawdown.policy_id}</code>], ["Artifact", <code>{drawdown.artifacts.table}</code>]]} />

@@ -4,6 +4,7 @@
  */
 import type { Objective, ParameterEvaluation, StudyMetric } from "../../types";
 import type { TradeOffPoint } from "../tradeoff/scatter-layout";
+import { num } from "../display-format.ts";
 
 type Candidate = ParameterEvaluation["candidates"][number];
 
@@ -81,10 +82,10 @@ export function compareTable(evaluation: ParameterEvaluation, pinnedIds: string[
     return { label: name, kind: "parameter", cells: columns.map((column) => { const value = parameterValue(column, name); return { value, differs: column.key !== "default" && columns[0]?.key === "default" && !same(value, reference) }; }) };
   });
   for (const metric of evaluation.study.metrics) {
-    rows.push({ label: metric.label, kind: "metric", cells: columns.map((column) => ({ value: column.candidate ? column.candidate.metrics[metric.id] ?? "—" : "not tested", differs: false })) });
+    rows.push({ label: metric.label, kind: "metric", cells: columns.map((column) => ({ value: column.candidate ? num(column.candidate.metrics[metric.id]) : "not tested", differs: false })) });
   }
   for (const metric of evaluation.forward?.metrics ?? []) {
-    rows.push({ label: `Forward: ${metric.label}`, kind: "forward", cells: columns.map((column) => ({ value: !column.candidate ? "not tested" : column.candidate.forward ? column.candidate.forward.metrics[metric.id] ?? "—" : "no forward match", differs: false })) });
+    rows.push({ label: `Forward: ${metric.label}`, kind: "forward", cells: columns.map((column) => ({ value: !column.candidate ? "not tested" : column.candidate.forward ? num(column.candidate.forward.metrics[metric.id]) : "no forward match", differs: false })) });
   }
   rows.push({ label: "Status", kind: "status", cells: columns.map((column) => ({ value: column.candidate ? statusText(column.candidate) : "not in this optimisation", differs: false })) });
   return { columns, rows };

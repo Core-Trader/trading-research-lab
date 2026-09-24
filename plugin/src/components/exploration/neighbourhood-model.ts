@@ -4,6 +4,7 @@
  * only chooses defaults, words, and heatmap shading.
  */
 import type { NeighbourhoodResult, NeighbourhoodRole, NeighbourhoodSettings, NeighbourhoodSlice, StudyParameter } from "../../types";
+import { num } from "../display-format.ts";
 
 /** Steppable .set parameters start ordinal; everything else must be equal (spec N1). */
 export function defaultSettings(parameters: StudyParameter[]): NeighbourhoodSettings {
@@ -50,7 +51,7 @@ export function heatmapCells(slice: NeighbourhoodSlice, direction: "MAX" | "MIN"
       shade = direction === "MIN" ? 1 - position : position;
     }
     const where = `${xLabel} ${slice.x_values[x]}, ${yLabel} ${slice.y_values[y]}`;
-    return { value: cell.value, tested: cell.tested, isCandidate: cell.is_candidate, shade, title: cell.tested ? `${where}: ${cell.value ?? "—"}${cell.is_candidate ? " (selected)" : ""}` : `${where}: not tested` };
+    return { value: cell.value, tested: cell.tested, isCandidate: cell.is_candidate, shade, title: cell.tested ? `${where}: ${num(cell.value)}${cell.is_candidate ? " (selected)" : ""}` : `${where}: not tested` };
   }));
 }
 
