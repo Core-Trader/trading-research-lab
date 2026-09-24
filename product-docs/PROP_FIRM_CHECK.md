@@ -7,8 +7,12 @@ it came.
 
 ## Firm presets and your own rules
 
-When you create a profile, you can **start from a firm preset**; FTMO 2-Step
-and 1-Step are included. A preset is copied from the firm's published rules
+The **Profile** list shows your own profiles and the firm presets (FTMO and
+FundedNext). Pick a preset and click **Check against the rules**: TRL saves a
+copy sized to the report under **My profiles**. To change a preset's values
+first, use **Edit a copy…**. To change one of your own profiles, use **Edit
+(saves a new version)…**. You can also start from a preset in **New
+profile…**. A preset is copied from the firm's published rules
 on the date shown, and every value stays editable. Firms change their terms,
 so check the preset against your firm's current rules. Each preset also lists
 what TRL cannot check (for example news restrictions).
