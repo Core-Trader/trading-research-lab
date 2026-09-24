@@ -97,6 +97,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const navigation = plugin.navigation;
   const activePage = useSyncExternalStore((listener) => navigation.subscribe(listener), () => navigation.current.page);
   const setActivePage = (page: WorkspacePage): void => navigation.setPage(page);
+  const propRequest = useSyncExternalStore((listener) => navigation.subscribe(listener), () => navigation.current.propRequest ?? null);
   const [importBusy, setImportBusy] = useState(false);
   const [equityMetrics, setEquityMetrics] = useState<EquityMetrics | null>(null);
   const [equityMetricsError, setEquityMetricsError] = useState<string | null>(null);
@@ -763,8 +764,8 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       />
     </section>}
     {activePage === "help" && <HelpPage />}
-    {activePage === "portfolio" && <PortfolioLab service={service} linkedNotes={linkedNotes} />}
-    {activePage === "prop" && <PropCheckPage service={service} currentDatasetRef={evidence?.dataset_ref ?? null} />}
+    {activePage === "portfolio" && <PortfolioLab service={service} linkedNotes={linkedNotes} onPropCheck={(key) => navigation.requestPropCheck(`combination:${key}`)} />}
+    {activePage === "prop" && <PropCheckPage service={service} currentDatasetRef={evidence?.dataset_ref ?? null} request={propRequest} />}
     {activePage === "parameters" && <ParameterExplorer service={service} experiment={experiment} onRecordChoice={recordParameterChoice} />}
     {activePage === "advanced" && <section className="trl-page" aria-label="Advanced research">
       <header className="trl-page__header"><div><h3>Advanced research</h3><p>Optional, qualified studies. Results are research evidence, not trading recommendations.</p></div></header>

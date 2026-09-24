@@ -38,7 +38,9 @@ export type ReportSummary = {
   setCheck: "MATCH" | "DIFFERS" | null;
 };
 
-export type NavigationSnapshot = { page: WorkspacePage; report: ReportSummary | null; busy: boolean; workspaceOpen: boolean };
+/** Ask the Prop-firm check page to select a run: "report:<ref>", "combination:<key>", or null for the current report. */
+export type PropRequest = { choice: string | null; seq: number };
+export type NavigationSnapshot = { page: WorkspacePage; report: ReportSummary | null; busy: boolean; workspaceOpen: boolean; propRequest?: PropRequest | null };
 export type NavigationAction = "validate" | "analyse";
 
 type Listener = (snapshot: NavigationSnapshot) => void;
@@ -64,6 +66,11 @@ export class NavigationStore {
   }
 
   setPage(page: WorkspacePage): void { this.update({ page }); }
+
+  /** Open the Prop-firm check page on a run (quick actions from the sidebar and saved combinations). */
+  requestPropCheck(choice: string | null): void {
+    this.update({ page: "prop", propRequest: { choice, seq: (this.snapshot.propRequest?.seq ?? 0) + 1 } });
+  }
 
   /** The workspace registers the handler for sidebar quick actions while it is open. */
   handleActions(handler: (action: NavigationAction) => void): () => void {

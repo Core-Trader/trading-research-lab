@@ -12,13 +12,13 @@ import { addToTrack, addTrack, combinationRequest, removeReport, removeTrack, re
 import { isMt5ReportPath, MT5_REPORT_ACCEPT, reportBaseName } from "../../application/report-files";
 import { DismissButton } from "../dismiss-button";
 
-type Props = { service: ResearchService; linkedNotes?: LinkedNotes };
+type Props = { service: ResearchService; linkedNotes?: LinkedNotes; onPropCheck?: (savedKey: string) => void };
 
 /**
  * Portfolio Lab v1: build strategy tracks from imported reports and combine
  * them on one account (as reported). All results come from portfolio.combine.
  */
-export function PortfolioLab({ service, linkedNotes }: Props): React.ReactElement {
+export function PortfolioLab({ service, linkedNotes, onPropCheck }: Props): React.ReactElement {
   const [library, setLibrary] = useState<DatasetEvidence[]>([]);
   const [archived, setArchived] = useState<DatasetEvidence[]>([]);
   const [deleting, setDeleting] = useState<{ preview: DatasetDeletionPreview; notes: string[] } | null>(null);
@@ -277,7 +277,7 @@ export function PortfolioLab({ service, linkedNotes }: Props): React.ReactElemen
       <button type="button" disabled={busy !== null} onClick={() => void saveCurrent()}>{savedKeyOf(result.combination) ? "Rename saved combination" : "Save combination for comparison"}</button>
     </section>}
     {result && <CombinedDashboard combination={result.combination} labels={result.labels} />}
-    <SavedCombinations saved={saved} evaluation={evaluation} activeKey={activeKey} onOpen={(key) => { const item = saved.find((entry) => entry.key === key); if (item) { setResult({ combination: item.combination, labels: item.labels }); setActiveKey(key); } }} onRemove={(key) => void removeSaved(key)} />
+    <SavedCombinations saved={saved} evaluation={evaluation} activeKey={activeKey} onOpen={(key) => { const item = saved.find((entry) => entry.key === key); if (item) { setResult({ combination: item.combination, labels: item.labels }); setActiveKey(key); } }} onRemove={(key) => void removeSaved(key)} onPropCheck={onPropCheck} />
     {unavailable.length > 0 && <ul className="trl-batch__findings">{unavailable.map((entry) => <li key={entry.saved.key}>
       <strong className="is-blocked">Saved combination "{entry.saved.name}" cannot be recalculated</strong>
       <span>{entry.error?.message ?? "Unknown error."} Its reports may have been removed from the workspace.</span>

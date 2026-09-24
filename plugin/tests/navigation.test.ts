@@ -29,3 +29,12 @@ test("the store notifies on real changes only and routes quick actions", () => {
   store.setPage("help");
   assert.deepEqual(seen, ["portfolio"]);
 });
+
+test("a prop-check request opens the page and carries a fresh sequence number", () => {
+  const store = new NavigationStore();
+  store.requestPropCheck("combination:abc");
+  assert.equal(store.current.page, "prop");
+  assert.deepEqual(store.current.propRequest, { choice: "combination:abc", seq: 1 });
+  store.requestPropCheck(null);
+  assert.deepEqual(store.current.propRequest, { choice: null, seq: 2 });
+});

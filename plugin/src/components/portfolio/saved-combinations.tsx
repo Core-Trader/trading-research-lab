@@ -13,7 +13,8 @@ export type SavedCombination = { key: string; name: string; labels: string[]; co
 const r2 = (value: string | null | undefined): string => value === null || value === undefined ? "—" : roundDecimalString(value, 2);
 
 /** Named combinations side by side. Pareto status comes from the Core (analysis.pareto_evaluate). */
-export function SavedCombinations({ saved, evaluation, activeKey, onOpen, onRemove }: {
+export function SavedCombinations({ saved, evaluation, activeKey, onOpen, onRemove, onPropCheck }: {
+  onPropCheck?: (key: string) => void;
   saved: SavedCombination[];
   evaluation: ParetoEvaluation | null;
   activeKey: string | null;
@@ -53,7 +54,7 @@ export function SavedCombinations({ saved, evaluation, activeKey, onOpen, onRemo
           <td>{r2(item.combination.metrics.stagnation.longest_by_time.duration_days)}</td>
           <td>{item.combination.close_event_count}</td>
           <td>{row ? (row.status === "PARETO" ? "Frontier" : row.status === "DOMINATED" ? `Dominated (${row.dominated_by_count})` : row.status) : "—"}</td>
-          <td><button type="button" onClick={() => onRemove(item.key)}>Remove</button></td>
+          <td>{onPropCheck && <button type="button" title="Check this combination against a prop-firm profile" onClick={() => onPropCheck(item.key)}>Prop check</button>} <button type="button" onClick={() => onRemove(item.key)}>Remove</button></td>
         </tr>;
       })}</tbody>
     </table></div>

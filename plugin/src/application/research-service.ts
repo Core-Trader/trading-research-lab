@@ -1,4 +1,4 @@
-import type { PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { PropChain, PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -187,6 +187,11 @@ export class ResearchService {
   /** Every day of the run as a challenge start, followed to its first decision (P8). */
   propRollingStarts(profileId: string, target: PropTarget, reportClockZone: string | null): Promise<PropRolling> {
     return this.worker.request("prop.rolling_starts", reportClockZone ? { profile_id: profileId, target, report_clock_zone: reportClockZone } : { profile_id: profileId, target }, LONG_RUNNING_MS);
+  }
+
+  /** A multi-phase challenge from every start day: each phase after a pass starts the next day as a fresh account. */
+  propChainStarts(profileIds: string[], target: PropTarget, reportClockZone: string | null): Promise<PropChain> {
+    return this.worker.request("prop.chain_starts", reportClockZone ? { profile_ids: profileIds, target, report_clock_zone: reportClockZone } : { profile_ids: profileIds, target }, LONG_RUNNING_MS);
   }
 
   /** Firm presets with their source and retrieval date; copied into editable profiles. */

@@ -229,3 +229,23 @@ export function rollingGuidance(result: import("../../types").PropRolling): Guid
   for (const warning of result.warnings) flags.push(warning);
   return { read, tips, flags };
 }
+
+export const CHAIN_LABEL: Record<import("../../types").PropChainOutcome, string> = {
+  COMPLETED: "Completed every phase", FAILED: "Failed a phase", POSSIBLY_FAILED: "Possibly failed a phase", NOT_DECIDED: "Not decided (data ended)",
+};
+
+export function chainGuidance(result: import("../../types").PropChain): Guidance {
+  const summary = result.summary;
+  const names = result.profiles.map((profile, index) => `phase ${index + 1} "${profile.name}"`).join(", then ");
+  const read = [`Each of the ${summary.starts} days with data started ${names}. After a pass, the next phase starts on the next day with data as a fresh account.`];
+  const tips: string[] = [];
+  const flags: string[] = [];
+  if (summary.completed_share_percent !== null) read.push(`${r2(summary.completed_share_percent)}% of the ${summary.decided} decided starts completed every phase.`);
+  else read.push("No start reached a decision before the data ended, so there is no share to report.");
+  const failures = Object.entries(summary.failed_by_phase).map(([phase, count]) => `${count} in phase ${phase}`).join(", ");
+  if (failures) tips.push(`Failures by phase: ${failures}. The phase that fails most is where the rules bind hardest for this EA.`);
+  if (summary.days_to_complete) tips.push(`Completing starts took ${summary.days_to_complete.minimum} to ${summary.days_to_complete.maximum} calendar days (median ${summary.days_to_complete.median}).`);
+  if (summary.open_at_start > 0) flags.push(`${summary.open_at_start} of ${summary.starts} starts began with positions already open.`);
+  for (const warning of result.warnings) flags.push(warning);
+  return { read, tips, flags };
+}

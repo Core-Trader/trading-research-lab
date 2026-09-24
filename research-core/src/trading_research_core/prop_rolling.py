@@ -38,30 +38,12 @@ _HUNDRED = Decimal(100)
 
 def rolling_starts(workspace_root: Path, profile_id: str, target: dict[str, Any], report_clock_zone: str | None = None, survival_days: int | None = None) -> dict[str, object]:
     root = workspace_root.resolve()
+    _check_survival(survival_days)
     record = load_profile(root, profile_id)
-    rules = record["rules"]
-    boundary = DayBoundary(rules["reset"], report_clock_zone)
-    account = Decimal(rules["account_size"])
-    run = _run(root, target, account)
-    variants = run["variants"]
-    if rules["breach_on"] == "BALANCE_CLOSE":
-        variants = [[sample | {"low": sample["balance"], "low_at": sample["time"]} for sample in samples] for samples in variants]
-    events = sorted(run["open_times"] if rules["trading_day_definition"] == "POSITION_OPENED" else run["deal_times"])
+    phase = _Phase(record, root, target, report_clock_zone, survival_days)
+    rules, boundary, run, horizon = phase.rules, phase.boundary, phase.run, phase.horizon
     has_target = rules["profit_target"] is not None
-    horizon = rules["maximum_calendar_days"] if rules["maximum_calendar_days"] is not None else (None if has_target else survival_days or DEFAULT_SURVIVAL_DAYS)
-    if survival_days is not None and (not isinstance(survival_days, int) or isinstance(survival_days, bool) or survival_days < 1):
-        raise CoreError("E_REQUEST_INVALID", "survival_days must be a whole number of at least 1.")
-
-    context = _Context(variants[0], boundary, events, rules, account, horizon)
-    optimistic = _Context(variants[1], boundary, events, rules, account, horizon) if len(variants) > 1 else None
-    starts = []
-    for index in range(len(context.days)):
-        result = context.follow(index)
-        if optimistic is not None and result["outcome"] == "BROKEN":
-            other = optimistic.follow(index)
-            if other["outcome"] != "BROKEN":
-                result = result | {"outcome": "POSSIBLY_BROKEN", "optimistic_outcome": other["outcome"]}
-        starts.append(result)
+    starts = [phase.follow(index) for index in range(len(phase.context.days))]
     return {
         "calculation_version": ROLLING_VERSION,
         "profile": {"profile_id": record["profile_id"], "profile_hash": record["profile_hash"], "name": rules["name"]},
@@ -78,6 +60,124 @@ def rolling_starts(workspace_root: Path, profile_id: str, target: dict[str, Any]
             "Each start shifts the run to begin at the account size; profit and loss are not rescaled and lots are as tested. An EA that sizes lots from its balance traded that day on the backtest balance, not the account size.",
             "Starts overlap and share one history, so the pass share describes this run under these rules. It is not an independent probability of passing.",
             "A start that inherits open positions begins with their floating profit or loss.",
+        ],
+    }
+
+
+def _check_survival(survival_days: Any) -> None:
+    if survival_days is not None and (not isinstance(survival_days, int) or isinstance(survival_days, bool) or survival_days < 1):
+        raise CoreError("E_REQUEST_INVALID", "survival_days must be a whole number of at least 1.")
+
+
+class _Phase:
+    """One profile applied to one run: the conservative context and, for portfolios, the optimistic one."""
+
+    def __init__(self, record: dict[str, Any], root: Path, target: dict[str, Any], report_clock_zone: str | None, survival_days: int | None) -> None:
+        self.record = record
+        self.rules = rules = record["rules"]
+        self.boundary = DayBoundary(rules["reset"], report_clock_zone)
+        self.account = Decimal(rules["account_size"])
+        self.run = _run(root, target, self.account)
+        variants = self.run["variants"]
+        if rules["breach_on"] == "BALANCE_CLOSE":
+            variants = [[sample | {"low": sample["balance"], "low_at": sample["time"]} for sample in samples] for samples in variants]
+        events = sorted(self.run["open_times"] if rules["trading_day_definition"] == "POSITION_OPENED" else self.run["deal_times"])
+        has_target = rules["profit_target"] is not None
+        self.horizon = rules["maximum_calendar_days"] if rules["maximum_calendar_days"] is not None else (None if has_target else survival_days or DEFAULT_SURVIVAL_DAYS)
+        self.context = _Context(variants[0], self.boundary, events, rules, self.account, self.horizon)
+        self.optimistic = _Context(variants[1], self.boundary, events, rules, self.account, self.horizon) if len(variants) > 1 else None
+
+    def follow(self, index: int) -> dict[str, object]:
+        result = self.context.follow(index)
+        if self.optimistic is not None and result["outcome"] == "BROKEN":
+            other = self.optimistic.follow(index)
+            if other["outcome"] != "BROKEN":
+                result = result | {"outcome": "POSSIBLY_BROKEN", "optimistic_outcome": other["outcome"]}
+        return result
+
+    def first_day_after(self, moment: str) -> int | None:
+        """Index of the first day with data after the day containing `moment` (the next phase starts on a new day)."""
+
+        after = self.boundary.day(moment)
+        return next((index for index, info in enumerate(self.context.days) if info["day"] > after), None)
+
+
+CHAIN_VERSION = "prop-chain-1"
+MAX_PHASES = 3
+
+
+def chain_starts(workspace_root: Path, profile_ids: list[str], target: dict[str, Any], report_clock_zone: str | None = None, survival_days: int | None = None) -> dict[str, object]:
+    """A multi-phase challenge from every start day: phase 1, then (after a pass) the next
+    phase from the next day with data as a fresh account, and so on (P8 follow-up).
+    """
+
+    root = workspace_root.resolve()
+    _check_survival(survival_days)
+    if not isinstance(profile_ids, list) or not 2 <= len(profile_ids) <= MAX_PHASES or not all(isinstance(item, str) for item in profile_ids):
+        raise CoreError("E_PROP_CHAIN_INVALID", f"A challenge chain needs 2 to {MAX_PHASES} profiles, in order.")
+    records = [load_profile(root, profile_id) for profile_id in profile_ids]
+    if any(record["rules"]["profit_target"] is None for record in records[:-1]):
+        raise CoreError("E_PROP_CHAIN_INVALID", "Every phase except the last needs a profit target; otherwise it can never pass on to the next phase.")
+    if len({Decimal(record["rules"]["account_size"]) for record in records}) != 1:
+        raise CoreError("E_PROP_CHAIN_INVALID", "All phases must use the same account size (results are not rescaled).")
+    phases = [_Phase(record, root, target, report_clock_zone, survival_days) for record in records]
+    starts = []
+    for index in range(len(phases[0].context.days)):
+        steps: list[dict[str, object]] = []
+        position: int | None = index
+        for number, phase in enumerate(phases, start=1):
+            assert position is not None
+            step = phase.follow(position) | {"phase": number}
+            steps.append(step)
+            if step["outcome"] not in {"PASSED", "SURVIVED"} or number == len(phases):
+                break
+            next_phase = phases[number]
+            position = next_phase.first_day_after(str(step["decided_at"]))
+            if position is None:
+                steps.append({"phase": number + 1, "outcome": "NOT_DECIDED", "rule": None, "decided_at": None, "decided_day": None, "calendar_days": 0, "start_day": None, "start_time": None, "open_at_start": False})
+                break
+        last = steps[-1]
+        complete = len(steps) == len(phases) and last["outcome"] in {"PASSED", "SURVIVED"}
+        if complete:
+            outcome = "COMPLETED"
+        elif last["outcome"] == "NOT_DECIDED":
+            outcome = "NOT_DECIDED"
+        elif last["outcome"] == "POSSIBLY_BROKEN":
+            outcome = "POSSIBLY_FAILED"
+        else:
+            outcome = "FAILED"
+        decided_day = last.get("decided_day")
+        starts.append({
+            "start_day": steps[0]["start_day"], "start_time": steps[0]["start_time"], "open_at_start": steps[0]["open_at_start"],
+            "outcome": outcome, "failed_phase": None if outcome in {"COMPLETED", "NOT_DECIDED"} else last["phase"],
+            "calendar_days": _span(str(steps[0]["start_day"]), str(decided_day)) if decided_day else None, "phases": steps,
+        })
+    first = phases[0]
+    counts: dict[str, int] = {}
+    failed_by_phase: dict[str, int] = {}
+    for item in starts:
+        counts[item["outcome"]] = counts.get(item["outcome"], 0) + 1
+        if item["failed_phase"] is not None:
+            failed_by_phase[str(item["failed_phase"])] = failed_by_phase.get(str(item["failed_phase"]), 0) + 1
+    decided = len(starts) - counts.get("NOT_DECIDED", 0)
+    return {
+        "calculation_version": CHAIN_VERSION,
+        "profiles": [{"profile_id": record["profile_id"], "profile_hash": record["profile_hash"], "name": record["rules"]["name"], "horizon_days": phase.horizon} for record, phase in zip(records, phases)],
+        "target": first.run["target"],
+        "currency": first.run["currency"],
+        "evidence_level": first.run["evidence_level"],
+        "summary": {
+            "starts": len(starts), "decided": decided, "counts": counts, "failed_by_phase": failed_by_phase,
+            "completed_share_percent": None if decided == 0 else _q(Decimal(counts.get("COMPLETED", 0)) / Decimal(decided) * _HUNDRED),
+            "days_to_complete": _spread(sorted(item["calendar_days"] for item in starts if item["outcome"] == "COMPLETED")),
+            "open_at_start": sum(1 for item in starts if item["open_at_start"]),
+        },
+        "starts": starts,
+        "findings": first.boundary.findings() + first.run["findings"],
+        "warnings": [
+            "Each phase after a pass starts on the next day with data, as a fresh account at the account size. Positions the EA still held carry over in the backtest; a real new account would start flat.",
+            "Starts overlap and share one history, so the completed share describes this run under these rules. It is not an independent probability.",
+            "Each phase is shifted to begin at the account size; profit and loss are not rescaled.",
         ],
     }
 

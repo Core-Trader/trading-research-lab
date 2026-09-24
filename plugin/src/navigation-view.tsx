@@ -51,6 +51,7 @@ function NavigationSidebar({ plugin }: { plugin: TradingResearchLabPlugin }): Re
         </ul>
         <div className="trl-sidenav__actions">
           {!report.analysed && <button type="button" className="mod-cta" disabled={snapshot.busy} onClick={() => act("analyse")}>Start analysis</button>}
+          <button type="button" disabled={snapshot.busy} onClick={() => { void plugin.openPage("prop").then(() => navigation.requestPropCheck(null)); }}>Check prop-firm rules…</button>
           <button type="button" disabled={snapshot.busy} onClick={() => act("validate")}>Validate another report…</button>
         </div>
       </> : <>

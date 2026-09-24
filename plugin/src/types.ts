@@ -624,3 +624,16 @@ export type PropRolling = {
   findings: Array<{ severity: string; code: string; message: string }>;
   warnings: string[];
 };
+
+export type PropChainOutcome = "COMPLETED" | "FAILED" | "POSSIBLY_FAILED" | "NOT_DECIDED";
+export type PropChainStart = { start_day: string; start_time: string; open_at_start: boolean; outcome: PropChainOutcome; failed_phase: number | null; calendar_days: number | null; phases: Array<PropRollingStart & { phase: number }> };
+export type PropChain = {
+  calculation_version: string;
+  profiles: Array<{ profile_id: string; profile_hash: string; name: string; horizon_days: number | null }>;
+  currency: string | null;
+  evidence_level: PropEvidenceLevel;
+  summary: { starts: number; decided: number; counts: Partial<Record<PropChainOutcome, number>>; failed_by_phase: Record<string, number>; completed_share_percent: string | null; days_to_complete: { minimum: number; median: number; maximum: number } | null; open_at_start: number };
+  starts: PropChainStart[];
+  findings: Array<{ severity: string; code: string; message: string }>;
+  warnings: string[];
+};

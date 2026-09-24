@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { emptyForm, formFromPreset, formFromRules, limitUsedPercent, profileFromForm, propChartGeometry, propGuidance, rollingGuidance, verdictHeadline } from "../src/components/prop/prop-model.ts";
-import type { PropEvaluation, PropPreset, PropRolling, PropRules } from "../src/types.ts";
+import { chainGuidance, emptyForm, formFromPreset, formFromRules, limitUsedPercent, profileFromForm, propChartGeometry, propGuidance, rollingGuidance, verdictHeadline } from "../src/components/prop/prop-model.ts";
+import type { PropChain, PropEvaluation, PropPreset, PropRolling, PropRules } from "../src/types.ts";
 
 const rules: PropRules = {
   name: "P", account_size: "10000", daily_loss_limit: { kind: "PERCENT", value: "5" }, daily_loss_basis: "INITIAL_BALANCE", start_of_day_reference: "HIGHER_OF_BALANCE_AND_EQUITY",
@@ -82,4 +82,16 @@ test("rolling guidance restates the Core summary and never reports a share witho
   assert.ok(guidance.tips.some((tip) => tip.includes("3 to 20 calendar days (median 9)")));
   assert.ok(guidance.flags.some((flag) => flag.startsWith("4 of 10 starts began with positions already open")));
   assert.ok(rollingGuidance(rolling({ decided: 0, success_share_percent: null, counts: { NOT_DECIDED: 10 } })).read.some((line) => line.startsWith("No start reached a decision")));
+});
+
+test("chain guidance names the phases and the failures by phase from the Core summary", () => {
+  const chain: PropChain = {
+    calculation_version: "prop-chain-1", currency: "USD", evidence_level: "REALISED_ONLY", starts: [], findings: [], warnings: [],
+    profiles: [{ profile_id: "a", profile_hash: "h", name: "FTMO 2-Step · FTMO Challenge (phase 1)", horizon_days: null }, { profile_id: "b", profile_hash: "h", name: "FTMO 2-Step · Verification (phase 2)", horizon_days: null }],
+    summary: { starts: 20, decided: 16, counts: { COMPLETED: 4, FAILED: 12, NOT_DECIDED: 4 }, failed_by_phase: { "1": 9, "2": 3 }, completed_share_percent: "25.00000000", days_to_complete: { minimum: 20, median: 31, maximum: 60 }, open_at_start: 0 },
+  };
+  const guidance = chainGuidance(chain);
+  assert.ok(guidance.read[0]!.includes("phase 1 \"FTMO 2-Step · FTMO Challenge (phase 1)\", then phase 2"));
+  assert.ok(guidance.read.some((line) => line.startsWith("25.00% of the 16 decided starts completed every phase")));
+  assert.ok(guidance.tips.some((tip) => tip.startsWith("Failures by phase: 9 in phase 1, 3 in phase 2")));
 });

@@ -1,17 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
-import type { DatasetEvidence, PropEvaluation, PropPreset, PropProfile, PropRolling, PropTarget, SavedCombinationEntry } from "../../types";
+import type { DatasetEvidence, PropChain, PropEvaluation, PropPreset, PropProfile, PropRolling, PropTarget, SavedCombinationEntry } from "../../types";
+import type { PropRequest } from "../../application/navigation";
 import { AuditTrail } from "../audit-trail";
 import { ChartFrame } from "../chart-frame";
 import { slotIndex, nearestIndex } from "../chart-geometry";
 import { DismissButton } from "../dismiss-button";
 import { formatTimestamp, roundDecimalString } from "../display-format";
 import { GuidanceBlock, KpiTile } from "../guidance";
-import { CHALLENGE_TEXT, ROLLING_LABEL, rollingGuidance, emptyForm, formFromPreset, EVIDENCE_TEXT, formFromRules, limitText, limitUsedPercent, modeText, profileFromForm, propChartGeometry, propGuidance, RULE_LABELS, verdictHeadline, ZONE_SUGGESTIONS, type LimitKind, type ProfileForm } from "./prop-model";
+import { CHAIN_LABEL, CHALLENGE_TEXT, ROLLING_LABEL, chainGuidance, rollingGuidance, emptyForm, formFromPreset, EVIDENCE_TEXT, formFromRules, limitText, limitUsedPercent, modeText, profileFromForm, propChartGeometry, propGuidance, RULE_LABELS, verdictHeadline, ZONE_SUGGESTIONS, type LimitKind, type ProfileForm } from "./prop-model";
 import { money } from "../display-format";
 
-type Props = { service: ResearchService; currentDatasetRef: string | null };
+type Props = { service: ResearchService; currentDatasetRef: string | null; request?: PropRequest | null };
 type Choice = { key: string; label: string; target: PropTarget; account: string | null; logged: boolean };
 
 const r2 = (value: string | null | undefined): string => value === null || value === undefined ? "—" : roundDecimalString(value, 2);
@@ -28,7 +29,7 @@ function rememberClock(key: string, zone: string): void {
  * Prop-firm rule check (PROP_FIRM_SPEC.md). The user enters the firm's rules
  * in a profile; the Core checks one report or saved combination against it.
  */
-export function PropCheckPage({ service, currentDatasetRef }: Props): React.ReactElement {
+export function PropCheckPage({ service, currentDatasetRef, request = null }: Props): React.ReactElement {
   const [profiles, setProfiles] = useState<PropProfile[]>([]);
   const [profileId, setProfileId] = useState<string>("");
   const [editing, setEditing] = useState<{ form: ProfileForm; supersedes: string | null } | null>(null);
@@ -39,6 +40,8 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
   const [clockZone, setClockZone] = useState("");
   const [result, setResult] = useState<PropEvaluation | null>(null);
   const [rolling, setRolling] = useState<PropRolling | null>(null);
+  const [chain, setChain] = useState<PropChain | null>(null);
+  const [laterPhases, setLaterPhases] = useState<string[]>(["", ""]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const runs = useRef(new LatestRun()).current;
@@ -66,6 +69,14 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
     setChoiceKey((current ?? choices[0]!).key);
   }, [choices, choiceKey, currentDatasetRef]);
   useEffect(() => { if (choiceKey) setClockZone(rememberedClock(choiceKey)); }, [choiceKey]);
+  // A quick action asked for a specific run (or the current report); apply it once the choices are known.
+  const appliedRequest = useRef(0);
+  useEffect(() => {
+    if (!request || request.seq === appliedRequest.current || choices.length === 0) return;
+    const wanted = request.choice ?? (currentDatasetRef ? `report:${currentDatasetRef}` : null);
+    if (wanted && choices.some((item) => item.key === wanted)) { setChoiceKey(wanted); setResult(null); setRolling(null); setChain(null); }
+    appliedRequest.current = request.seq;
+  }, [request, choices, currentDatasetRef]);
 
   const profile = profiles.find((item) => item.profile_id === profileId) ?? null;
   const choice = choices.find((item) => item.key === choiceKey) ?? null;
@@ -83,19 +94,26 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
   };
   const remove = async (): Promise<void> => {
     if (!profile || !window.confirm(`Delete the profile "${profile.rules.name}"? Results are not stored, so nothing else changes.`)) return;
-    try { await service.deletePropProfile(profile.profile_id); setProfileId(""); setResult(null); setRolling(null); await refresh(); } catch (caught) { fail(caught); }
+    try { await service.deletePropProfile(profile.profile_id); setProfileId(""); setResult(null); setRolling(null); setChain(null); await refresh(); } catch (caught) { fail(caught); }
   };
+  const phaseIds = profile ? [profile.profile_id, ...laterPhases.filter((id) => id !== "")] : [];
+  const chainNeedsClock = phaseIds.some((id) => profiles.find((item) => item.profile_id === id)?.rules.reset.kind === "FIRM_RESET");
   const rollStarts = async (): Promise<void> => {
     if (!profile || !choice) return;
     const token = runs.begin();
-    setBusy("Following every start day to its first decision…");
+    setBusy(phaseIds.length > 1 ? "Following every start day through each phase…" : "Following every start day to its first decision…");
     setError(null);
     try {
-      if (needsClock && clockZone.trim()) rememberClock(choice.key, clockZone.trim());
-      const rolled = await service.propRollingStarts(profile.profile_id, choice.target, needsClock ? clockZone.trim() || null : null);
-      if (runs.isCurrent(token)) setRolling(rolled);
+      if (clockZone.trim()) rememberClock(choice.key, clockZone.trim());
+      if (phaseIds.length > 1) {
+        const chained = await service.propChainStarts(phaseIds, choice.target, chainNeedsClock ? clockZone.trim() || null : null);
+        if (runs.isCurrent(token)) { setChain(chained); setRolling(null); }
+      } else {
+        const rolled = await service.propRollingStarts(profile.profile_id, choice.target, needsClock ? clockZone.trim() || null : null);
+        if (runs.isCurrent(token)) { setRolling(rolled); setChain(null); }
+      }
     } catch (caught) {
-      if (runs.isCurrent(token)) { setRolling(null); fail(caught); }
+      if (runs.isCurrent(token)) { setRolling(null); setChain(null); fail(caught); }
     } finally {
       if (runs.isCurrent(token)) setBusy(null);
     }
@@ -110,7 +128,7 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
       const evaluated = await service.propEvaluate(profile.profile_id, choice.target, needsClock ? clockZone.trim() || null : null);
       if (runs.isCurrent(token)) setResult(evaluated);
     } catch (caught) {
-      if (runs.isCurrent(token)) { setResult(null); setRolling(null); fail(caught); }
+      if (runs.isCurrent(token)) { setResult(null); setRolling(null); setChain(null); fail(caught); }
     } finally {
       if (runs.isCurrent(token)) setBusy(null);
     }
@@ -125,7 +143,7 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
       <h4>1. Rules</h4>
       {profiles.length === 0 && !editing && <p className="trl-m0__note">No profiles yet. Create one with your firm's numbers.</p>}
       {profiles.length > 0 && <label className="trl-m0__field">Profile
-        <select value={profileId} onChange={(event) => { setProfileId(event.currentTarget.value); setResult(null); setRolling(null); }}>
+        <select value={profileId} onChange={(event) => { setProfileId(event.currentTarget.value); setResult(null); setRolling(null); setChain(null); }}>
           {profiles.map((item) => <option key={item.profile_id} value={item.profile_id}>{item.rules.name} · {r2(item.rules.account_size)}</option>)}
         </select>
       </label>}
@@ -141,26 +159,35 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
     <section className="trl-page__surface">
       <h4>2. What to check</h4>
       {choices.length === 0 ? <p className="trl-m0__note">No reports yet. Import one on the Data page or in the Portfolio report library.</p> : <label className="trl-m0__field">Report or saved combination
-        <select value={choiceKey} onChange={(event) => { setChoiceKey(event.currentTarget.value); setResult(null); setRolling(null); }}>
+        <select value={choiceKey} onChange={(event) => { setChoiceKey(event.currentTarget.value); setResult(null); setRolling(null); setChain(null); }}>
           <optgroup label="Reports">{choices.filter((item) => item.target.kind === "DATASET").map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</optgroup>
           {combinations.length > 0 && <optgroup label="Saved combinations">{choices.filter((item) => item.target.kind === "COMBINATION").map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</optgroup>}
         </select>
       </label>}
       {choice && choice.target.kind === "DATASET" && !choice.logged && <p className="trl-m0__note">This report has no equity log, so the check sees closed trades only (an optimistic preview).</p>}
-      {needsClock && <label className="trl-m0__field">Report server time zone (needed for the firm's reset time)
+      {profile && profiles.length > 1 && <div className="trl-m0__scenario-fields">
+        {[0, 1].map((slot) => (slot === 0 || laterPhases[0]) && <label key={slot} className="trl-m0__field">Then phase {slot + 2} (for rolling starts; optional)
+          <select value={laterPhases[slot]} onChange={(event) => { const next = [...laterPhases]; next[slot] = event.currentTarget.value; if (slot === 0 && !next[0]) next[1] = ""; setLaterPhases(next); setRolling(null); setChain(null); }}>
+            <option value="">none</option>
+            {profiles.filter((item) => item.profile_id !== profile.profile_id).map((item) => <option key={item.profile_id} value={item.profile_id}>{item.rules.name}</option>)}
+          </select>
+        </label>)}
+      </div>}
+      {(needsClock || chainNeedsClock) && <label className="trl-m0__field">Report server time zone (needed for the firm's reset time)
         <input list="trl-prop-zones" value={clockZone} placeholder="e.g. Europe/Athens or UTC+02:00" onChange={(event) => setClockZone(event.currentTarget.value)} />
         <datalist id="trl-prop-zones">{ZONE_SUGGESTIONS.map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</datalist>
         <span className="trl-m0__note">MT5 test times are in the broker's server time. Many MT5 servers use EET with EU daylight saving (Europe/Athens). TRL remembers this for the selected report on this device.</span>
       </label>}
       <div className="trl-m0__actions">
         <button type="button" className="mod-cta" disabled={!profile || !choice || busy !== null || (needsClock && !clockZone.trim())} onClick={() => void check()}>Check against the rules</button>
-        <button type="button" disabled={!profile || !choice || busy !== null || (needsClock && !clockZone.trim())} title="Use every day of the run as a challenge start" onClick={() => void rollStarts()}>Rolling start dates</button>
+        <button type="button" disabled={!profile || !choice || busy !== null || ((needsClock || chainNeedsClock) && !clockZone.trim())} title="Use every day of the run as a challenge start" onClick={() => void rollStarts()}>{phaseIds.length > 1 ? `Rolling starts through ${phaseIds.length} phases` : "Rolling start dates"}</button>
         {busy && <span className="trl-m0__note" role="status">{busy}</span>}
       </div>
     </section>
 
     {result && <PropResult result={result} />}
     {rolling && <RollingStarts result={rolling} />}
+    {chain && <ChainStarts result={chain} />}
   </section>;
 }
 
@@ -388,5 +415,38 @@ function RollingStarts({ result }: { result: PropRolling }): React.ReactElement 
     </ChartFrame>
     <GuidanceBlock guidance={rollingGuidance(result)} />
     <AuditTrail items={[["Calculation", <code>{result.calculation_version}</code>], ["Profile", <code>{result.profile.profile_id}</code>], ["Evidence", <code>{result.evidence_level}</code>], ["Horizon", result.horizon_days === null ? "none (until pass, breach, or the end of the data)" : `${result.horizon_days} calendar days`], ["Findings", result.findings.map((finding) => finding.code).join(", ") || "none"]]} />
+  </section>;
+}
+
+function ChainStarts({ result }: { result: PropChain }): React.ReactElement {
+  const [active, setActive] = useState<number | null>(null);
+  const summary = result.summary;
+  const starts = result.starts;
+  const item = active === null ? null : starts[active] ?? null;
+  const count = (key: keyof typeof CHAIN_LABEL): number => summary.counts[key] ?? 0;
+  return <section className="trl-page__surface" aria-label="Challenge chain from every start day">
+    <h4>Challenge chain · {result.profiles.map((profile) => profile.name).join(" → ")}</h4>
+    <div className="trl-kpi-row">
+      <KpiTile label="Completed every phase" value={summary.completed_share_percent === null ? "—" : `${r2(summary.completed_share_percent)}%`} detail={`${count("COMPLETED")} of ${summary.decided} decided starts`} tone={count("COMPLETED") > 0 ? "positive" : "neutral"} exact={summary.completed_share_percent} />
+      {result.profiles.map((profile, index) => <KpiTile key={profile.profile_id} label={`Failed in phase ${index + 1}`} value={String(summary.failed_by_phase[String(index + 1)] ?? 0)} detail={profile.name} tone={(summary.failed_by_phase[String(index + 1)] ?? 0) > 0 ? "negative" : "neutral"} />)}
+      <KpiTile label="Days to complete" value={summary.days_to_complete ? String(summary.days_to_complete.median) : "—"} detail={summary.days_to_complete ? `median; ${summary.days_to_complete.minimum}–${summary.days_to_complete.maximum}` : `${count("NOT_DECIDED")} not decided`} />
+    </div>
+    <ChartFrame title="Final outcome by start day">
+      <figure className="trl-prop-rolling">
+        <div className="trl-prop-rolling__strip" role="img" aria-label={`Final outcome for each of ${starts.length} start days.`}
+          onPointerMove={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); if (bounds.width > 0) setActive(slotIndex((event.clientX - bounds.left) / bounds.width, starts.length)); }}
+          onPointerLeave={() => setActive(null)}>
+          {starts.map((start, index) => <span key={start.start_day} className={`trl-prop-rolling__cell is-${start.outcome === "COMPLETED" ? "passed" : start.outcome === "FAILED" ? "broken" : start.outcome === "POSSIBLY_FAILED" ? "possibly-broken" : "not-decided"}${index === active ? " is-active" : ""}`} />)}
+          {item && <span className={`trl-balance-chart__tooltip${(active ?? 0) / starts.length > 0.6 ? " is-left" : ""}`} style={{ left: `${(((active ?? 0) + 0.5) / starts.length) * 100}%` }} role="status">
+            <strong>Start {item.start_day}: {CHAIN_LABEL[item.outcome]}</strong>
+            {item.phases.map((phase) => <span key={phase.phase}>Phase {phase.phase}: {ROLLING_LABEL[phase.outcome]}{phase.rule ? ` (${RULE_LABELS[phase.rule].toLowerCase()})` : ""}{phase.decided_day ? ` · ${phase.decided_day}` : ""}</span>)}
+          </span>}
+        </div>
+        <div className="trl-balance-chart__x-axis" aria-hidden="true"><span>{starts[0]?.start_day}</span><span>{starts.at(-1)?.start_day}</span></div>
+        <figcaption className="trl-m0__note">Green: completed every phase · red: failed a phase · orange: possibly failed (portfolio worst case) · grey: the data ended first. Hover a day for each phase.</figcaption>
+      </figure>
+    </ChartFrame>
+    <GuidanceBlock guidance={chainGuidance(result)} />
+    <AuditTrail items={[["Calculation", <code>{result.calculation_version}</code>], ["Phases", result.profiles.map((profile, index) => `${index + 1}. ${profile.name} (${profile.profile_id})`).join(" · ")], ["Evidence", <code>{result.evidence_level}</code>]]} />
   </section>;
 }

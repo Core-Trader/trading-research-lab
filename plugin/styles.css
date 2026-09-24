@@ -421,3 +421,4 @@
 .trl-prop-rolling__cell.is-out-of-time, .trl-prop-rolling__key.is-out-of-time { background: var(--color-yellow); }
 .trl-prop-rolling__key { display: inline-block; width: 0.8rem; height: 0.8rem; margin: 0 0.2rem 0 0.4rem; vertical-align: middle; border-radius: 2px; background: var(--background-modifier-border); }
 .trl-chart-frame.is-expanded .trl-prop-rolling__strip { height: 30vh; }
+.trl-prop-rolling__cell.is-not-decided { background: var(--background-modifier-border); }
