@@ -284,3 +284,75 @@ def test_worker_methods(tmp_path: Path) -> None:
     result = worker.dispatch({"method": "prop.evaluate", "params": {"profile_id": profile_id, "target": {"kind": "DATASET", "dataset_ref": ref}}})
     assert result["verdict"] == "NOT_BROKEN" and result["rules"][0]["tightest"]["headroom"] == "860.00"
     assert worker.dispatch({"method": "prop.delete_profile", "params": {"profile_id": profile_id}})["deleted"] is True
+
+
+# PROP-2: FTMO presets and the options they need (examples from ftmo.com/en/trading-objectives, 2026-09-24)
+from trading_research_core.prop_check import _challenge, _hash, _target  # noqa: E402
+from trading_research_core.prop_presets import PRESETS, list_presets  # noqa: E402
+
+
+def test_presets_are_valid_profiles_with_their_source() -> None:
+    assert list_presets()["presets"] == PRESETS and len(PRESETS) == 5
+    for item in PRESETS:
+        rules = validate_profile({"name": item["name"], "account_size": "100000", **item["rules"]})
+        assert rules["reset"] == {"kind": "FIRM_RESET", "time": "00:00", "zone": "Europe/Prague"}
+        assert item["source_url"].startswith("https://ftmo.com/") and item["retrieved_at"] == "2026-09-24" and item["not_modelled"]
+
+
+def test_ftmo_daily_limit_example_below_not_touch() -> None:
+    samples = [sample("2026-01-01T00:00:00", "100000"), sample("2026-01-01T23:00:00", "102000"), sample("2026-01-02T12:00:00", "102000", "98000", low="97000.00")]
+    base = {"daily_loss_limit": {"kind": "PERCENT", "value": "5"}, "start_of_day_reference": "BALANCE", "limit_touch_counts": False}
+    check = lambda items, **extra: _check(items, validate_profile({"name": "F", "account_size": "100000", **base, **extra}), DayBoundary(), D(100000))
+    assert check(samples)["daily"]["first_breach"] is None  # the limit for day 2 is 97 000; reaching it is not "below"
+    assert check(samples, limit_touch_counts=True)["daily"]["first_breach"]["limit_level"] == "97000"
+    samples[-1] = sample("2026-01-02T12:00:00", "102000", "98000", low="96999.99")
+    assert check(samples)["daily"]["first_breach"]["time"] == "2026-01-02T12:00:00"
+
+
+def test_ftmo_one_step_end_of_day_trailing_floor() -> None:
+    samples = [sample("2026-01-01T00:00:00", "100000"), sample("2026-01-01T22:00:00", "104000"), sample("2026-01-02T22:00:00", "103000"), sample("2026-01-03T12:00:00", "103000", "99000", low="94000")]
+    rules_ = validate_profile({"name": "F1", "account_size": "100000", "overall_loss_limit": {"kind": "PERCENT", "value": "10"}, "overall_loss_mode": "TRAILING", "trailing_reference": "END_OF_DAY_BALANCE_HIGH", "limit_touch_counts": False})
+    overall = _check(samples, rules_, DayBoundary(), D(100000))
+    assert overall["floors"] == [D(90000), D(90000), D(94000), D(94000)]  # day 3 keeps 94 000: the higher earlier end-of-day balance
+    assert overall["overall"]["first_breach"] is None
+    assert _check(samples, rules_ | {"limit_touch_counts": True}, DayBoundary(), D(100000))["overall"]["first_breach"]["limit_level"] == "94000"
+
+
+def _best_day_run(extra_day: bool) -> dict[str, object]:
+    balances = ["98000", "108000", "106000", "104000", "110000"] + (["120000"] if extra_day else [])
+    samples = [sample("2026-01-01T00:00:00", "100000")] + [sample(f"2026-01-0{day + 1}T20:00:00", value) for day, value in enumerate(balances)]
+    rules_ = validate_profile({"name": "B", "account_size": "100000", "profit_target": {"kind": "PERCENT", "value": "10"}, "best_day_max_percent": "50"})
+    boundary = DayBoundary()
+    days = sorted({boundary.day(item["time"]) for item in samples[1:]})
+    target = _target(samples, rules_, D(100000), boundary, days, "2026-01-01")
+    return _challenge(rules_, target, samples, [item["time"] for item in samples[1:]], boundary, [], "2026-01-01")
+
+
+def test_ftmo_best_day_rule_example() -> None:
+    blocked = _best_day_run(extra_day=False)
+    assert blocked["outcome"] == "BEST_DAY_RULE_NOT_MET"
+    assert blocked["best_day"] | {} == {"max_percent": "50", "at": "end of run", "date": "2026-01-02", "best_day_profit": "10000", "positive_days_profit": "16000", "share_percent": "62.50000000"}
+    passed = _best_day_run(extra_day=True)
+    assert passed["outcome"] == "PASSED" and passed["pass_time"] == "2026-01-06T20:00:00"
+    assert passed["best_day"]["share_percent"] == "38.46153846"
+
+
+def test_trading_days_can_count_opened_positions_only(tmp_path: Path) -> None:
+    workspace, ref = _workspace(tmp_path)
+    target = {"kind": "DATASET", "dataset_ref": ref}
+    opened = evaluate(workspace, _profile(workspace, profit_target={"kind": "PERCENT", "value": "1"}, minimum_trading_days=3, trading_day_definition="POSITION_OPENED"), target)
+    assert opened["trading_days"]["total"] == 2 and opened["challenge"]["outcome"] == "MINIMUM_DAYS_NOT_REACHED"
+    assert evaluate(workspace, _profile(workspace, profit_target={"kind": "PERCENT", "value": "1"}, minimum_trading_days=3), target)["challenge"]["outcome"] == "PASSED"
+
+
+def test_preset_origin_is_recorded_and_older_profiles_still_load(tmp_path: Path) -> None:
+    workspace, ref = _workspace(tmp_path)
+    item = PRESETS[0]
+    saved = save_profile(workspace, {"name": item["name"], "account_size": "10000", **item["rules"]}, preset_id=item["preset_id"])["profile"]
+    assert saved["values_source"] == "PRESET_EDITABLE" and saved["preset"]["source_url"] == item["source_url"]
+    with pytest.raises(CoreError):
+        save_profile(workspace, {"name": "x", "account_size": "10000", "profit_target": {"kind": "AMOUNT", "value": "1"}}, preset_id="nope")
+    legacy_rules = {key: value for key, value in rules(profit_target={"kind": "AMOUNT", "value": "1"}).items() if key not in {"trading_day_definition", "limit_touch_counts", "best_day_max_percent"}}
+    legacy = {"profile_version": "prop-profile-1", "profile_id": "00000000-0000-5000-8000-000000000001", "profile_hash": _hash(legacy_rules), "saved_at": "2026-09-24T00:00:00+00:00", "supersedes": None, "values_source": "USER_SUPPLIED", "rules": legacy_rules}
+    (workspace / "prop-profiles" / "00000000-0000-5000-8000-000000000001.json").write_text(json.dumps(legacy), encoding="utf-8")
+    assert evaluate(workspace, legacy["profile_id"], {"kind": "DATASET", "dataset_ref": ref})["profile"]["rules"]["limit_touch_counts"] is True

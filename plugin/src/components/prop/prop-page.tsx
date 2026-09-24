@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ResearchService } from "../../application/research-service";
 import { LatestRun } from "../../application/latest-run";
-import type { DatasetEvidence, PropEvaluation, PropProfile, PropTarget, SavedCombinationEntry } from "../../types";
+import type { DatasetEvidence, PropEvaluation, PropPreset, PropProfile, PropTarget, SavedCombinationEntry } from "../../types";
 import { AuditTrail } from "../audit-trail";
 import { ChartFrame } from "../chart-frame";
 import { slotIndex, nearestIndex } from "../chart-geometry";
 import { DismissButton } from "../dismiss-button";
 import { formatTimestamp, roundDecimalString } from "../display-format";
 import { GuidanceBlock, KpiTile } from "../guidance";
-import { CHALLENGE_TEXT, emptyForm, EVIDENCE_TEXT, formFromRules, limitText, limitUsedPercent, modeText, profileFromForm, propChartGeometry, propGuidance, RULE_LABELS, verdictHeadline, ZONE_SUGGESTIONS, type LimitKind, type ProfileForm } from "./prop-model";
+import { CHALLENGE_TEXT, emptyForm, formFromPreset, EVIDENCE_TEXT, formFromRules, limitText, limitUsedPercent, modeText, profileFromForm, propChartGeometry, propGuidance, RULE_LABELS, verdictHeadline, ZONE_SUGGESTIONS, type LimitKind, type ProfileForm } from "./prop-model";
 import { money } from "../display-format";
 
 type Props = { service: ResearchService; currentDatasetRef: string | null };
@@ -34,6 +34,7 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
   const [editing, setEditing] = useState<{ form: ProfileForm; supersedes: string | null } | null>(null);
   const [library, setLibrary] = useState<DatasetEvidence[]>([]);
   const [combinations, setCombinations] = useState<SavedCombinationEntry[]>([]);
+  const [presets, setPresets] = useState<PropPreset[]>([]);
   const [choiceKey, setChoiceKey] = useState<string>("");
   const [clockZone, setClockZone] = useState("");
   const [result, setResult] = useState<PropEvaluation | null>(null);
@@ -44,7 +45,8 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
 
   const refresh = useCallback(async (): Promise<void> => {
     try {
-      const [listed, registry, saved] = await Promise.all([service.listPropProfiles(), service.listRegistry(), service.listSavedCombinations()]);
+      const [listed, registry, saved, firmPresets] = await Promise.all([service.listPropProfiles(), service.listRegistry(), service.listSavedCombinations(), service.listPropPresets()]);
+      setPresets(firmPresets.presets);
       setProfiles(listed.profiles);
       setLibrary(registry.entries);
       setCombinations(saved.entries.filter((entry) => entry.combination !== null));
@@ -72,7 +74,7 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
     if (!editing) return;
     setError(null);
     try {
-      const saved = await service.savePropProfile(profileFromForm(editing.form), editing.supersedes);
+      const saved = await service.savePropProfile(profileFromForm(editing.form), editing.supersedes, editing.form.presetId);
       await refresh();
       setProfileId(saved.profile.profile_id);
       setEditing(null);
@@ -100,7 +102,7 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
 
   return <section className="trl-page" aria-label="Prop-firm check">
     <header className="trl-page__header"><div><h3>Prop-firm check</h3><p>Would this backtest have broken your prop firm's rules? Enter the rules once, then check any report or saved combination against them.</p></div></header>
-    <p className="trl-portfolio__caveat" role="note"><strong>Your rules, not a firm's.</strong> TRL ships no firm presets: firms change their terms, so enter the numbers from your firm's current rules. This checks a past run and does not predict a live challenge.</p>
+    <p className="trl-portfolio__caveat" role="note"><strong>Check the rules against your firm's current terms.</strong> Firm presets are copied from each firm's published rules on the date shown, and firms change their terms. Every preset becomes an ordinary profile you can edit. This checks a past run and does not predict a live challenge.</p>
     {error && <div className="trl-m0__error-wrap"><pre className="trl-m0__error" role="alert">{error}</pre><DismissButton onDismiss={() => setError(null)} /></div>}
 
     <section className="trl-page__surface">
@@ -111,13 +113,13 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
           {profiles.map((item) => <option key={item.profile_id} value={item.profile_id}>{item.rules.name} · {r2(item.rules.account_size)}</option>)}
         </select>
       </label>}
-      {profile && !editing && <ProfileSummary profile={profile} />}
+      {profile && !editing && <ProfileSummary profile={profile} presets={presets} />}
       {!editing && <div className="trl-m0__actions">
         <button type="button" onClick={() => setEditing({ form: emptyForm(choice?.account?.replace(/[\s ]/g, "") ?? ""), supersedes: null })}>New profile…</button>
         {profile && <button type="button" onClick={() => setEditing({ form: formFromRules(profile.rules), supersedes: profile.profile_id })}>Edit (saves a new version)…</button>}
         {profile && <button type="button" className="trl-link-button is-danger" onClick={() => void remove()}>Delete profile</button>}
       </div>}
-      {editing && <ProfileEditor form={editing.form} onChange={(form) => setEditing({ ...editing, form })} onSave={() => void save()} onCancel={() => setEditing(null)} />}
+      {editing && <ProfileEditor form={editing.form} presets={editing.supersedes ? [] : presets} onChange={(form) => setEditing({ ...editing, form })} onSave={() => void save()} onCancel={() => setEditing(null)} />}
     </section>
 
     <section className="trl-page__surface">
@@ -144,7 +146,9 @@ export function PropCheckPage({ service, currentDatasetRef }: Props): React.Reac
   </section>;
 }
 
-function ProfileSummary({ profile }: { profile: PropProfile }): React.ReactElement {
+function ProfileSummary({ profile, presets }: { profile: PropProfile; presets: PropPreset[] }): React.ReactElement {
+  const origin = profile.preset ?? null;
+  const notModelled = origin ? presets.find((item) => item.preset_id === origin.preset_id)?.not_modelled ?? [] : [];
   const rules = profile.rules;
   const reset = rules.reset.kind === "FIRM_RESET" ? `${rules.reset.time} ${rules.reset.zone}` : "midnight, report clock";
   return <dl className="trl-prop__summary">
@@ -154,7 +158,11 @@ function ProfileSummary({ profile }: { profile: PropProfile }): React.ReactEleme
     <dt>Profit target</dt><dd>{limitText(rules.profit_target, "")}</dd>
     <dt>Trading days</dt><dd>{rules.minimum_trading_days ?? "no minimum"}{rules.maximum_calendar_days ? ` · within ${rules.maximum_calendar_days} calendar days` : ""}</dd>
     <dt>Day reset</dt><dd>{reset}</dd>
-    <dt>Entered</dt><dd>by you on {profile.saved_at.slice(0, 10)}</dd>
+    <dt>Trading day</dt><dd>{rules.trading_day_definition === "POSITION_OPENED" ? "a day with a position opened" : "a day with a deal opened or closed"}</dd>
+    {rules.best_day_max_percent && <><dt>Best day</dt><dd>at most {rules.best_day_max_percent}% of the positive days' profit</dd></>}
+    <dt>At the limit</dt><dd>{rules.limit_touch_counts === false ? "only going beyond it is a breach" : "touching it is a breach"}</dd>
+    <dt>Source</dt><dd>{origin ? <>{origin.firm} preset ({origin.programme}, {origin.phase}), copied from <a href={origin.source_url}>{origin.source_url}</a> on {origin.retrieved_at}; saved {profile.saved_at.slice(0, 10)}</> : <>entered by you on {profile.saved_at.slice(0, 10)}</>}</dd>
+    {notModelled.length > 0 && <><dt>Not checked</dt><dd>{notModelled.join(" ")}</dd></>}
   </dl>;
 }
 
@@ -171,10 +179,18 @@ function LimitField({ label, kind, value, onKind, onValue, amountOnlyHint }: { l
   </div>;
 }
 
-function ProfileEditor({ form, onChange, onSave, onCancel }: { form: ProfileForm; onChange: (form: ProfileForm) => void; onSave: () => void; onCancel: () => void }): React.ReactElement {
+function ProfileEditor({ form, presets, onChange, onSave, onCancel }: { form: ProfileForm; presets: PropPreset[]; onChange: (form: ProfileForm) => void; onSave: () => void; onCancel: () => void }): React.ReactElement {
   const set = <K extends keyof ProfileForm>(key: K, value: ProfileForm[K]): void => onChange({ ...form, [key]: value });
+  const chosen = presets.find((item) => item.preset_id === form.presetId) ?? null;
   return <div className="trl-prop__editor">
-    <p className="trl-m0__note">Enter your firm's current rules. Leave a rule as "Not used" if your firm does not have it. The examples in the boxes are placeholders, not any firm's terms.</p>
+    {presets.length > 0 && <label className="trl-m0__field">Start from
+      <select value={form.presetId ?? ""} onChange={(event) => { const picked = presets.find((item) => item.preset_id === event.currentTarget.value); onChange(picked ? formFromPreset(picked, form.accountSize) : { ...emptyForm(form.accountSize) }); }}>
+        <option value="">A blank profile</option>
+        {[...new Set(presets.map((item) => item.firm))].map((firm) => <optgroup key={firm} label={firm}>{presets.filter((item) => item.firm === firm).map((item) => <option key={item.preset_id} value={item.preset_id}>{item.programme} · {item.phase}</option>)}</optgroup>)}
+      </select>
+      {chosen && <span className="trl-m0__note">Copied from <a href={chosen.source_url}>{chosen.source_url}</a> on {chosen.retrieved_at}. Verify against the firm's current terms; every value below stays editable. Not checked: {chosen.not_modelled.join(" ")}</span>}
+    </label>}
+    <p className="trl-m0__note">Leave a rule as "Not used" if your firm does not have it. Placeholders in empty boxes are examples, not any firm's terms.</p>
     <div className="trl-m0__scenario-fields">
       <label className="trl-m0__field">Profile name<input value={form.name} placeholder="e.g. My 100k challenge, phase 1" onChange={(event) => set("name", event.currentTarget.value)} /></label>
       <label className="trl-m0__field">Account size<input inputMode="decimal" value={form.accountSize} onChange={(event) => set("accountSize", event.currentTarget.value)} /><span className="trl-m0__note">Must equal the report's starting balance (results are not rescaled).</span></label>
@@ -196,6 +212,8 @@ function ProfileEditor({ form, onChange, onSave, onCancel }: { form: ProfileForm
       <LimitField label="Profit target" kind={form.targetKind} value={form.targetValue} onKind={(value) => set("targetKind", value)} onValue={(value) => set("targetValue", value)} amountOnlyHint="of the account size" />
       <label className="trl-m0__field">Minimum trading days<input inputMode="numeric" value={form.minimumDays} placeholder="none" onChange={(event) => set("minimumDays", event.currentTarget.value)} /><span className="trl-m0__note">A day with at least one deal opened or closed.</span></label>
       <label className="trl-m0__field">Maximum calendar days<input inputMode="numeric" value={form.maximumDays} placeholder="unlimited" onChange={(event) => set("maximumDays", event.currentTarget.value)} /></label>
+      <label className="trl-m0__field">A trading day is a day with<select value={form.tradingDay} onChange={(event) => set("tradingDay", event.currentTarget.value as ProfileForm["tradingDay"])}><option value="DEAL_OPENED_OR_CLOSED">a deal opened or closed</option><option value="POSITION_OPENED">a position opened</option></select></label>
+      <label className="trl-m0__field">Best day at most (% of positive days' profit)<input inputMode="decimal" value={form.bestDay} placeholder="no rule" onChange={(event) => set("bestDay", event.currentTarget.value)} /><span className="trl-m0__note">A consistency rule: you pass only once your best day is at most this share.</span></label>
     </div>
     <h5>Day reset and breaches</h5>
     <div className="trl-m0__scenario-fields">
@@ -203,6 +221,7 @@ function ProfileEditor({ form, onChange, onSave, onCancel }: { form: ProfileForm
       {form.resetKind === "FIRM_RESET" && <label className="trl-m0__field">Reset time (24-hour)<input value={form.resetTime} placeholder="00:00" onChange={(event) => set("resetTime", event.currentTarget.value)} /></label>}
       {form.resetKind === "FIRM_RESET" && <label className="trl-m0__field">Firm's time zone<input list="trl-prop-firm-zones" value={form.resetZone} placeholder="e.g. Europe/Prague" onChange={(event) => set("resetZone", event.currentTarget.value)} /><datalist id="trl-prop-firm-zones">{ZONE_SUGGESTIONS.filter((zone) => !zone.value.startsWith("UTC+")).map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</datalist></label>}
       <label className="trl-m0__field">A breach is<select value={form.breachOn} onChange={(event) => set("breachOn", event.currentTarget.value as ProfileForm["breachOn"])}><option value="EQUITY_TOUCH">equity touching the limit, even while trades are open</option><option value="BALANCE_CLOSE">balance reaching the limit when trades close</option></select></label>
+      <label className="trl-portfolio__include"><input type="checkbox" checked={form.touchCounts} onChange={(event) => set("touchCounts", event.currentTarget.checked)} /> Exactly reaching a limit counts as a breach (untick if your firm breaches only below the limit)</label>
     </div>
     <div className="trl-m0__actions">
       <button type="button" className="mod-cta" onClick={onSave}>Save profile</button>

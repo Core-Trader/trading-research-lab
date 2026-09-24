@@ -28,6 +28,7 @@ from .pareto import evaluate as pareto_evaluate
 from .mt5_set import intake_parameter_schema
 from .parameter_exploration import add_single_test, attach_forward, create_study, evaluate as exploration_evaluate, render_choice
 from .equity_log import attach_equity_log, equity_metrics
+from .prop_presets import list_presets as prop_list_presets
 from .prop_check import delete_profile as prop_delete_profile, evaluate as prop_evaluate, list_profiles as prop_list_profiles, save_profile as prop_save_profile
 from .set_check import check_set_against_report
 from .neighbourhood import attach_neighbourhood_run, neighbourhood, render_neighbourhood_set, write_neighbourhood_set
@@ -92,6 +93,7 @@ class Worker:
                     "dataset.attach_equity_log",
                     "dataset.check_set",
                     "analysis.equity_metrics",
+                    "prop.list_presets",
                     "prop.list_profiles",
                     "prop.save_profile",
                     "prop.delete_profile",
@@ -252,6 +254,8 @@ class Worker:
             return check_set_against_report(self.workspace_root, _required_string(params, "dataset_ref"), _required_string(params, "source_path"))
         if method == "analysis.equity_metrics":
             return equity_metrics(self.workspace_root, _required_string(params, "dataset_ref"))
+        if method == "prop.list_presets":
+            return prop_list_presets()
         if method == "prop.list_profiles":
             return prop_list_profiles(self.workspace_root)
         if method == "prop.save_profile":
@@ -259,7 +263,8 @@ class Worker:
             if not isinstance(profile, dict):
                 raise CoreError("E_REQUEST_INVALID", "params.profile must be an object.")
             supersedes = params.get("supersedes")
-            return prop_save_profile(self.workspace_root, profile, supersedes if isinstance(supersedes, str) and supersedes else None)
+            preset_id = params.get("preset_id")
+            return prop_save_profile(self.workspace_root, profile, supersedes if isinstance(supersedes, str) and supersedes else None, preset_id if isinstance(preset_id, str) and preset_id else None)
         if method == "prop.delete_profile":
             return prop_delete_profile(self.workspace_root, _required_string(params, "profile_id"))
         if method == "prop.evaluate":

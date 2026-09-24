@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { emptyForm, formFromRules, limitUsedPercent, profileFromForm, propChartGeometry, propGuidance, verdictHeadline } from "../src/components/prop/prop-model.ts";
-import type { PropEvaluation, PropRules } from "../src/types.ts";
+import { emptyForm, formFromPreset, formFromRules, limitUsedPercent, profileFromForm, propChartGeometry, propGuidance, verdictHeadline } from "../src/components/prop/prop-model.ts";
+import type { PropEvaluation, PropPreset, PropRules } from "../src/types.ts";
 
 const rules: PropRules = {
   name: "P", account_size: "10000", daily_loss_limit: { kind: "PERCENT", value: "5" }, daily_loss_basis: "INITIAL_BALANCE", start_of_day_reference: "HIGHER_OF_BALANCE_AND_EQUITY",
   overall_loss_limit: { kind: "AMOUNT", value: "1000" }, overall_loss_mode: "TRAILING", trailing_reference: "EQUITY_HIGH", profit_target: null,
   minimum_trading_days: 4, maximum_calendar_days: null, reset: { kind: "FIRM_RESET", time: "00:00", zone: "Europe/Prague" }, breach_on: "EQUITY_TOUCH",
+  trading_day_definition: "POSITION_OPENED", limit_touch_counts: false, best_day_max_percent: "50",
 };
 
 const result = (overrides: Partial<PropEvaluation> = {}): PropEvaluation => ({
@@ -57,4 +58,14 @@ test("chart geometry and bar heights are display scaling of Core values", () => 
   assert.equal(geometry.markers[0]!.x, 100);
   assert.equal(limitUsedPercent("98.13180000").toFixed(4), "1.8682");
   assert.equal(limitUsedPercent("-50"), 120);
+});
+
+test("a preset fills an editable form with the run's account size and remembers its origin", () => {
+  const { name: _name, account_size: _size, ...presetRules } = rules;
+  const preset = { preset_id: "ftmo-1step-challenge", firm: "FTMO", programme: "FTMO Challenge: 1-Step", phase: "FTMO Challenge", source_url: "https://ftmo.com/en/trading-objectives/", retrieved_at: "2026-09-24", name: "FTMO 1-Step · FTMO Challenge", rules: presetRules, not_modelled: [] } satisfies PropPreset;
+  const form = formFromPreset(preset, "100000");
+  assert.equal(form.presetId, "ftmo-1step-challenge");
+  assert.equal(form.accountSize, "100000");
+  assert.deepEqual(profileFromForm(form), { ...rules, name: "FTMO 1-Step · FTMO Challenge", account_size: "100000" });
+  assert.equal(profileFromForm({ ...form, bestDay: " " }).best_day_max_percent, null);
 });

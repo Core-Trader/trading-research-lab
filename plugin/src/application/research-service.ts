@@ -1,4 +1,4 @@
-import type { PropEvaluation, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { PropEvaluation, PropPreset, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -180,8 +180,13 @@ export class ResearchService {
   }
 
   /** Profiles are never overwritten: an edit is a new profile that names the one it supersedes. */
-  savePropProfile(profile: Record<string, unknown>, supersedes: string | null): Promise<{ profile: PropProfile; created: boolean }> {
-    return this.worker.request("prop.save_profile", supersedes ? { profile, supersedes } : { profile });
+  savePropProfile(profile: Record<string, unknown>, supersedes: string | null, presetId: string | null = null): Promise<{ profile: PropProfile; created: boolean }> {
+    return this.worker.request("prop.save_profile", { profile, ...(supersedes ? { supersedes } : {}), ...(presetId ? { preset_id: presetId } : {}) });
+  }
+
+  /** Firm presets with their source and retrieval date; copied into editable profiles. */
+  listPropPresets(): Promise<{ presets_version: string; presets: PropPreset[]; notice: string }> {
+    return this.worker.request("prop.list_presets", {});
   }
 
   deletePropProfile(profileId: string): Promise<{ profile_id: string; deleted: boolean }> {

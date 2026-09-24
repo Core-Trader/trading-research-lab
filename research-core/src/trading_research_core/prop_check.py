@@ -37,7 +37,7 @@ from .identities import stable_uuid
 
 
 PROFILE_VERSION = "prop-profile-1"
-CALCULATION_VERSION = "prop-check-1"
+CALCULATION_VERSION = "prop-check-2"
 PROFILE_FOLDER = "prop-profiles"
 DISPLAY_POINTS = 1500
 MAX_NAME = 120
@@ -51,9 +51,11 @@ START_OF_DAY_REFERENCES = {"BALANCE", "HIGHER_OF_BALANCE_AND_EQUITY", "EQUITY"}
 OVERALL_MODES = {"FIXED", "TRAILING", "TRAILING_LOCKS_AT_START"}
 TRAILING_REFERENCES = {"BALANCE_HIGH", "EQUITY_HIGH", "END_OF_DAY_BALANCE_HIGH"}
 BREACH_ON = {"EQUITY_TOUCH", "BALANCE_CLOSE"}
+TRADING_DAY_DEFINITIONS = {"DEAL_OPENED_OR_CLOSED", "POSITION_OPENED"}
 PROFILE_FIELDS = {
     "name", "account_size", "daily_loss_limit", "daily_loss_basis", "start_of_day_reference", "overall_loss_limit",
     "overall_loss_mode", "trailing_reference", "profit_target", "minimum_trading_days", "maximum_calendar_days", "reset", "breach_on",
+    "trading_day_definition", "limit_touch_counts", "best_day_max_percent",
 }
 
 
@@ -94,10 +96,13 @@ def validate_profile(raw: dict[str, Any]) -> dict[str, Any]:
         "maximum_calendar_days": _count(raw.get("maximum_calendar_days"), "maximum_calendar_days"),
         "reset": normalise_spec(raw.get("reset")),
         "breach_on": _choice(raw.get("breach_on"), BREACH_ON, "breach_on", "EQUITY_TOUCH"),
+        "trading_day_definition": _choice(raw.get("trading_day_definition"), TRADING_DAY_DEFINITIONS, "trading_day_definition", "DEAL_OPENED_OR_CLOSED"),
+        "limit_touch_counts": _flag(raw.get("limit_touch_counts"), "limit_touch_counts", True),
+        "best_day_max_percent": _percent_or_none(raw.get("best_day_max_percent"), "best_day_max_percent"),
     }
 
 
-def save_profile(workspace_root: Path, profile: dict[str, Any], supersedes: str | None = None) -> dict[str, object]:
+def save_profile(workspace_root: Path, profile: dict[str, Any], supersedes: str | None = None, preset_id: str | None = None) -> dict[str, object]:
     """Store a profile, content-addressed; saving identical rules returns the existing one.
 
     Profiles are never overwritten: an edit is saved as a new profile that
@@ -107,6 +112,14 @@ def save_profile(workspace_root: Path, profile: dict[str, Any], supersedes: str 
     rules = validate_profile(profile)
     if supersedes is not None and not _PROFILE_ID.match(str(supersedes)):
         raise _invalid("supersedes must be a saved profile id.")
+    origin = None
+    if preset_id is not None:
+        from .prop_presets import preset
+
+        found = preset(str(preset_id))
+        if found is None:
+            raise _invalid("Unknown preset.")
+        origin = {key: found[key] for key in ("preset_id", "firm", "programme", "phase", "source_url", "retrieved_at")}
     profile_hash = _hash(rules)
     profile_id = stable_uuid("prop-profile", profile_hash)
     folder = workspace_root.resolve() / PROFILE_FOLDER
@@ -119,7 +132,8 @@ def save_profile(workspace_root: Path, profile: dict[str, Any], supersedes: str 
         "profile_hash": profile_hash,
         "saved_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "supersedes": supersedes,
-        "values_source": "USER_SUPPLIED",
+        "values_source": "USER_SUPPLIED" if origin is None else "PRESET_EDITABLE",
+        "preset": origin,
         "rules": rules,
     }
     folder.mkdir(parents=True, exist_ok=True)
@@ -154,7 +168,7 @@ def load_profile(workspace_root: Path, profile_id: str) -> dict[str, Any]:
     record = json.loads(path.read_text(encoding="utf-8"))
     if _hash(record["rules"]) != record["profile_hash"]:
         raise CoreError("E_PROP_PROFILE_INVALID", "The stored profile does not match its hash; it was edited outside TRL.")
-    return record
+    return record | {"rules": validate_profile(record["rules"])}
 
 
 # ---------------------------------------------------------------- evaluation
@@ -174,7 +188,8 @@ def evaluate(workspace_root: Path, profile_id: str, target: dict[str, Any], repo
         if breach_on_balance:
             samples = [sample | {"low": sample["balance"], "low_at": sample["time"]} for sample in samples]
         variants.append(_check(samples, rules, boundary, account))
-    trading_days = sorted({boundary.day(moment) for moment in run["deal_times"]})
+    day_events = run["open_times"] if rules["trading_day_definition"] == "POSITION_OPENED" else run["deal_times"]
+    trading_days = sorted({boundary.day(moment) for moment in day_events})
     main, optimistic = variants[0], variants[1] if len(variants) > 1 else None
 
     loss_rules = []
@@ -198,11 +213,11 @@ def evaluate(workspace_root: Path, profile_id: str, target: dict[str, Any], repo
 
     first_day = boundary.day(run["variants"][0][0]["time"])
     target_block = _target(main["samples"], rules, account, boundary, trading_days, first_day)
-    challenge = _challenge(rules, target_block, trading_days, run["deal_times"], boundary, loss_rules, first_day)
+    challenge = _challenge(rules, target_block, main["samples"], sorted(day_events), boundary, loss_rules, first_day)
     findings = boundary.findings() + run["findings"]
     return {
         "calculation_version": CALCULATION_VERSION,
-        "profile": {"profile_id": record["profile_id"], "profile_hash": record["profile_hash"], "name": rules["name"], "saved_at": record["saved_at"], "values_source": "USER_SUPPLIED", "rules": rules},
+        "profile": {"profile_id": record["profile_id"], "profile_hash": record["profile_hash"], "name": rules["name"], "saved_at": record["saved_at"], "values_source": record.get("values_source", "USER_SUPPLIED"), "preset": record.get("preset"), "rules": rules},
         "target": run["target"],
         "currency": run["currency"],
         "evidence_level": run["evidence_level"],
@@ -211,7 +226,7 @@ def evaluate(workspace_root: Path, profile_id: str, target: dict[str, Any], repo
         "verdict": verdict,
         "rules": loss_rules,
         "profit_target": target_block,
-        "trading_days": {"total": len(trading_days), "definition": "days (by the chosen boundary) with at least one deal opened or closed"},
+        "trading_days": {"total": len(trading_days), "definition": "days (by the chosen boundary) with at least one position opened" if rules["trading_day_definition"] == "POSITION_OPENED" else "days (by the chosen boundary) with at least one deal opened or closed"},
         "challenge": challenge,
         "daily": main["daily_table"],
         "series": _display(main["samples"], main["floors"]),
@@ -229,6 +244,7 @@ def _check(samples: list[dict[str, Any]], rules: dict[str, Any], boundary: DayBo
             source = samples[index - 1] if index > 0 else samples[0]
             references[day] = _reference(source, rules["start_of_day_reference"])
 
+    touch = rules["limit_touch_counts"]
     daily_result = None
     if rules["daily_loss_limit"] is not None:
         lowest: dict[str, tuple[Decimal, str]] = {}
@@ -240,7 +256,7 @@ def _check(samples: list[dict[str, Any]], rules: dict[str, Any], boundary: DayBo
             limit = _daily_limit(rules, account, reference)
             if day not in lowest or sample["low"] < lowest[day][0]:
                 lowest[day] = (sample["low"], sample["low_at"])
-            if first_breach is None and reference - sample["low"] >= limit:
+            if first_breach is None and _beyond(reference - sample["low"], limit, touch):
                 first_breach = {"time": sample["low_at"], "day": day, "value": _fmt(sample["low"]), "limit_level": _fmt(reference - limit), "loss": _fmt(reference - sample["low"]), "limit": _fmt(limit)}
         table, tightest = [], None
         for day, reference in references.items():
@@ -248,7 +264,7 @@ def _check(samples: list[dict[str, Any]], rules: dict[str, Any], boundary: DayBo
             low, low_at = lowest.get(day, (reference, None))
             loss = max(_ZERO, reference - low)
             headroom = limit - loss
-            row = {"date": day, "reference": _fmt(reference), "lowest": _fmt(low), "lowest_at": low_at, "loss": _fmt(loss), "limit": _fmt(limit), "headroom": _fmt(headroom), "headroom_percent_of_limit": _q(headroom / limit * _HUNDRED), "broken": loss >= limit}
+            row = {"date": day, "reference": _fmt(reference), "lowest": _fmt(low), "lowest_at": low_at, "loss": _fmt(loss), "limit": _fmt(limit), "headroom": _fmt(headroom), "headroom_percent_of_limit": _q(headroom / limit * _HUNDRED), "broken": _beyond(loss, limit, touch)}
             table.append(row)
             if tightest is None or headroom < Decimal(tightest["headroom"]):
                 tightest = {"date": day, "time": low_at, "headroom": row["headroom"], "headroom_percent_of_limit": row["headroom_percent_of_limit"], "loss": row["loss"], "limit": row["limit"]}
@@ -270,7 +286,7 @@ def _check(samples: list[dict[str, Any]], rules: dict[str, Any], boundary: DayBo
                 floor = min(floor, account)
             floors.append(floor)
             headroom = sample["low"] - floor
-            if first_breach is None and headroom <= 0:
+            if first_breach is None and _beyond(-headroom, _ZERO, touch):
                 first_breach = {"time": sample["low_at"], "day": days[index], "value": _fmt(sample["low"]), "limit_level": _fmt(floor), "limit": _fmt(limit)}
             if tightest is None or headroom < Decimal(tightest["headroom"]):
                 tightest = {"time": sample["low_at"], "headroom": _fmt(headroom), "headroom_percent_of_limit": _q(headroom / limit * _HUNDRED), "floor": _fmt(floor)}
@@ -296,24 +312,67 @@ def _target(samples: list[dict[str, Any]], rules: dict[str, Any], account: Decim
     return {"target": rules["profit_target"], "amount": _fmt(amount), "level": _fmt(level), "reached": False, "time": None, "day": None, "trading_days": None, "calendar_days": None, "basis": "closed balance"}
 
 
-def _challenge(rules: dict[str, Any], target: dict[str, Any] | None, trading_days: list[str], deal_times: list[str], boundary: DayBoundary, loss_rules: list[dict[str, Any]], first_day: str) -> dict[str, object] | None:
-    """Pass point = the later of the target and the minimum trading days (spec §5, P7)."""
+def _challenge(rules: dict[str, Any], target: dict[str, Any] | None, samples: list[dict[str, Any]], day_events: list[str], boundary: DayBoundary, loss_rules: list[dict[str, Any]], first_day: str) -> dict[str, object] | None:
+    """The pass point is the first sample at which every objective holds together:
+    closed balance at or above the target, the minimum trading days reached, and
+    (when set) the best day at most the allowed share of the positive days' profit.
+    Day profit is the closed-balance change since the day's start (spec §5, P7).
+    """
 
     if target is None:
         return None
     required = rules["minimum_trading_days"] or 0
-    days_block = {"required": rules["minimum_trading_days"], "total": len(trading_days), "met": len(trading_days) >= required}
+    cap = None if rules["best_day_max_percent"] is None else Decimal(rules["best_day_max_percent"])
+    level = Decimal(target["level"])
+    seen_days: set[str] = set()
+    pointer = 0
+    current_day, day_start = None, _ZERO
+    done_best: tuple[Decimal, str | None] = (_ZERO, None)
+    done_positive = _ZERO
+    pass_index, pass_best, target_and_days = None, None, False
+    best: dict[str, Any] = {"date": None, "profit": _ZERO, "positive": _ZERO}
+    for index, sample in enumerate(samples):
+        moment, day = sample["time"], boundary.day(sample["time"])
+        while pointer < len(day_events) and day_events[pointer] <= moment:
+            seen_days.add(boundary.day(day_events[pointer]))
+            pointer += 1
+        if day != current_day:
+            if current_day is not None:
+                closed = samples[index - 1]["balance"] - day_start
+                done_positive += max(_ZERO, closed)
+                if closed > done_best[0]:
+                    done_best = (closed, current_day)
+            current_day = day
+            day_start = samples[index - 1]["balance"] if index else sample["balance"]
+        today = sample["balance"] - day_start
+        best = {"date": current_day, "profit": today, "positive": done_positive + max(_ZERO, today)} if today > done_best[0] else {"date": done_best[1], "profit": done_best[0], "positive": done_positive + max(_ZERO, today)}
+        if sample["balance"] >= level and len(seen_days) >= required:
+            target_and_days = True
+            share = None if best["positive"] <= 0 else best["profit"] / best["positive"] * _HUNDRED
+            if cap is None or (share is not None and share <= cap):
+                pass_index, pass_best = index, best | {"share": share}
+                break
+    best_block = None
+    if cap is not None:
+        final_share = None if best["positive"] <= 0 else best["profit"] / best["positive"] * _HUNDRED
+        state = pass_best if pass_best is not None else best | {"share": final_share}
+        best_block = {"max_percent": rules["best_day_max_percent"], "at": "pass" if pass_best is not None else "end of run", "date": state["date"], "best_day_profit": _fmt(state["profit"]), "positive_days_profit": _fmt(state["positive"]), "share_percent": None if state["share"] is None else _q(state["share"])}
+    total_days = len({boundary.day(moment) for moment in day_events})
+    days_block = {"required": rules["minimum_trading_days"], "total": total_days, "at_pass": len(seen_days) if pass_index is not None else None, "met": total_days >= required}
     calendar = {"allowed": rules["maximum_calendar_days"], "days_to_pass": None, "met": None}
-    if not target["reached"]:
-        return {"outcome": "TARGET_NOT_REACHED", "pass_time": None, "minimum_trading_days": days_block, "maximum_calendar_days": calendar}
-    pass_time = str(target["time"])
-    if required and target["trading_days"] < required:
-        if len(trading_days) < required:
-            return {"outcome": "MINIMUM_DAYS_NOT_REACHED", "pass_time": None, "minimum_trading_days": days_block, "maximum_calendar_days": calendar}
-        needed_day = trading_days[required - 1]
-        pass_time = next(moment for moment in sorted(deal_times) if boundary.day(moment) == needed_day)
-    pass_day = boundary.day(pass_time)
-    calendar["days_to_pass"] = _span(first_day, pass_day)
+    base = {"minimum_trading_days": days_block, "maximum_calendar_days": calendar, "best_day": best_block}
+    if pass_index is None:
+        if not target["reached"]:
+            outcome = "TARGET_NOT_REACHED"
+        elif not days_block["met"]:
+            outcome = "MINIMUM_DAYS_NOT_REACHED"
+        elif target_and_days and cap is not None:
+            outcome = "BEST_DAY_RULE_NOT_MET"
+        else:
+            outcome = "OBJECTIVES_NOT_MET_TOGETHER"
+        return {"outcome": outcome, "pass_time": None, **base}
+    pass_time = samples[pass_index]["time"]
+    calendar["days_to_pass"] = _span(first_day, boundary.day(pass_time))
     calendar["met"] = None if rules["maximum_calendar_days"] is None else calendar["days_to_pass"] <= rules["maximum_calendar_days"]
     before = [entry for entry in loss_rules if entry["first_breach"] is not None and entry["first_breach"]["time"] <= pass_time]
     if any(entry["verdict"] == "BROKEN" for entry in before):
@@ -324,7 +383,7 @@ def _challenge(rules: dict[str, Any], target: dict[str, Any] | None, trading_day
         outcome = "TOO_SLOW"
     else:
         outcome = "PASSED"
-    return {"outcome": outcome, "pass_time": pass_time, "minimum_trading_days": days_block, "maximum_calendar_days": calendar}
+    return {"outcome": outcome, "pass_time": pass_time, **base}
 
 
 # ---------------------------------------------------------------- runs (series)
@@ -348,9 +407,10 @@ def _dataset_run(root: Path, dataset_ref: str, account: Decimal) -> dict[str, An
         raise CoreError("E_PROP_ACCOUNT_MISMATCH", f"The profile's account size ({_fmt(account)}) differs from this report's opening balance ({_fmt(opening)}). TRL does not rescale results (P6): use a profile for {_fmt(opening)}, or a report run on the profile's account size.", details={"account_size": _fmt(account), "opening_balance": _fmt(opening)})
     currency = close_event_summary(dataset)[0]["currency"]
     deal_times = [_iso(event["source_timestamp"]) for event in events if event.get("event_type") in {"POSITION_OPEN", "POSITION_CLOSE"}]
+    open_times = [_iso(event["source_timestamp"]) for event in events if event.get("event_type") == "POSITION_OPEN"]
     evidence = get_evidence(root, dataset_ref)
     equity = evidence.get("equity")
-    base = {"target": {"kind": "DATASET", "dataset_ref": dataset_ref}, "currency": currency, "deal_times": deal_times}
+    base = {"target": {"kind": "DATASET", "dataset_ref": dataset_ref}, "currency": currency, "deal_times": deal_times, "open_times": open_times}
     if isinstance(equity, dict) and equity.get("status") == "LINKED_VERIFIED":
         rows = _equity_rows(root, evidence)
         findings = [] if "real ticks" in str(equity.get("modelling_mode", "")).lower() else [{"severity": "NOTE", "code": "SYNTHETIC_INTRABAR_PATH", "message": f"The equity log comes from modelling mode '{equity.get('modelling_mode')}', not real ticks, so intrabar lows are approximate."}]
@@ -370,11 +430,15 @@ def _combination_run(root: Path, tracks: Any, starting_capital: Any, account: De
     combined = combine(root, tracks, _fmt(capital), "UNION")
     ordered = [list(track["dataset_refs"]) for track in combined["tracks"]]
     target = {"kind": "COMBINATION", "combination_id": combined["combination_id"], "tracks": ordered, "starting_capital": _fmt(capital)}
-    deal_times = []
+    deal_times, open_times = [], []
     for refs in ordered:
         for ref in refs:
-            deal_times += [_iso(event["source_timestamp"]) for event in read_dataset(root, ref)["events"] if event.get("event_type") in {"POSITION_OPEN", "POSITION_CLOSE"}]
-    base = {"target": target, "currency": combined["currency"], "deal_times": sorted(deal_times)}
+            for event in read_dataset(root, ref)["events"]:
+                if event.get("event_type") in {"POSITION_OPEN", "POSITION_CLOSE"}:
+                    deal_times.append(_iso(event["source_timestamp"]))
+                if event.get("event_type") == "POSITION_OPEN":
+                    open_times.append(_iso(event["source_timestamp"]))
+    base = {"target": target, "currency": combined["currency"], "deal_times": sorted(deal_times), "open_times": sorted(open_times)}
     evidences = [[get_evidence(root, ref) for ref in refs] for refs in ordered]
     logged = all(isinstance(item.get("equity"), dict) and item["equity"].get("status") == "LINKED_VERIFIED" for refs in evidences for item in refs)
     if not logged:
@@ -509,8 +573,29 @@ def _warnings(evidence_level: str, rules: dict[str, Any]) -> list[str]:
         items.append("Equity from the TRL tester logger: each interval's low is the lowest tick-level equity inside it.")
     if rules["reset"]["kind"] == "REPORT_CLOCK_MIDNIGHT":
         items.append("Day = the report clock's midnight (broker server time). Check that this matches your firm's reset time.")
-    items.append("A loss exactly equal to a limit counts as a breach.")
+    items.append("A loss exactly equal to a limit counts as a breach." if rules["limit_touch_counts"] else "Only a loss beyond a limit counts as a breach; exactly reaching it does not.")
     return items
+
+
+def _beyond(loss: Decimal, limit: Decimal, touch: bool) -> bool:
+    return loss >= limit if touch else loss > limit
+
+
+def _flag(value: Any, field: str, default: bool) -> bool:
+    if value in (None, ""):
+        return default
+    if not isinstance(value, bool):
+        raise _invalid(f"{field} must be true or false.")
+    return value
+
+
+def _percent_or_none(value: Any, field: str) -> str | None:
+    if value in (None, ""):
+        return None
+    number = _positive(value, field)
+    if number > _HUNDRED:
+        raise _invalid(f"{field} cannot exceed 100%.")
+    return _fmt(number)
 
 
 def _reference(sample: dict[str, Any], kind: str) -> Decimal:

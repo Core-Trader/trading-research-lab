@@ -3,7 +3,7 @@
  * from the Core (`prop.evaluate`); this module converts the profile form to
  * the request shape, words Core fields, and scales chart points.
  */
-import type { PropChallengeOutcome, PropEvaluation, PropLimit, PropRuleResult, PropRules } from "../../types";
+import type { PropChallengeOutcome, PropEvaluation, PropLimit, PropPreset, PropRuleResult, PropRules } from "../../types";
 import { formatTimestamp, roundDecimalString } from "../display-format.ts";
 import type { Guidance } from "../advanced/monte-carlo-model";
 
@@ -19,6 +19,11 @@ export type ProfileForm = {
   minimumDays: string; maximumDays: string;
   resetKind: "REPORT_CLOCK_MIDNIGHT" | "FIRM_RESET"; resetTime: string; resetZone: string;
   breachOn: PropRules["breach_on"];
+  tradingDay: NonNullable<PropRules["trading_day_definition"]>;
+  touchCounts: boolean;
+  bestDay: string;
+  /** Set when the form started from a firm preset; recorded with the saved profile. */
+  presetId: string | null;
 };
 
 export function emptyForm(accountSize = ""): ProfileForm {
@@ -28,6 +33,7 @@ export function emptyForm(accountSize = ""): ProfileForm {
     overallKind: "PERCENT", overallValue: "", overallMode: "FIXED", trailingReference: "BALANCE_HIGH",
     targetKind: "PERCENT", targetValue: "", minimumDays: "", maximumDays: "",
     resetKind: "REPORT_CLOCK_MIDNIGHT", resetTime: "00:00", resetZone: "", breachOn: "EQUITY_TOUCH",
+    tradingDay: "DEAL_OPENED_OR_CLOSED", touchCounts: true, bestDay: "", presetId: null,
   };
 }
 
@@ -41,7 +47,13 @@ export function formFromRules(rules: PropRules): ProfileForm {
     minimumDays: rules.minimum_trading_days === null ? "" : String(rules.minimum_trading_days), maximumDays: rules.maximum_calendar_days === null ? "" : String(rules.maximum_calendar_days),
     resetKind: rules.reset.kind, resetTime: rules.reset.kind === "FIRM_RESET" ? rules.reset.time : "00:00", resetZone: rules.reset.kind === "FIRM_RESET" ? rules.reset.zone : "",
     breachOn: rules.breach_on,
+    tradingDay: rules.trading_day_definition ?? "DEAL_OPENED_OR_CLOSED", touchCounts: rules.limit_touch_counts ?? true, bestDay: rules.best_day_max_percent ?? "", presetId: null,
   };
+}
+
+/** A new form from a firm preset; the account size comes from the run being checked. */
+export function formFromPreset(preset: PropPreset, accountSize: string): ProfileForm {
+  return { ...formFromRules({ ...preset.rules, name: preset.name, account_size: accountSize } as PropRules), presetId: preset.preset_id };
 }
 
 /** The request body for prop.save_profile. The Core validates every value. */
@@ -62,6 +74,9 @@ export function profileFromForm(form: ProfileForm): Record<string, unknown> {
     maximum_calendar_days: count(form.maximumDays),
     reset: form.resetKind === "FIRM_RESET" ? { kind: "FIRM_RESET", time: form.resetTime.trim(), zone: form.resetZone.trim() } : { kind: "REPORT_CLOCK_MIDNIGHT" },
     breach_on: form.breachOn,
+    trading_day_definition: form.tradingDay,
+    limit_touch_counts: form.touchCounts,
+    best_day_max_percent: form.bestDay.trim() === "" ? null : form.bestDay.trim(),
   };
 }
 
@@ -105,6 +120,8 @@ export const CHALLENGE_TEXT: Record<PropChallengeOutcome, string> = {
   PASSED: "Target reached with no loss rule broken first",
   TARGET_NOT_REACHED: "Profit target not reached in this run",
   MINIMUM_DAYS_NOT_REACHED: "Target reached, but the run has fewer trading days than required",
+  BEST_DAY_RULE_NOT_MET: "Target and days reached, but the best day stayed above the allowed share of the profit",
+  OBJECTIVES_NOT_MET_TOGETHER: "Each objective was met at some point, but never all at the same time",
   TOO_SLOW: "Target reached, but after the allowed number of days",
   BROKEN_BEFORE_PASS: "A loss rule was broken before the target was reached",
   POSSIBLY_BROKEN_BEFORE_PASS: "A loss rule was possibly broken before the target was reached",
@@ -143,7 +160,7 @@ export function propGuidance(result: PropEvaluation): Guidance {
   const read: string[] = [];
   const tips: string[] = [];
   const flags: string[] = [];
-  read.push(`Evidence: ${EVIDENCE_TEXT[result.evidence_level]}. The rules are the values in "${result.profile.name}", entered by you; TRL does not know any firm's current terms.`);
+  read.push(`Evidence: ${EVIDENCE_TEXT[result.evidence_level]}. The rules are the values in "${result.profile.name}"${result.profile.preset ? `, copied from a ${result.profile.preset.firm} preset and editable` : ", entered by you"}.`);
   const boundary = result.day_boundary;
   read.push(boundary.kind === "FIRM_RESET"
     ? `A day starts at ${boundary.time} ${boundary.zone}; report times were read as ${boundary.report_clock_zone}.`
@@ -167,6 +184,9 @@ export function propGuidance(result: PropEvaluation): Guidance {
       : `Profit target (${r2(target.amount)} ${ccy}) not reached in this run.`);
   }
   if (result.challenge) tips.push(`${CHALLENGE_TEXT[result.challenge.outcome]}.`);
+  const best = result.challenge?.best_day;
+  if (best?.share_percent) tips.push(`Best day ${best.date}: ${r2(best.best_day_profit)} ${ccy} of ${r2(best.positive_days_profit)} ${ccy} positive-days profit (${r2(best.share_percent)}%, limit ${best.max_percent}%) at the ${best.at}.`);
+  if (result.profile.preset) flags.push(`Rules from the ${result.profile.preset.firm} preset (${result.profile.preset.programme}, ${result.profile.preset.phase}), copied from ${result.profile.preset.source_url} on ${result.profile.preset.retrieved_at}. Verify against the firm's current terms.`);
   const tightestDay = result.rules.find((rule) => rule.rule === "DAILY_LOSS")?.tightest;
   if (tightestDay?.date && tightestDay.loss) tips.push(`Your hardest day was ${tightestDay.date}: a loss of ${r2(tightestDay.loss)} ${ccy} against a ${r2(tightestDay.limit)} ${ccy} limit. Open that day on the chart to see which trades drove it.`);
   if (result.evidence_level === "REALISED_ONLY") flags.push("Floating (open-position) losses are not visible without an equity log. Attach one on the Data page (see Help & downloads for the logger) for an equity-based check.");

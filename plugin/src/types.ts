@@ -551,8 +551,14 @@ export type PropRules = {
   maximum_calendar_days: number | null;
   reset: PropReset;
   breach_on: "EQUITY_TOUCH" | "BALANCE_CLOSE";
+  /** Optional in profiles saved before prop-check-2; the Core fills the defaults. */
+  trading_day_definition?: "DEAL_OPENED_OR_CLOSED" | "POSITION_OPENED";
+  limit_touch_counts?: boolean;
+  best_day_max_percent?: string | null;
 };
-export type PropProfile = { profile_version: string; profile_id: string; profile_hash: string; saved_at: string; supersedes: string | null; values_source: string; rules: PropRules };
+export type PropPresetOrigin = { preset_id: string; firm: string; programme: string; phase: string; source_url: string; retrieved_at: string };
+export type PropPreset = PropPresetOrigin & { name: string; rules: Omit<PropRules, "name" | "account_size">; not_modelled: string[] };
+export type PropProfile = { profile_version: string; profile_id: string; profile_hash: string; saved_at: string; supersedes: string | null; values_source: string; preset?: PropPresetOrigin | null; rules: PropRules };
 export type PropVerdict = "BROKEN" | "POSSIBLY_BROKEN" | "NOT_BROKEN";
 export type PropEvidenceLevel = "EQUITY_LOGGED" | "PORTFOLIO_CONSERVATIVE" | "REALISED_ONLY";
 export type PropBreach = { time: string; day: string; value: string; limit_level: string; limit: string; loss?: string };
@@ -570,10 +576,10 @@ export type PropRuleResult = {
   optimistic?: { first_breach: PropBreach | null; tightest: PropTightest | null };
 };
 export type PropDailyRow = { date: string; reference: string; lowest: string; lowest_at: string | null; loss: string; limit: string; headroom: string; headroom_percent_of_limit: string; broken: boolean };
-export type PropChallengeOutcome = "PASSED" | "TARGET_NOT_REACHED" | "MINIMUM_DAYS_NOT_REACHED" | "TOO_SLOW" | "BROKEN_BEFORE_PASS" | "POSSIBLY_BROKEN_BEFORE_PASS";
+export type PropChallengeOutcome = "PASSED" | "TARGET_NOT_REACHED" | "MINIMUM_DAYS_NOT_REACHED" | "BEST_DAY_RULE_NOT_MET" | "OBJECTIVES_NOT_MET_TOGETHER" | "TOO_SLOW" | "BROKEN_BEFORE_PASS" | "POSSIBLY_BROKEN_BEFORE_PASS";
 export type PropEvaluation = {
   calculation_version: string;
-  profile: { profile_id: string; profile_hash: string; name: string; saved_at: string; values_source: string; rules: PropRules };
+  profile: { profile_id: string; profile_hash: string; name: string; saved_at: string; values_source: string; preset?: PropPresetOrigin | null; rules: PropRules };
   target: { kind: "DATASET"; dataset_ref: string } | { kind: "COMBINATION"; combination_id: string; tracks: string[][]; starting_capital: string };
   currency: string | null;
   evidence_level: PropEvidenceLevel;
@@ -586,8 +592,9 @@ export type PropEvaluation = {
   challenge: {
     outcome: PropChallengeOutcome;
     pass_time: string | null;
-    minimum_trading_days: { required: number | null; total: number; met: boolean };
+    minimum_trading_days: { required: number | null; total: number; at_pass?: number | null; met: boolean };
     maximum_calendar_days: { allowed: number | null; days_to_pass: number | null; met: boolean | null };
+    best_day?: { max_percent: string; at: string; date: string | null; best_day_profit: string; positive_days_profit: string; share_percent: string | null } | null;
   } | null;
   daily: PropDailyRow[];
   series: Array<{ time: string; balance: string; equity: string; low: string; floor: string | null }>;
