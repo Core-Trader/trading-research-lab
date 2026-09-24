@@ -126,12 +126,13 @@ Every point is labelled: a sourced fact (with its source), your own workflow cho
 
 **Where:** TRL Advanced: What-If and Monte Carlo
 
-**Inputs:** What-If: an extra cost per trade; Monte Carlo: a seed and the number of paths
+**Inputs:** What-If: an extra cost per trade; Monte Carlo: a method (reorder, resample, or resample in blocks), a seed and the number of paths
 
 **Checks:**
 
 - **[U]** The extra cost per trade, for example your broker's typical spread plus slippage. Higher costs are more pessimistic; the right value depends on your broker and symbol.
 - **[S]** Reshuffling trades measures ordering risk only, not total risk. *(Source: MT5 Backtesting & Optimization Best Practices (TRL's internal playbook, written from confirmed MT5 failure cases).)*
+- **[S]** Resampling trades with replacement lets the final result vary, so the share of paths ending below zero is defined; use "Resample in blocks" when trades depend on each other (Künsch 1989). *(Source: [NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.3.4 Bootstrap Plot](https://www.itl.nist.gov/div898/handbook/eda/section3/bootplot.htm).)*
 - **[U]** The worst drawdown you accept at the 95th percentile of reshuffles: your risk budget.
 
 ## 8. Prop-firm rules (if you trade a challenge)
@@ -180,7 +181,6 @@ Every point is labelled: a sourced fact (with its source), your own workflow cho
 
 - Rolling walk-forward optimisation (re-optimising for each window).
 - Modelling spread, slippage or execution delay inside TRL (today: What-If's fixed cost per trade).
-- Bootstrap Monte Carlo (resampling with replacement); today TRL reorders the actual trades.
 - Importing demo or live account statements to track real forward results.
 - Combining equity logs in Portfolio; today it combines realised balance only.
 - A checklist in Research notes that tracks steps 0–10.

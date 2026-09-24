@@ -147,6 +147,10 @@ class TradingResearchSettingsTab extends PluginSettingTab {
         this.plugin.settings.showDeveloperDiagnostics = value;
         await this.plugin.saveData(this.plugin.settings);
       }));
+    new Setting(containerEl)
+      .setName("Show interpretation and tips")
+      .setDesc("The \"How to read this\" blocks next to results: each point is labelled as a sourced fact (with its source), a TRL suggestion, or your own threshold. Turn off to see results only.")
+      .addToggle((toggle) => toggle.setValue(this.plugin.thresholds.snapshot.showGuidance).onChange((value) => this.plugin.thresholds.set({ showGuidance: value })));
     containerEl.createEl("h3", { text: "Your research thresholds" });
     new Setting(containerEl)
       .setName("Minimum trades")

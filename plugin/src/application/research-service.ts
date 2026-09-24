@@ -1,4 +1,4 @@
-import type { WindowsRequest, WindowsResult, SweepComparison, SweepEvaluation, SymbolSweep, PropChain, PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult, SignificanceConfidence, SignificanceResult } from "../types";
+import type { WindowsRequest, WindowsResult, SweepComparison, SweepEvaluation, SymbolSweep, PropChain, PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult, SignificanceConfidence, SignificanceResult, BootstrapMethod, BootstrapResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -268,6 +268,14 @@ export class ResearchService {
 
   fixedCostScenario(datasetRef: string, additionalCost: string): Promise<FixedCostScenarioResult> {
     return this.worker.request("scenario.fixed_close_event_cost", { dataset_ref: datasetRef, additional_cost_per_close_event: additionalCost });
+  }
+
+  monteCarloBootstrap(datasetRef: string, seed: string, pathCount: number, method: BootstrapMethod, blockLength: number | null, drawdownLimit: string | null): Promise<BootstrapResult> {
+    return this.worker.request("scenario.monte_carlo_bootstrap", { dataset_ref: datasetRef, seed, path_count: pathCount, method, ...(blockLength !== null ? { block_length: blockLength } : {}), ...(drawdownLimit !== null ? { drawdown_limit: drawdownLimit } : {}) }, LONG_RUNNING_MS);
+  }
+
+  renderBootstrapNote(datasetRef: string, analysisId: string, reason: string): Promise<{ record_id: string; markdown: string }> {
+    return this.worker.request("scenario.render_bootstrap_note", { dataset_ref: datasetRef, analysis_id: analysisId, reason });
   }
 
   monteCarloOrderPermutation(datasetRef: string, seed: string, pathCount: number): Promise<MonteCarloResult> {

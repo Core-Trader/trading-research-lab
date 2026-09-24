@@ -8,10 +8,9 @@ import { AuditTrail } from "../audit-trail";
 import { CollapsibleSection } from "../collapsible-section";
 import { DismissButton } from "../dismiss-button";
 import { money, num } from "../display-format";
-import { KpiTile } from "../guidance";
+import { Interpretation, KpiTile } from "../guidance";
 import { plain } from "../plain-language";
 import { RecordTo } from "../research/record-to";
-import { SourcedList } from "../sourced-points";
 import { useThresholds } from "../thresholds-context";
 import { intervalGeometry, significanceGuidance } from "./significance-model";
 
@@ -89,16 +88,7 @@ export function SignificancePanel({ service, datasetRef, result, error, analysis
         </div>
         <figcaption className="trl-m0__note">{money(test.interval.low)} · average {money(test.mean ?? "0")} · {money(test.interval.high)} {ccy} — the bar is the {percentLabel(current.confidence)} interval; the line is zero.</figcaption>
       </figure>}
-      {guidance && <details className="trl-guidance" open>
-        <summary>How to read this · what to do next</summary>
-        <div className="trl-guidance__body">
-          <SourcedList points={guidance.read} />
-          <strong className="trl-guidance__heading">Tips from your results</strong>
-          <SourcedList points={guidance.tips} />
-          <strong className="trl-guidance__heading">Keep in mind</strong>
-          <SourcedList points={guidance.flags} />
-        </div>
-      </details>}
+      {guidance && <Interpretation sections={[{ heading: null, points: guidance.read }, { heading: "Tips from your results", points: guidance.tips }, { heading: "Keep in mind", points: guidance.flags }]} />}
       <div className="trl-windows__record">
         <strong>Record this check</strong>
         <RecordTo notes={notes} requirement={requirement} createKind={analysis ? "report-analysis" : "general"} bindings={analysis ? { trl_dataset_id: analysis.datasetId, trl_analysis_run_id: analysis.analysisRunId } : undefined} value={target} onChange={setTarget} />

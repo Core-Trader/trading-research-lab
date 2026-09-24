@@ -6,7 +6,8 @@ test("no minimum by default; 95 % is the preselected confidence", () => {
   assert.deepEqual(readThresholds(undefined), DEFAULT_THRESHOLDS);
   assert.equal(DEFAULT_THRESHOLDS.minTrades, null);
   assert.deepEqual(readThresholds({ minTrades: -3, confidence: "0.5" }), DEFAULT_THRESHOLDS);
-  assert.deepEqual(readThresholds({ minTrades: 50, confidence: "0.99" }), { minTrades: 50, confidence: "0.99" });
+  assert.deepEqual(readThresholds({ minTrades: 50, confidence: "0.99" }), { minTrades: 50, confidence: "0.99", showGuidance: true });
+  assert.equal(readThresholds({ showGuidance: false }).showGuidance, false);
 });
 
 test("typed minimums: empty clears, positive whole numbers only", () => {
@@ -31,5 +32,5 @@ test("the store saves and notifies", async () => {
   store.set({ minTrades: 25 });
   assert.equal(store.snapshot.minTrades, 25);
   assert.equal(calls, 1);
-  assert.deepEqual(saved, [{ minTrades: 25, confidence: "0.95" }]);
+  assert.deepEqual(saved, [{ minTrades: 25, confidence: "0.95", showGuidance: true }]);
 });

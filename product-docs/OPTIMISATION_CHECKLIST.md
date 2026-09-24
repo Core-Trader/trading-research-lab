@@ -73,13 +73,15 @@ Where the tutorial's wording differs from MT5's documentation or TRL's sources, 
 
 **Question:** How much of the result depends on the order the trades happened in?
 
-**In TRL:** TRL Advanced → Monte Carlo (reorders the actual trades) (Partly in TRL)
+**In TRL:** TRL Advanced → Monte Carlo: reorder the actual trades, resample them, or resample blocks of consecutive trades (In TRL)
 
 **Research workflow:** step 7
 
 - **[S]** Reshuffling trades measures ordering risk only, not total risk. *(Source: MT5 Backtesting & Optimization Best Practices (TRL's internal playbook, written from confirmed MT5 failure cases).)*
 - **[C]** Reordering the same trades never changes the final total, only the path, because a sum does not depend on order. It gives the drawdown spread (median, 95th percentile, worst), not the chance of ending negative.
-- **[C]** The chance of ending negative needs resampling with replacement (a bootstrap), where some trades are drawn more than once and others not at all. That is not in TRL yet.
+- **[S]** The chance of ending negative needs resampling with replacement (a bootstrap), where some trades are drawn more than once and others not at all. Choose "Resample" on the Monte Carlo panel. *(Source: [NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.3.4 Bootstrap Plot](https://www.itl.nist.gov/div898/handbook/eda/section3/bootplot.htm).)*
+- **[S]** When trades depend on each other (streaks, DCA or grid baskets), "Resample in blocks" keeps consecutive trades together; the block length is your own choice. *(Source: [Künsch, H. R. (1989), "The Jackknife and the Bootstrap for General Stationary Observations", The Annals of Statistics 17(3), 1217–1241](https://doi.org/10.1214/aos/1176347265).)*
+- **[S]** The bootstrap is least reliable in the tails, so read the 99th percentile and the worst path with care. *(Source: [NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.3.4 Bootstrap Plot](https://www.itl.nist.gov/div898/handbook/eda/section3/bootplot.htm).)*
 - **[C]** Neither method can create a loss larger than the worst one in the data. For DCA or grid EAs, trades in one basket depend on each other, so treating them as independent can understate risk: read the result as a lower bound.
 - **[C]** TRL's closed-trade P/L includes the commission and swap MT5 books on each closing deal; commissions charged when positions open are not yet included.
 - **[U]** How many paths to run. More paths give steadier percentiles but take longer.

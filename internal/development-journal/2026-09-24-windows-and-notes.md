@@ -144,3 +144,20 @@ live index on a real vault (rename and delete refresh) and the sidebar card.
     includes zero, one above zero, and streaks. Confidence switching and the
     minimum-trade warning were also checked.
 - Tests: Core 284; plugin 141.
+
+## Follow-up: bootstrap Monte Carlo (BOOT-1) and hideable guidance (GUIDE-1)
+
+- **Sources read:**
+  - Efron 1979 (abstract), NIST 1.3.3.4 (including its tail caution), and
+    Künsch 1989 (abstract; no numeric block length).
+  - Politis & Romano was not reachable and is not used.
+- **Core:**
+  - A new module; the reorder method is untouched.
+  - Tests: determinism, a total that varies, blocks that stay consecutive,
+    all-win and all-loss boundaries, validation, and a note from the stored
+    result.
+  - Two issues found: a synthetic-hash collision in my own test, and `0E-8`
+    percent formatting, which is now fixed.
+- **Plugin:** the method selector, BootstrapView, the guidance model, and one
+  switch for all guidance (checked: hiding and restoring).
+- **Tests:** Core 296 (12 new); plugin 147.

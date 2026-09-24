@@ -40,6 +40,8 @@ export const CODE_TEXT: Record<string, string> = {
   FIRM_RESET: "The firm's daily reset time",
   // Methods
   ORDER_PERMUTATION_WITHOUT_REPLACEMENT: "Reordering the actual trades (each used once per path)",
+  RESAMPLE_WITH_REPLACEMENT: "Resampling single trades with replacement",
+  MOVING_BLOCK_RESAMPLE: "Resampling blocks of consecutive trades with replacement",
   // Significance (PROPOSAL_SIGNIFICANCE.md)
   VALID: "The randomness check passed",
   NOT_VALID: "Not valid for this report: wins and losses are not in random order",

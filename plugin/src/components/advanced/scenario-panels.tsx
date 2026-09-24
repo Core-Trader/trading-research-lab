@@ -56,7 +56,9 @@ function OutcomeBar({ label, summary }: { label: string; summary: FixedCostScena
   </div>;
 }
 
-export function MonteCarloAnalysis({ seed, pathCount, error, result, enabled, equity, onSeedChange, onPathCountChange, onRun }: {
+export type MonteCarloMethod = "REORDER" | "RESAMPLE" | "BLOCK_RESAMPLE";
+
+export function MonteCarloAnalysis({ seed, pathCount, error, result, enabled, equity, onSeedChange, onPathCountChange, onRun, method = "REORDER", onMethodChange, streaky = false, resample }: {
   seed: string;
   pathCount: string;
   error: string | null;
@@ -66,17 +68,30 @@ export function MonteCarloAnalysis({ seed, pathCount, error, result, enabled, eq
   onSeedChange: (value: string) => void;
   onPathCountChange: (value: string) => void;
   onRun: () => void;
+  /** PROPOSAL_BOOTSTRAP.md B1: reorder (the original study) or resample; the resample view is supplied by the caller. */
+  method?: MonteCarloMethod;
+  onMethodChange?: (method: MonteCarloMethod) => void;
+  /** B6: the significance check found streaks, so blocks are recommended. */
+  streaky?: boolean;
+  resample?: React.ReactNode;
 }): React.ReactElement {
   const currency = result?.currency ?? "";
-  return <CollapsibleSection title="Monte Carlo: trade-order reshuffle" defaultOpen>
-    <p className="trl-m0__note">Replays your closed trades in many random orders to show how much the drawdown depends on the order trades happened to arrive in. It is not a forecast.</p>
+  return <CollapsibleSection title="Monte Carlo: reorder or resample your trades" defaultOpen>
+    <p className="trl-m0__note">{method === "REORDER" ? "Replays your closed trades in many random orders to show how much the drawdown depends on the order trades happened to arrive in. Every path ends at the same total." : "Builds many paths by drawing your closed trades with replacement, so the final result varies too: it shows how often these trades could have added up to a loss."} It is not a forecast.</p>
+    {onMethodChange && <label className="trl-m0__field"><span>Method</span><select value={method} onChange={(event) => onMethodChange(event.currentTarget.value as MonteCarloMethod)}>
+      <option value="REORDER">Reorder the actual trades (drawdown only)</option>
+      <option value="RESAMPLE">Resample single trades (also the final result)</option>
+      <option value="BLOCK_RESAMPLE">Resample in blocks of consecutive trades</option>
+    </select></label>}
+    {streaky && method !== "BLOCK_RESAMPLE" && <p className="trl-m0__note trl-mc__hint" role="note">The significance check on Analysis found your wins and losses come in streaks: "Resample in blocks" keeps consecutive trades together (Künsch 1989).</p>}
     <div className="trl-m0__scenario-fields">
       <label className="trl-m0__field"><span>Seed (makes the reshuffle repeatable)</span><input type="text" inputMode="numeric" value={seed} onChange={(event) => onSeedChange(event.currentTarget.value)} /></label>
       <label className="trl-m0__field"><span>Paths (1–10,000)</span><input type="text" inputMode="numeric" value={pathCount} onChange={(event) => onPathCountChange(event.currentTarget.value)} /></label>
     </div>
-    {error && <p className="trl-m0__inline-error" role="alert">{error}</p>}
-    <button type="button" disabled={!enabled || !seed.trim() || !pathCount.trim()} onClick={onRun}>{enabled ? "Run reshuffle" : "Run trade analysis first"}</button>
-    {result && <section className="trl-m0__analysis-result">
+    {method !== "REORDER" && resample}
+    {method === "REORDER" && error && <p className="trl-m0__inline-error" role="alert">{error}</p>}
+    {method === "REORDER" && <button type="button" disabled={!enabled || !seed.trim() || !pathCount.trim()} onClick={onRun}>{enabled ? "Run reshuffle" : "Run trade analysis first"}</button>}
+    {method === "REORDER" && result && <section className="trl-m0__analysis-result">
       <div className="trl-kpi-row">
         <KpiTile label="Median worst drawdown" value={`${r2(result.drawdown_summary.p50)} ${currency}`} exact={result.drawdown_summary.p50} detail={result.account.p50_percent_of_opening !== null ? `${r2(result.account.p50_percent_of_opening)}% of starting balance` : "Half of the paths at or below"} />
         <KpiTile label="95% of paths within" value={`${r2(result.drawdown_summary.p95)} ${currency}`} tone="warning" exact={result.drawdown_summary.p95} detail={result.account.p95_percent_of_opening !== null ? `${r2(result.account.p95_percent_of_opening)}% of starting balance` : "95th percentile"} />

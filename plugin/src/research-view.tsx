@@ -17,7 +17,8 @@ import { M5Preflight } from "./components/data/batch-preflight-panel";
 import { M2Analysis, M3Analysis, Results } from "./components/analysis/analysis-panels";
 import { RMultiplePanel, type RSource } from "./components/analysis/r-multiple-panel";
 import { M4Documents } from "./components/research/documents-panel";
-import { MonteCarloAnalysis, WhatIfAnalysis } from "./components/advanced/scenario-panels";
+import { MonteCarloAnalysis, WhatIfAnalysis, type MonteCarloMethod } from "./components/advanced/scenario-panels";
+import { BootstrapView } from "./components/advanced/bootstrap-view";
 import { Diagnostics, type RunDiagnostics } from "./components/advanced/diagnostics-panel";
 import { PortfolioLab } from "./components/portfolio/portfolio-lab";
 import { PropCheckPage } from "./components/prop/prop-page";
@@ -115,6 +116,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const [validated, setValidated] = useState<{ datasetRef: string; eventCount: number; workerWasReady: boolean; readinessMs: number; importMs: number } | null>(null);
   const [libraryEntries, setLibraryEntries] = useState<DatasetEvidence[]>([]);
   const [significance, setSignificance] = useState<SignificanceResult | null>(null);
+  const [monteCarloMethod, setMonteCarloMethod] = useState<MonteCarloMethod>("REORDER");
   const [significanceError, setSignificanceError] = useState<string | null>(null);
   const thresholds = useSyncExternalStore(plugin.thresholds.subscribe, () => plugin.thresholds.snapshot);
   const [setCheck, setSetCheck] = useState<SetCheckResult | null>(null);
@@ -935,6 +937,10 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       onSeedChange={(value) => { setMonteCarloSeed(value); setMonteCarloError(null); }}
       onPathCountChange={(value) => { setMonteCarloPathCount(value); setMonteCarloError(null); }}
       onRun={() => void runMonteCarlo()}
+      method={monteCarloMethod}
+      onMethodChange={setMonteCarloMethod}
+      streaky={significance?.runs_test.status === "RANDOMNESS_REJECTED"}
+      resample={monteCarloMethod !== "REORDER" && (evidence?.dataset_ref ?? statistics?.dataset_ref) ? <BootstrapView service={service} datasetRef={(evidence?.dataset_ref ?? statistics?.dataset_ref)!} method={monteCarloMethod} seed={monteCarloSeed} pathCount={monteCarloPathCount} trades={closeEventAnalysis?.summary.count ?? null} streaky={significance?.runs_test.status === "RANDOMNESS_REJECTED"} enabled={closeEventAnalysis !== null} analysis={statistics ? { datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id } : null} notes={notesApi} /> : null}
     />}
       {diagnostics && plugin.settings.showDeveloperDiagnostics && <Diagnostics diagnostics={diagnostics} />}
     </section>}

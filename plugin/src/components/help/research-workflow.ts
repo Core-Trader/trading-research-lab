@@ -36,6 +36,9 @@ export const SOURCES = {
   nistRuns: { title: "NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.5.13 Runs Test for Detecting Non-randomness", url: "https://www.itl.nist.gov/div898/handbook/eda/section3/eda35d.htm" },
   nistAutocorrelation: { title: "NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.5.12 Autocorrelation", url: "https://www.itl.nist.gov/div898/handbook/eda/section3/eda35c.htm" },
   asa2016: { title: "Wasserstein, R. L. & Lazar, N. A. (2016), \"The ASA's Statement on p-Values: Context, Process, and Purpose\", The American Statistician 70(2), 129–133", url: "https://doi.org/10.1080/00031305.2016.1154108" },
+  efron1979: { title: "Efron, B. (1979), \"Bootstrap Methods: Another Look at the Jackknife\", The Annals of Statistics 7(1), 1–26", url: "https://doi.org/10.1214/aos/1176344552" },
+  nistBootstrap: { title: "NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.3.4 Bootstrap Plot", url: "https://www.itl.nist.gov/div898/handbook/eda/section3/bootplot.htm" },
+  kunsch1989: { title: "Künsch, H. R. (1989), \"The Jackknife and the Bootstrap for General Stationary Observations\", The Annals of Statistics 17(3), 1217–1241", url: "https://doi.org/10.1214/aos/1176347265" },
   firmRules: { title: "The firm's own rules page (FTMO and FundedNext pages are listed with each preset)", url: null },
 } as const;
 export type SourceKey = keyof typeof SOURCES;
@@ -125,10 +128,11 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
   },
   {
     number: 7, title: "Stress costs and trade order", purpose: "See how thin the edge is.",
-    where: "TRL Advanced: What-If and Monte Carlo", inputs: "What-If: an extra cost per trade; Monte Carlo: a seed and the number of paths",
+    where: "TRL Advanced: What-If and Monte Carlo", inputs: "What-If: an extra cost per trade; Monte Carlo: a method (reorder, resample, or resample in blocks), a seed and the number of paths",
     checks: [
       { label: "U", text: "The extra cost per trade, for example your broker's typical spread plus slippage. Higher costs are more pessimistic; the right value depends on your broker and symbol." },
       { label: "S", source: "playbook", text: "Reshuffling trades measures ordering risk only, not total risk." },
+      { label: "S", source: "nistBootstrap", text: "Resampling trades with replacement lets the final result vary, so the share of paths ending below zero is defined; use \"Resample in blocks\" when trades depend on each other (Künsch 1989)." },
       { label: "U", text: "The worst drawdown you accept at the 95th percentile of reshuffles: your risk budget." },
     ],
   },
@@ -164,7 +168,6 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
 export const WORKFLOW_GAPS = [
   "Rolling walk-forward optimisation (re-optimising for each window).",
   "Modelling spread, slippage or execution delay inside TRL (today: What-If's fixed cost per trade).",
-  "Bootstrap Monte Carlo (resampling with replacement); today TRL reorders the actual trades.",
   "Importing demo or live account statements to track real forward results.",
   "Combining equity logs in Portfolio; today it combines realised balance only.",
   "A checklist in Research notes that tracks steps 0–10.",

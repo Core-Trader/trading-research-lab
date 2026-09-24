@@ -20,6 +20,7 @@ from .time_risk import equity_availability, realised_balance_daily_drawdown, val
 from .portfolio_preflight import combined_daily_drawdown, create_combined_realised_balance, preflight_mt5_excel_batch
 from .what_if import fixed_close_event_cost_scenario
 from .monte_carlo import order_permutation_scenario
+from .monte_carlo_bootstrap import bootstrap_note, bootstrap_scenario, stored_bootstrap_result
 from .display_series import close_event_display_series
 from .performance_metrics import performance_metrics
 from .significance import significance, significance_note
@@ -117,6 +118,8 @@ class Worker:
                     "prop.chain_starts",
                     "scenario.fixed_close_event_cost",
                     "scenario.monte_carlo_order_permutation",
+                    "scenario.monte_carlo_bootstrap",
+                    "scenario.render_bootstrap_note",
                     "optimisation.intake_parameter_grid",
                     "optimisation.intake_paired_forward_grid",
                     "report.prepare_payload",
@@ -339,6 +342,21 @@ class Worker:
                 _required_string(params, "dataset_ref"),
                 _required_string(params, "additional_cost_per_close_event"),
             )
+        if method == "scenario.monte_carlo_bootstrap":
+            path_count, block_length, limit = params.get("path_count"), params.get("block_length"), params.get("drawdown_limit")
+            if isinstance(path_count, bool) or not isinstance(path_count, int):
+                raise CoreError("E_REQUEST_INVALID", "params.path_count must be an integer.")
+            if block_length is not None and (isinstance(block_length, bool) or not isinstance(block_length, int)):
+                raise CoreError("E_REQUEST_INVALID", "params.block_length must be an integer when supplied.")
+            if limit is not None and not isinstance(limit, str):
+                raise CoreError("E_REQUEST_INVALID", "params.drawdown_limit must be a decimal string when supplied.")
+            return bootstrap_scenario(self.workspace_root, _required_string(params, "dataset_ref"), _required_string(params, "seed"), path_count,
+                                      _required_string(params, "method"), block_length, limit)
+        if method == "scenario.render_bootstrap_note":
+            reason = params.get("reason", "")
+            if not isinstance(reason, str):
+                raise CoreError("E_REQUEST_INVALID", "params.reason must be a string.")
+            return bootstrap_note(stored_bootstrap_result(self.workspace_root, _required_string(params, "dataset_ref"), _required_string(params, "analysis_id")), reason)
         if method == "scenario.monte_carlo_order_permutation":
             path_count = params.get("path_count")
             if isinstance(path_count, bool) or not isinstance(path_count, int):

@@ -1,6 +1,10 @@
 # Proposal: bootstrap Monte Carlo (resampling trades)
 
-**Status:** DRAFT 2026-09-24. Awaiting the owner (B1–B7).
+**Status:** APPROVED and BUILT 2026-09-24 (the owner accepted B1–B7 as recommended and asked that interpretation and tips be easy to hide or remove; see GUIDE-1).
+
+**Built:**
+- Core `monte_carlo_bootstrap.py` (`m6-monte-carlo-bootstrap-1`); the order-permutation method is unchanged. Worker `scenario.monte_carlo_bootstrap`, and `scenario.render_bootstrap_note`, which reads the stored result and does not recalculate.
+- Plugin: a method selector on the Monte Carlo panel, `BootstrapView` (block length, drawdown limit, KPIs, a final-result histogram, exact values with tail values marked), `bootstrap-model.ts` (labelled, sourced guidance), and record to note.
 
 This is workflow gap 1 of the 7 that remain. The sources are in
 `internal/references/REFERENCE_REGISTER.md`.

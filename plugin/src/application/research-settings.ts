@@ -6,17 +6,19 @@ import type { SignificanceConfidence } from "../types.ts";
  * warning is off until the user sets it, and 95 % is the owner's preselected
  * workflow choice for the confidence level (a convention, not a sourced value).
  */
-export type ResearchThresholds = { minTrades: number | null; confidence: SignificanceConfidence };
+/** showGuidance: the "How to read this · tips" blocks across TRL (one switch; the wording lives in the *-model.ts guidance functions). */
+export type ResearchPreferences = { minTrades: number | null; confidence: SignificanceConfidence; showGuidance: boolean };
 
-export const DEFAULT_THRESHOLDS: ResearchThresholds = { minTrades: null, confidence: "0.95" };
+export const DEFAULT_THRESHOLDS: ResearchPreferences = { minTrades: null, confidence: "0.95", showGuidance: true };
 export const CONFIDENCE_OPTIONS: readonly SignificanceConfidence[] = ["0.90", "0.95", "0.99"];
 
-export function readThresholds(value: unknown): ResearchThresholds {
+export function readThresholds(value: unknown): ResearchPreferences {
   if (typeof value !== "object" || value === null) return DEFAULT_THRESHOLDS;
-  const { minTrades, confidence } = value as { minTrades?: unknown; confidence?: unknown };
+  const { minTrades, confidence, showGuidance } = value as { minTrades?: unknown; confidence?: unknown; showGuidance?: unknown };
   return {
     minTrades: typeof minTrades === "number" && Number.isInteger(minTrades) && minTrades > 0 ? minTrades : null,
     confidence: CONFIDENCE_OPTIONS.includes(confidence as SignificanceConfidence) ? confidence as SignificanceConfidence : DEFAULT_THRESHOLDS.confidence,
+    showGuidance: showGuidance !== false,
   };
 }
 
@@ -33,23 +35,23 @@ export function belowMinimum(trades: number | null | undefined, minimum: number 
 }
 
 export class ThresholdStore {
-  private value: ResearchThresholds;
+  private value: ResearchPreferences;
   private readonly listeners = new Set<() => void>();
-  private readonly persist: (value: ResearchThresholds) => Promise<void>;
+  private readonly persist: (value: ResearchPreferences) => Promise<void>;
 
-  constructor(initial: unknown, persist: (value: ResearchThresholds) => Promise<void>) {
+  constructor(initial: unknown, persist: (value: ResearchPreferences) => Promise<void>) {
     this.value = readThresholds(initial);
     this.persist = persist;
   }
 
-  get snapshot(): ResearchThresholds { return this.value; }
+  get snapshot(): ResearchPreferences { return this.value; }
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => { this.listeners.delete(listener); };
   };
 
-  set(next: Partial<ResearchThresholds>): void {
+  set(next: Partial<ResearchPreferences>): void {
     this.value = readThresholds({ ...this.value, ...next });
     this.listeners.forEach((listener) => listener());
     void this.persist(this.value).catch(() => undefined);

@@ -716,3 +716,30 @@ export type SignificanceResult = {
   validity: "VALID" | "NOT_VALID" | "UNCHECKED" | "NOT_AVAILABLE";
   notes: string[];
 };
+
+/** scenario.monte_carlo_bootstrap (PROPOSAL_BOOTSTRAP.md B1–B5); values are Core decimal strings. */
+export type BootstrapMethod = "RESAMPLE" | "BLOCK_RESAMPLE";
+export type BootstrapResult = {
+  analysis_id: string;
+  analysis_basis: string;
+  policy_id: string;
+  calculation_version: string;
+  dataset_ref: string;
+  currency: string;
+  method: BootstrapMethod;
+  configuration: { sampling_method: string; block_length: number | null; path_count: number; seed: string; prng: string; drawdown_limit: string | null; input_artifact: string };
+  population_count: number;
+  source_total_close_event_pnl: string;
+  final_summary: { minimum: string; p05: string; p50: string; p95: string; maximum: string };
+  below_zero: { count: number; percent: string };
+  historical_final_rank_percent: string;
+  final_histogram: { bin_count: number; buckets: Array<{ lower_bound: string; upper_bound: string; count: number }> };
+  drawdown_summary: { minimum: string; p50: string; p95: string; maximum: string };
+  drawdown_percentiles: Array<{ percentile: string; maximum_drawdown: string }>;
+  drawdown_histogram: { bin_count: number; buckets: Array<{ lower_bound: string; upper_bound: string; count: number }> };
+  over_limit: { limit: string; count: number; percent: string } | null;
+  historical: { maximum_drawdown: string; final: string };
+  account: { opening_balance: string | null; p50_percent_of_opening: string | null; p95_percent_of_opening: string | null };
+  tail_values: string[];
+  warnings: string[];
+};

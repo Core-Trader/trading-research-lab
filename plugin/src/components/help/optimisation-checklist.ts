@@ -90,12 +90,14 @@ export const CHECKLIST_STEPS: ChecklistStep[] = [
   },
   {
     number: 5, title: "Monte Carlo", question: "How much of the result depends on the order the trades happened in?",
-    tool: "TRL Advanced → Monte Carlo (reorders the actual trades)",
-    coverage: "PARTIAL", workflowSteps: [7],
+    tool: "TRL Advanced → Monte Carlo: reorder the actual trades, resample them, or resample blocks of consecutive trades",
+    coverage: "FULL", workflowSteps: [7],
     points: [
       { label: "S", source: "playbook", text: "Reshuffling trades measures ordering risk only, not total risk." },
       { label: "C", text: "Reordering the same trades never changes the final total, only the path, because a sum does not depend on order. It gives the drawdown spread (median, 95th percentile, worst), not the chance of ending negative." },
-      { label: "C", text: "The chance of ending negative needs resampling with replacement (a bootstrap), where some trades are drawn more than once and others not at all. That is not in TRL yet." },
+      { label: "S", source: "nistBootstrap", text: "The chance of ending negative needs resampling with replacement (a bootstrap), where some trades are drawn more than once and others not at all. Choose \"Resample\" on the Monte Carlo panel." },
+      { label: "S", source: "kunsch1989", text: "When trades depend on each other (streaks, DCA or grid baskets), \"Resample in blocks\" keeps consecutive trades together; the block length is your own choice." },
+      { label: "S", source: "nistBootstrap", text: "The bootstrap is least reliable in the tails, so read the 99th percentile and the worst path with care." },
       { label: "C", text: "Neither method can create a loss larger than the worst one in the data. For DCA or grid EAs, trades in one basket depend on each other, so treating them as independent can understate risk: read the result as a lower bound." },
       { label: "C", text: "TRL's closed-trade P/L includes the commission and swap MT5 books on each closing deal; commissions charged when positions open are not yet included." },
       { label: "U", text: "How many paths to run. More paths give steadier percentiles but take longer." },

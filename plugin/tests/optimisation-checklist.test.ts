@@ -28,7 +28,7 @@ test("user-defined thresholds explain a trade-off instead of giving a number", (
 
 test("the Monte Carlo step does not claim reordering can change the final result", () => {
   const monteCarlo = CHECKLIST_STEPS.find((step) => step.title === "Monte Carlo")!;
-  assert.equal(monteCarlo.coverage, "PARTIAL");
+  assert.equal(monteCarlo.coverage, "FULL");  // reorder plus resampling (PROPOSAL_BOOTSTRAP.md)
   assert.ok(monteCarlo.points.some((point) => /never changes the final total/.test(point.text)));
 });
 
