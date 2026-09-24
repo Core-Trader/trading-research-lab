@@ -26,6 +26,7 @@ from .display_series import close_event_display_series
 from .performance_metrics import performance_metrics
 from .significance import significance, significance_note
 from .cost_breakdown import cost_breakdown, cost_note
+from .execution_costs import execution_cost_note, execution_cost_scenario, points_to_money
 from .r_metrics import r_multiple_metrics
 from .portfolio_lab import combine as portfolio_combine, delete_saved_combination, explore as portfolio_explore, list_saved_combinations, save_combination
 from .pareto import evaluate as pareto_evaluate
@@ -125,6 +126,9 @@ class Worker:
                     "scenario.fixed_close_event_cost",
                     "scenario.monte_carlo_order_permutation",
                     "scenario.monte_carlo_bootstrap",
+                    "scenario.execution_costs",
+                    "scenario.render_execution_cost_note",
+                    "scenario.points_to_money",
                     "scenario.render_bootstrap_note",
                     "optimisation.intake_parameter_grid",
                     "optimisation.intake_paired_forward_grid",
@@ -370,6 +374,22 @@ class Worker:
             if stop_out is not None and not isinstance(stop_out, str):
                 raise CoreError("E_REQUEST_INVALID", "params.stop_out_level must be a decimal string when supplied.")
             return combine_equity(self.workspace_root, tracks, _required_string(params, "starting_capital"), str(params.get("window", "UNION")), stop_out)
+        if method in {"scenario.execution_costs", "scenario.render_execution_cost_note"}:
+            per_symbol = params.get("per_symbol")
+            if per_symbol is not None and not isinstance(per_symbol, dict):
+                raise CoreError("E_REQUEST_INVALID", "params.per_symbol must be an object when supplied.")
+            for key in ("extra_spread_per_lot", "slippage_per_lot"):
+                if params.get(key) is not None and not isinstance(params.get(key), str):
+                    raise CoreError("E_REQUEST_INVALID", f"params.{key} must be a decimal string when supplied.")
+            result = execution_cost_scenario(read_dataset(self.workspace_root, _required_string(params, "dataset_ref")), params.get("extra_spread_per_lot"), params.get("slippage_per_lot"), per_symbol)
+            if method == "scenario.execution_costs":
+                return result
+            reason = params.get("reason", "")
+            if not isinstance(reason, str):
+                raise CoreError("E_REQUEST_INVALID", "params.reason must be a string.")
+            return execution_cost_note(result, reason)
+        if method == "scenario.points_to_money":
+            return points_to_money(*(_required_string(params, key) for key in ("points", "point_size", "tick_size", "tick_value")))
         if method == "scenario.monte_carlo_bootstrap":
             path_count, block_length, limit = params.get("path_count"), params.get("block_length"), params.get("drawdown_limit")
             if isinstance(path_count, bool) or not isinstance(path_count, int):

@@ -1,6 +1,11 @@
 # Proposal: modelling spread, slippage, and execution delay
 
-**Status:** DRAFT 2026-09-24. Awaiting the owner (X1–X7).
+**Status:** APPROVED and BUILT 2026-09-24 (the owner accepted X1–X7 and asked that every modelling parameter stay optional: nothing is charged when the parameters are empty, and the break-even needs none).
+
+**Built:**
+- Core `execution_costs.py` (`execution-costs-1`): a per-lot charge on every deal, per-symbol overrides, before-and-after metrics, break-even, the points-to-money helper, and a round-turn consistency check. Worker `scenario.execution_costs`, `scenario.render_execution_cost_note`, and `scenario.points_to_money`.
+- Plugin: What-If mode switch ("Per lot", the default, or "Per closed trade"), `ExecutionCostView`, `execution-cost-model.ts` guidance, and record to note.
+- **Real report TRL_V3b:** break-even 141.95 USD per lot per deal on 1.60 lots; the round turn is consistent.
 
 This is workflow gap 1 of the 4 that remain. The sources are in
 `internal/references/REFERENCE_REGISTER.md`.

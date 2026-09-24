@@ -1,4 +1,4 @@
-import type { WindowsRequest, WindowsResult, SweepComparison, SweepEvaluation, SymbolSweep, PropChain, PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult, SignificanceConfidence, SignificanceResult, BootstrapMethod, BootstrapResult, EquityCombination, EquityCombinationMissing, CostBreakdown } from "../types";
+import type { WindowsRequest, WindowsResult, SweepComparison, SweepEvaluation, SymbolSweep, PropChain, PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult, SignificanceConfidence, SignificanceResult, BootstrapMethod, BootstrapResult, EquityCombination, EquityCombinationMissing, CostBreakdown, ExecutionCostInputs, ExecutionCostResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -80,6 +80,18 @@ export class ResearchService {
 
   performanceMetrics(datasetRef: string): Promise<PerformanceMetrics> {
     return this.worker.request("analysis.performance_metrics", { dataset_ref: datasetRef });
+  }
+
+  executionCosts(datasetRef: string, inputs: ExecutionCostInputs): Promise<ExecutionCostResult> {
+    return this.worker.request("scenario.execution_costs", executionParams(datasetRef, inputs));
+  }
+
+  renderExecutionCostNote(datasetRef: string, inputs: ExecutionCostInputs, reason: string): Promise<{ record_id: string; markdown: string }> {
+    return this.worker.request("scenario.render_execution_cost_note", { ...executionParams(datasetRef, inputs), reason });
+  }
+
+  pointsToMoney(points: string, pointSize: string, tickSize: string, tickValue: string): Promise<{ money_per_lot: string; formula: string }> {
+    return this.worker.request("scenario.points_to_money", { points, point_size: pointSize, tick_size: tickSize, tick_value: tickValue });
   }
 
   costBreakdown(datasetRef: string): Promise<CostBreakdown> {
@@ -313,4 +325,15 @@ export class ResearchService {
   commitReportRevision(payload: ReportPayload, revision: number, priorConfigurationHash: string | null): Promise<unknown> {
     return this.worker.request("report.commit_revision_manifest", { payload, report_revision: revision, prior_configuration_hash: priorConfigurationHash });
   }
+}
+
+/** Only the parameters the user filled in are sent (every one is optional). */
+function executionParams(datasetRef: string, inputs: ExecutionCostInputs): Record<string, unknown> {
+  const perSymbol = Object.fromEntries(Object.entries(inputs.perSymbol).filter(([, value]) => value.spread || value.slippage));
+  return {
+    dataset_ref: datasetRef,
+    ...(inputs.extraSpread ? { extra_spread_per_lot: inputs.extraSpread } : {}),
+    ...(inputs.slippage ? { slippage_per_lot: inputs.slippage } : {}),
+    ...(Object.keys(perSymbol).length ? { per_symbol: perSymbol } : {}),
+  };
 }

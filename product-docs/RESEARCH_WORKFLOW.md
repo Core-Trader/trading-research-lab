@@ -130,6 +130,8 @@ Every point is labelled: a sourced fact (with its source), your own workflow cho
 
 **Checks:**
 
+- **[C]** What-If → "Per lot, on every opening and closing deal" shows the break-even extra cost per lot (how much worse spread and slippage can get before the edge is gone); every cost parameter there is optional.
+- **[S]** Execution delay is simulated by MT5 itself (random 0–18 s, or fixed): run the test again with a delay and compare the two reports. *(Source: [MetaTrader 5 Help: Strategy Testing](https://www.metatrader5.com/en/terminal/help/algotrading/testing).)*
 - **[U]** The extra cost per trade, for example your broker's typical spread plus slippage. Higher costs are more pessimistic; the right value depends on your broker and symbol.
 - **[S]** MT5 can charge commission when a position opens and/or closes. Analysis → Costs splits commissions and swaps, reconciles them with the final balance, and shows the amount on opening deals that per-trade figures leave out. *(Source: [MetaTrader 5 Help: Strategy Testing](https://www.metatrader5.com/en/terminal/help/algotrading/testing).)*
 - **[S]** Reshuffling trades measures ordering risk only, not total risk. *(Source: MT5 Backtesting & Optimization Best Practices (TRL's internal playbook, written from confirmed MT5 failure cases).)*
@@ -181,6 +183,5 @@ Every point is labelled: a sourced fact (with its source), your own workflow cho
 ## Not in TRL yet
 
 - Rolling walk-forward optimisation (re-optimising for each window).
-- Modelling spread, slippage or execution delay inside TRL (today: What-If's fixed cost per trade).
 - Importing demo or live account statements to track real forward results.
 - A checklist in Research notes that tracks steps 0–10.

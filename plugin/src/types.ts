@@ -786,3 +786,22 @@ export type CostBreakdown = {
   by_month: Array<CostRow & { month: string }>;
   warnings: string[];
 };
+
+/** scenario.execution_costs (PROPOSAL_EXECUTION_COSTS.md X1–X3); values are Core decimal strings. */
+export type ClosedTradeMetrics = { net: string; profit_factor: string | null; win_rate_percent: string | null; expectancy: string | null; wins: number; losses: number; breakeven: number };
+export type ExecutionCostResult = {
+  calculation_version: string;
+  evaluation_id: string;
+  dataset_ref: string;
+  currency: string | null;
+  configuration: { extra_spread_per_lot: string | null; slippage_per_lot: string | null; per_symbol: Record<string, string> };
+  applied: boolean;
+  lots_dealt: string;
+  break_even_per_lot: string | null;
+  before: { balance_change: string; max_drawdown: string; closed_trades: ClosedTradeMetrics };
+  after: { balance_change: string; extra_cost_total: string; max_drawdown: string; closed_trades: ClosedTradeMetrics } | null;
+  by_symbol: Array<{ symbol: string; lots: string; rate_per_lot: string; charge: string }>;
+  round_turn_check: { per_deal_total: string; round_turn_total: string; consistent: boolean };
+  warnings: string[];
+};
+export type ExecutionCostInputs = { extraSpread: string | null; slippage: string | null; perSymbol: Record<string, { spread?: string; slippage?: string }> };

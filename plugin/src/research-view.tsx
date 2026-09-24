@@ -17,7 +17,8 @@ import { M5Preflight } from "./components/data/batch-preflight-panel";
 import { M2Analysis, M3Analysis, Results } from "./components/analysis/analysis-panels";
 import { RMultiplePanel, type RSource } from "./components/analysis/r-multiple-panel";
 import { M4Documents } from "./components/research/documents-panel";
-import { MonteCarloAnalysis, WhatIfAnalysis, type MonteCarloMethod } from "./components/advanced/scenario-panels";
+import { MonteCarloAnalysis, WhatIfAnalysis, type MonteCarloMethod, type WhatIfMode } from "./components/advanced/scenario-panels";
+import { ExecutionCostView } from "./components/advanced/execution-cost-view";
 import { BootstrapView } from "./components/advanced/bootstrap-view";
 import { Diagnostics, type RunDiagnostics } from "./components/advanced/diagnostics-panel";
 import { PortfolioLab } from "./components/portfolio/portfolio-lab";
@@ -119,6 +120,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
   const [significance, setSignificance] = useState<SignificanceResult | null>(null);
   const [costs, setCosts] = useState<CostBreakdown | null>(null);
   const [costsError, setCostsError] = useState<string | null>(null);
+  const [whatIfMode, setWhatIfMode] = useState<WhatIfMode>("PER_LOT");
   const [monteCarloMethod, setMonteCarloMethod] = useState<MonteCarloMethod>("REORDER");
   const [significanceError, setSignificanceError] = useState<string | null>(null);
   const thresholds = useSyncExternalStore(plugin.thresholds.subscribe, () => plugin.thresholds.snapshot);
@@ -942,6 +944,9 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       enabled={closeEventAnalysis !== null}
       onCostChange={(value) => { setFixedCost(value); setFixedCostError(null); }}
       onRun={() => void runFixedCostScenario()}
+      mode={whatIfMode}
+      onModeChange={setWhatIfMode}
+      perLot={(evidence?.dataset_ref ?? statistics?.dataset_ref) ? <ExecutionCostView service={service} datasetRef={(evidence?.dataset_ref ?? statistics?.dataset_ref)!} enabled={closeEventAnalysis !== null} analysis={statistics ? { datasetId: statistics.dataset_id, analysisRunId: statistics.analysis_run_id } : null} notes={notesApi} /> : null}
     />}
       {(evidence || statistics) && <MonteCarloAnalysis
       equity={equityMetrics}

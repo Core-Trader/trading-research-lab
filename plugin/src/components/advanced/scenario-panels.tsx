@@ -12,17 +12,29 @@ import { money } from "../display-format";
 
 const r2 = (value: string | null | undefined): string => value === null || value === undefined ? "—" : roundDecimalString(value, 2);
 
-export function WhatIfAnalysis({ cost, error, result, enabled, onCostChange, onRun }: {
+export type WhatIfMode = "PER_LOT" | "PER_TRADE";
+
+export function WhatIfAnalysis({ cost, error, result, enabled, onCostChange, onRun, mode = "PER_TRADE", onModeChange, perLot }: {
   cost: string;
   error: string | null;
   result: FixedCostScenarioResult | null;
   enabled: boolean;
   onCostChange: (value: string) => void;
   onRun: () => void;
+  /** PROPOSAL_EXECUTION_COSTS.md X1/X4: per lot on every deal, or the original fixed cost per closed trade. */
+  mode?: WhatIfMode;
+  onModeChange?: (mode: WhatIfMode) => void;
+  perLot?: React.ReactNode;
 }): React.ReactElement {
   const currency = result?.currency ?? "";
-  return <CollapsibleSection title="What-if: extra cost per trade" defaultOpen>
-    <p className="trl-m0__note">Adds a fixed extra cost (for example spread, slippage or commission you expect) to every closed trade and shows how the result changes. It is a sensitivity check, not a forecast.</p>
+  return <CollapsibleSection title="What-if: extra execution costs" defaultOpen>
+    <p className="trl-m0__note">{mode === "PER_LOT" ? "How much worse can spread and slippage get before the edge is gone? Costs per lot scale with position size, which matters for EAs whose lots grow." : "Adds a fixed extra cost (for example a flat fee you expect) to every closed trade and shows how the result changes."} It is a sensitivity check, not a forecast.</p>
+    {onModeChange && <label className="trl-m0__field"><span>Cost model</span><select value={mode} onChange={(event) => onModeChange(event.currentTarget.value as WhatIfMode)}>
+      <option value="PER_LOT">Per lot, on every opening and closing deal (spread, slippage)</option>
+      <option value="PER_TRADE">Fixed amount per closed trade</option>
+    </select></label>}
+    {mode === "PER_LOT" && perLot}
+    {mode === "PER_TRADE" && <>
     <label className="trl-m0__field">
       <span>Extra cost per closed trade (report currency)</span>
       <input type="text" inputMode="decimal" value={cost} onChange={(event) => onCostChange(event.currentTarget.value)} placeholder="0.00" />
@@ -39,6 +51,7 @@ export function WhatIfAnalysis({ cost, error, result, enabled, onCostChange, onR
       <p className="trl-m0__note">Bars show wins, losses and breakeven trades (green, red, grey); hover for counts. The cost is your assumption; spread, slippage and position sizing are not modelled beyond it.</p>
       <AuditTrail items={[["Based on", <span title={`TRL code: ${result.analysis_basis}`}>{plain(result.analysis_basis)}</span>], ["Policy version", <code>{result.policy_id}</code>], ["Input artifact", <code>{result.configuration.input_artifact}</code>], ["Artifact", <code>{result.artifacts.table}</code>], ["Notes", plainSentence(result.warnings.join(" "))]]} />
     </section>}
+    </>}
   </CollapsibleSection>;
 }
 

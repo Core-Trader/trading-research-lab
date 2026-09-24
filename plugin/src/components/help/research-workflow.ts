@@ -40,6 +40,7 @@ export const SOURCES = {
   nistBootstrap: { title: "NIST/SEMATECH e-Handbook of Statistical Methods, 1.3.3.4 Bootstrap Plot", url: "https://www.itl.nist.gov/div898/handbook/eda/section3/bootplot.htm" },
   kunsch1989: { title: "Künsch, H. R. (1989), \"The Jackknife and the Bootstrap for General Stationary Observations\", The Annals of Statistics 17(3), 1217–1241", url: "https://doi.org/10.1214/aos/1176347265" },
   mt5TradingReport: { title: "MetaTrader 5 Help: Trading Report (margin level)", url: "https://www.metatrader5.com/en/terminal/help/trading_advanced/history_report" },
+  mt5MarketWatch: { title: "MetaTrader 5 Help: Market Watch (symbol specification)", url: "https://www.metatrader5.com/en/terminal/help/trading/market_watch" },
   firmRules: { title: "The firm's own rules page (FTMO and FundedNext pages are listed with each preset)", url: null },
 } as const;
 export type SourceKey = keyof typeof SOURCES;
@@ -131,6 +132,8 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
     number: 7, title: "Stress costs and trade order", purpose: "See how thin the edge is.",
     where: "TRL Analysis → Costs, then Advanced: What-If and Monte Carlo", inputs: "What-If: an extra cost per trade; Monte Carlo: a method (reorder, resample, or resample in blocks), a seed and the number of paths",
     checks: [
+      { label: "C", text: "What-If → \"Per lot, on every opening and closing deal\" shows the break-even extra cost per lot (how much worse spread and slippage can get before the edge is gone); every cost parameter there is optional." },
+      { label: "S", source: "mt5Testing", text: "Execution delay is simulated by MT5 itself (random 0–18 s, or fixed): run the test again with a delay and compare the two reports." },
       { label: "U", text: "The extra cost per trade, for example your broker's typical spread plus slippage. Higher costs are more pessimistic; the right value depends on your broker and symbol." },
       { label: "S", source: "mt5Testing", text: "MT5 can charge commission when a position opens and/or closes. Analysis → Costs splits commissions and swaps, reconciles them with the final balance, and shows the amount on opening deals that per-trade figures leave out." },
       { label: "S", source: "playbook", text: "Reshuffling trades measures ordering risk only, not total risk." },
@@ -169,7 +172,6 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
 
 export const WORKFLOW_GAPS = [
   "Rolling walk-forward optimisation (re-optimising for each window).",
-  "Modelling spread, slippage or execution delay inside TRL (today: What-If's fixed cost per trade).",
   "Importing demo or live account statements to track real forward results.",
   "A checklist in Research notes that tracks steps 0–10.",
 ];

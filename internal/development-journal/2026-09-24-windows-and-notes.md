@@ -200,3 +200,21 @@ live index on a real vault (rename and delete refresh) and the sidebar card.
     to note.
   - Harness-checked on the real TRL_V3b report.
 - **Tests:** Core 308; plugin 160.
+
+## Follow-up: execution costs (EXEC-1)
+
+- **Sources read:**
+  - MT5 Market Watch: specification fields such as tick size and tick
+    value.
+  - MT5 Strategy Testing: the delay modes.
+  - The custom-instruments page did not define tick value, so the helper
+    uses the Market Watch definitions.
+- **Core:** `execution_costs.py`; 9 tests, including break-even returning
+  exactly to zero and a per-symbol override.
+- **Plugin:**
+  - Every parameter is optional (owner); the break-even loads without
+    inputs.
+  - A tip was corrected before shipping: "fewer, larger trades" does not
+    reduce a per-lot cost.
+  - Harness-checked on the real TRL_V3b report.
+- **Tests:** Core 317; plugin 164.

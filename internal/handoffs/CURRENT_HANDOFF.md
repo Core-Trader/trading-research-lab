@@ -174,6 +174,8 @@ Research-note access is done (NOTES-1):
 - the sidebar recent-notes card
 - name clash checks
 
+Gap closed (EXEC-1): What-If per-lot execution costs (all optional) with break-even. 3 workflow gaps remain (Research notes checklist, demo/live statements, rolling walk-forward), plus the deferred C6 import change.
+
 Gap closed (COST-1): Analysis → Costs, with opening commissions named on the Overview tile. C6 is deferred. 4 workflow gaps remain.
 
 Gap closed (EQP-1): Portfolio combines equity logs (floating losses included), with the drawdown as a range. 5 workflow gaps remain.
