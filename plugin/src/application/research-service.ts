@@ -1,4 +1,4 @@
-import type { SweepComparison, SweepEvaluation, SymbolSweep, PropChain, PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
+import type { WindowsRequest, WindowsResult, SweepComparison, SweepEvaluation, SymbolSweep, PropChain, PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -192,6 +192,16 @@ export class ResearchService {
   /** A multi-phase challenge from every start day: each phase after a pass starts the next day as a fresh account. */
   propChainStarts(profileIds: string[], target: PropTarget, reportClockZone: string | null): Promise<PropChain> {
     return this.worker.request("prop.chain_starts", reportClockZone ? { profile_ids: profileIds, target, report_clock_zone: reportClockZone } : { profile_ids: profileIds, target }, LONG_RUNNING_MS);
+  }
+
+  /** Same fixed settings over time: one report split into windows, or separate window reports (W1–W6). */
+  compareWindows(request: WindowsRequest, minTrades: number | null, maxLosing: number | null): Promise<WindowsResult> {
+    const { mode, ...params } = request;
+    return this.worker.request(mode === "SPLIT" ? "windows.split" : "windows.separate", { ...params, ...(minTrades === null ? {} : { min_trades: minTrades }), ...(maxLosing === null ? {} : { max_losing_windows: maxLosing }) }, LONG_RUNNING_MS);
+  }
+
+  renderWindowsNote(request: WindowsRequest, minTrades: number | null, maxLosing: number | null, reason: string): Promise<{ record_id: string; markdown: string }> {
+    return this.worker.request("windows.render_note", { ...request, reason, ...(minTrades === null ? {} : { min_trades: minTrades }), ...(maxLosing === null ? {} : { max_losing_windows: maxLosing }) }, LONG_RUNNING_MS);
   }
 
   /** Imports an MT5 "All symbols selected in Market Watch" export; the .set is optional and recorded as declared. */

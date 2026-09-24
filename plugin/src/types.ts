@@ -664,3 +664,20 @@ export type SweepComparison = {
   matrix: Array<{ symbol: string; values: Array<string | null>; tested: boolean[] }>;
   warnings: string[];
 };
+
+/** Per-window comparison (windows-1). Values are Core strings. */
+export type TimeWindow = {
+  index: number; label: string; start: string; end: string; partial: boolean; source: { dataset_ref: string; filename?: string };
+  trades: number; net_pnl: string; profit_factor: string | null; profit_factor_reason: string | null; win_rate_percent: string | null; expectancy: string | null; sqn: string | null;
+  maximum_drawdown: string; maximum_drawdown_percent: string | null; equity_maximum_drawdown: string | null; losing: boolean; below_min_trades: boolean;
+};
+export type WindowsResult = {
+  calculation_version: string; evaluation_id: string;
+  configuration: { mode: "SPLIT" | "SEPARATE"; months?: number; start?: string; dataset_ref?: string; dataset_refs?: string[]; min_trades: number | null; max_losing_windows: number | null };
+  currency: string | null;
+  windows: TimeWindow[];
+  summary: { windows: number; with_trades: number; profitable: number; losing: number; worst: { index: number; label: string; net_pnl: string }; net_pnl_spread: { minimum: string; median: string; maximum: string }; within_losing_allowance: boolean | null; below_min_trades: number[] };
+  findings: Array<{ severity: string; code: string; message: string }>;
+  notes: string[];
+};
+export type WindowsRequest = { mode: "SPLIT"; dataset_ref: string; months: number; start?: string } | { mode: "SEPARATE"; dataset_refs: string[] };

@@ -440,3 +440,18 @@
 .trl-sweep-compare th[scope="row"] label { display: inline-flex; gap: 0.3rem; align-items: center; font-weight: 400; color: var(--text-normal); }
 .trl-sweep-compare td.is-untested { color: var(--text-faint); }
 .trl-sweep__picked { padding: 0.35rem 0.5rem; border: 1px solid var(--background-modifier-border); border-radius: 0.3rem; overflow-wrap: anywhere; }
+/* Windows (same settings over time) */
+.trl-windows__pick ul { max-height: 14rem; overflow-y: auto; margin: 0.3rem 0; padding-left: 0.2rem; list-style: none; }
+.trl-windows__pick li { margin: 0.15rem 0; overflow-wrap: anywhere; }
+.trl-windows-chart__plot { position: relative; display: flex; align-items: stretch; gap: 2px; height: 10rem; border-bottom: 1px solid var(--background-modifier-border); }
+.trl-windows-chart__zero { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--text-faint); pointer-events: none; }
+.trl-windows-chart__slot { position: relative; flex: 1 1 0; min-width: 2px; }
+.trl-windows-chart__bar { position: absolute; left: 12%; right: 12%; bottom: 50%; border-radius: 2px 2px 0 0; background: var(--color-green); opacity: 0.8; }
+.trl-windows-chart__bar.is-negative { bottom: auto; top: 50%; border-radius: 0 0 2px 2px; background: var(--color-red); }
+.trl-windows-chart__bar.is-partial { opacity: 0.4; }
+.trl-windows-chart__bar.is-active { opacity: 1; outline: 1px solid var(--text-normal); }
+.trl-chart-frame.is-expanded .trl-windows-chart__plot { height: 60vh; }
+.trl-monthly tr.is-losing th { color: var(--color-red); }
+.trl-monthly td.is-negative { color: var(--color-red); }
+.trl-monthly td.is-positive { color: var(--color-green); }
+.trl-windows__record { margin-top: 0.8rem; padding-top: 0.6rem; border-top: 1px solid var(--background-modifier-border); }

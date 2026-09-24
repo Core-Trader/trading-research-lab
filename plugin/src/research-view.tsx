@@ -21,6 +21,7 @@ import { Diagnostics, type RunDiagnostics } from "./components/advanced/diagnost
 import { PortfolioLab } from "./components/portfolio/portfolio-lab";
 import { PropCheckPage } from "./components/prop/prop-page";
 import { SymbolScanPage } from "./components/sweep/symbol-scan-page";
+import { WindowsPanel } from "./components/analysis/windows-panel";
 import { EquityAttach, EquityHowTo } from "./components/analysis/equity-panel";
 import { ParameterExplorer } from "./components/exploration/parameter-explorer";
 import { upsertChoiceBlock } from "./vault/choice-block";
@@ -746,6 +747,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     />}
       {evidence && <EquityPanel service={service} datasetRef={evidence.dataset_ref} availability={equityAvailability} metrics={equityMetrics} error={equityMetricsError} currency={evidence.supplied_facts.currency} onChanged={() => void service.equityAvailability(evidence.dataset_ref).then(setEquityAvailability)} />}
       {(evidence || statistics) && <RMultiplePanel source={rSource} amount={rAmount} result={rResult} busy={rBusy} error={rError} enabled={statistics !== null} onSourceChange={(value) => { setRSource(value); setRResult(null); setRError(null); }} onAmountChange={(value) => { setRAmount(value); setRError(null); }} onRun={() => void runRMultiples()} />}
+      {evidence && <WindowsPanel service={service} datasetRef={evidence.dataset_ref} experiment={experiment} onRecord={recordParameterChoice} />}
     </section>}
     {activePage === "research" && <section className="trl-page" aria-label="Research documents">
       <header className="trl-page__header"><div><h3>Research</h3><p>Link explicit Strategy, Experiment, and Report notes without overwriting your writing.</p></div></header>
