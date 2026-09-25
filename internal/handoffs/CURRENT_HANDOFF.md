@@ -281,7 +281,8 @@ approved package.
 
 | Purpose | Path | State |
 | --- | --- | --- |
-| Repository | `C:\DEV\Trading_Research_Lab` | Exists; Git `main`, local only (no remote). |
+| Repository | `C:\DEV\Trading_Research_Lab` | Exists; Git `main` tracks `origin/main` (private GitHub `core-trader/trading-research-lab`); push after each commit, never force. |
+| Reusable prompt: attach the equity logger to an EA | `internal\prompts\ATTACH_EQUITY_LOGGER.md` | Exists (2026-09-25). |
 | Disposable development vault | `C:\DEV\vaults\TRL-Dev-Vault` | Exists. |
 | Plugin source | `C:\DEV\Trading_Research_Lab\plugin` | Exists. |
 | Research Core | `C:\DEV\Trading_Research_Lab\research-core` | Exists. |
