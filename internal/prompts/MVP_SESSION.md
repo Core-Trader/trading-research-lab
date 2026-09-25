@@ -68,8 +68,12 @@ then propose status updates to the owner:
 
 ## 3. MVP-C: usability from the owner's review
 
-- The owner is reviewing the plugin in Obsidian and will bring UI and UX
-  notes. Take them one by one:
+- **Order agreed 2026-09-25:** the owner reviews the plugin in Obsidian, the
+  resulting UI and UX fixes are made in the previous session, and this MVP
+  session starts after that.
+- First read what the handoff and the journal record about those fixes, and
+  confirm with the owner which are done.
+- Any notes still open or new come here. Take them one by one:
   - restate each note
   - fix it with the smallest change that follows the existing design
     patterns (tokens in `plugin/styles.css`, `KpiTile`, `ChartFrame`,
