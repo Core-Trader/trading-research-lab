@@ -1,3 +1,4 @@
+import type { RecordKind } from "./record-block";
 import type { ExperimentKind, NoteEntry } from "./research-notes-model";
 
 /** What record panels and the notes browser may do with TRL research notes (N1, N3). */
@@ -7,7 +8,7 @@ export type NotesApi = {
   createStrategy: (title: string) => Promise<{ id: string; path: string }>;
   createExperiment: (title: string, strategyId: string, kind: ExperimentKind, bindings?: Record<string, string>) => Promise<{ id: string; path: string }>;
   /** Writes (or, after confirmation, replaces) a marked block in the note. */
-  record: (path: string, markdown: string, recordId: string) => Promise<void>;
+  record: (path: string, markdown: string, recordId: string, kind: RecordKind) => Promise<void>;
   rename: (path: string, title: string) => Promise<string>;
   /** TRL notes (never others) whose text contains the reference, e.g. a sweep's hash; used to warn before a deletion. */
   findReferences: (reference: string) => Promise<string[]>;

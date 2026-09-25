@@ -172,7 +172,7 @@ export function SymbolScanPage({ service, notes }: Props): React.ReactElement {
     try {
       const rendered = await service.renderSymbolShortlist(refs, shortlist, reason);
       if (!target) throw new Error("Choose or create an experiment under Record to.");
-      await notes.record(target, rendered.markdown, rendered.shortlist_id);
+      await notes.record(target, rendered.markdown, rendered.shortlist_id, "symbol-shortlist");
       setRecorded(`Recorded ${shortlist.length} symbol(s) in ${target}.`);
     } catch (caught) { setError(fail(caught)); } finally { setBusy(null); }
   };

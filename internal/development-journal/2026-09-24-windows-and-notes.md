@@ -218,3 +218,24 @@ live index on a real vault (rename and delete refresh) and the sidebar card.
     reduce a per-lot cost.
   - Harness-checked on the real TRL_V3b report.
 - **Tests:** Core 317; plugin 164.
+
+## 2026-09-25: bug fix, one record block per kind (NOTES-2)
+
+- **Found** while designing the research checklist.
+  - `notes.record` used the PX-007 single choice block for every kind of
+    check.
+  - Recording a second kind into the same Experiment note replaced the
+    first, including the user's conclusion text, after a misleading
+    confirmation.
+  - This affected the Symbol scan, Parameters, Windows, Significance, Costs,
+    Execution costs, Monte Carlo, and Combined equity records.
+- **Fix:** `vault/record-block.ts`, with kind-specific markers.
+  - A legacy block's kind is read from its heading; it is upgraded only by
+    the same kind and never overwritten by another.
+  - `choice-block.ts` is removed.
+  - 4 tests cover: two kinds coexisting, replacing only the same kind, the
+    legacy upgrade, and malformed markers.
+- **Owner action:** notes written before today may have lost an earlier
+  record if two different checks were recorded into the same note. Only the
+  last one survives there. Re-record the missing one if needed.
+- **Tests:** plugin 168.

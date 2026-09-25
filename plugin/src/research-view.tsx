@@ -27,7 +27,7 @@ import { SymbolScanPage } from "./components/sweep/symbol-scan-page";
 import { WindowsPanel } from "./components/analysis/windows-panel";
 import { EquityAttach, EquityHowTo } from "./components/analysis/equity-panel";
 import { ParameterExplorer } from "./components/exploration/parameter-explorer";
-import { upsertChoiceBlock } from "./vault/choice-block";
+import { RECORD_KINDS, upsertRecordBlock } from "./vault/record-block";
 import type { NotesApi } from "./vault/notes-api";
 import { ResearchNotesBrowser } from "./components/research/notes-browser";
 import { isMt5ReportPath, MT5_REPORT_ACCEPT, MT5_REPORT_HINT } from "./application/report-files";
@@ -467,12 +467,12 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
       new Notice(`Experiment created: ${path}`);
       return { id, path };
     },
-    record: async (path, markdown, recordId) => {
+    record: async (path, markdown, recordId, kind) => {
       const file = plugin.app.vault.getAbstractFileByPath(path);
       if (!(file instanceof TFile)) throw new Error(`The note ${path} is not available (moved or deleted?). Choose it again under Record to.`);
       const prior = await plugin.app.vault.read(file);
-      const { text, replaced } = upsertChoiceBlock(prior, recordId, markdown);
-      if (replaced && !window.confirm("Replace the record previously written by this analysis in this note? Text outside the marked block stays unchanged.")) throw new Error("Recording was cancelled; the note was not changed.");
+      const { text, replaced } = upsertRecordBlock(prior, kind, recordId, markdown);  // NOTES-2: one block per kind of check
+      if (replaced && !window.confirm(`Replace the ${RECORD_KINDS[kind].label} previously recorded in this note? Other records and your own text stay unchanged.`)) throw new Error("Recording was cancelled; the note was not changed.");
       await plugin.app.vault.modify(file, text);
       new Notice(replaced ? `Record updated in ${path}.` : `Recorded in ${path}.`);
     },
@@ -512,7 +512,7 @@ function ResearchPanel({ plugin }: { plugin: TradingResearchLabPlugin }): React.
     const file = plugin.app.vault.getAbstractFileByPath(experiment.path);
     if (!(file instanceof TFile)) throw new Error(`The experiment note ${experiment.path} is not available. Re-select it under Research.`);
     const prior = await plugin.app.vault.read(file);
-    const { text, replaced } = upsertChoiceBlock(prior, evaluationId, markdown);
+    const { text, replaced } = upsertRecordBlock(prior, "parameter-choice", evaluationId, markdown);
     if (replaced && !window.confirm("Replace the choice previously recorded in this experiment note? Text outside the marked choice block stays unchanged.")) throw new Error("Recording was cancelled; the note was not changed.");
     await plugin.app.vault.modify(file, text);
     new Notice(replaced ? "Recorded choice updated in the experiment note." : "Choice recorded in the experiment note.");

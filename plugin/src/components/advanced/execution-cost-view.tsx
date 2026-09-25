@@ -67,7 +67,7 @@ export function ExecutionCostView({ service, datasetRef, enabled, analysis, note
     setBusy(true);
     try {
       const rendered = await service.renderExecutionCostNote(datasetRef, inputs, reason);
-      await notes.record(target, rendered.markdown, rendered.record_id);
+      await notes.record(target, rendered.markdown, rendered.record_id, "execution-costs");
       setRecorded(`Recorded in ${target}.`);
     } catch (caught) { setError(fail(caught)); } finally { setBusy(false); }
   };

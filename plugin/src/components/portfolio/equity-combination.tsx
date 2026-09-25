@@ -56,7 +56,7 @@ export function EquityCombinationSection({ service, tracks, labels, capital, win
     setBusy(true);
     try {
       const rendered = await service.renderEquityCombinationNote(tracks, capital, window, stopOut.trim() || null, labels, reason);
-      await notes.record(target, rendered.markdown, rendered.record_id);
+      await notes.record(target, rendered.markdown, rendered.record_id, "combined-equity");
       setRecorded(`Recorded in ${target}.`);
     } catch (caught) { setError(fail(caught)); } finally { setBusy(false); }
   };

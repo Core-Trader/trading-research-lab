@@ -79,7 +79,7 @@ export function WindowsPanel({ service, datasetRef, analysis, notes }: Props): R
     try {
       const rendered = await service.renderWindowsNote(request, minValue ?? null, losingValue ?? null, reason);
       if (!target) throw new Error("Choose or create an experiment under Record to.");
-      await notes.record(target, rendered.markdown, rendered.record_id);
+      await notes.record(target, rendered.markdown, rendered.record_id, "windows");
       setRecorded(`Recorded in ${target}.`);
     } catch (caught) { setError(fail(caught)); } finally { setBusy(null); }
   };

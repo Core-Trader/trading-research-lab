@@ -50,6 +50,37 @@ Rules:
    UI warns before the first generated-block update. User commentary belongs
    outside the markers.
 
+## Recorded checks in Experiment notes (NOTES-2)
+
+Each kind of recorded check has its own marker pair, so recording one check
+never replaces another:
+
+```markdown
+<!-- TRL:RECORD:START kind=<kind> id=<uuid> -->
+<!-- TRL:RECORD:END kind=<kind> -->
+```
+
+Kinds:
+- `parameter-choice`
+- `symbol-shortlist`
+- `windows`
+- `significance`
+- `costs`
+- `execution-costs`
+- `monte-carlo`
+- `combined-equity`
+
+Recording the same kind again replaces only that block, after the user
+confirms. The same rules apply as for generated content: missing, duplicate, or
+malformed markers of the kind being written block the write, and text outside
+the markers is never changed.
+
+**Legacy notes.** These may hold one shared `TRL:CHOICE` block (PX-007),
+which every record used before NOTES-2:
+- its kind is read from its first heading
+- it is upgraded to a kind block only when that same kind is recorded again
+- a different kind never overwrites it
+
 ## Vault path and privacy rules
 
 The plugin stores logical document relationships by IDs/frontmatter, not absolute

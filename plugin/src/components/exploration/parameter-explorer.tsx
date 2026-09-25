@@ -176,7 +176,7 @@ export function ParameterExplorer({ service, notes }: Props): React.ReactElement
     try {
       const rendered = await service.renderParameterChoice(study.study_ref, objectives, constraints, selected, reason, study.schema_ref ? neighbourhoodSettings : undefined);
       if (!target) throw new Error("Choose or create an experiment under Record to.");
-      await notes.record(target, rendered.markdown, rendered.evaluation_id);
+      await notes.record(target, rendered.markdown, rendered.evaluation_id, "parameter-choice");
       setNotice(`Choice recorded in ${target}.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));

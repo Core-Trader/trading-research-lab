@@ -42,7 +42,7 @@ export function CostsPanel({ service, datasetRef, result, error, analysis, notes
     setRecordError(null);
     try {
       const rendered = await service.renderCostNote(datasetRef, reason);
-      await notes.record(target, rendered.markdown, rendered.record_id);
+      await notes.record(target, rendered.markdown, rendered.record_id, "costs");
       setRecorded(`Recorded in ${target}.`);
     } catch (caught) { setRecordError(fail(caught)); } finally { setBusy(false); }
   };

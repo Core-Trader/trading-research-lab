@@ -53,7 +53,7 @@ export function SignificancePanel({ service, datasetRef, result, error, analysis
     setRecordError(null);
     try {
       const rendered = await service.renderSignificanceNote(datasetRef, thresholds.confidence, reason);
-      await notes.record(target, rendered.markdown, rendered.record_id);
+      await notes.record(target, rendered.markdown, rendered.record_id, "significance");
       setRecorded(`Recorded in ${target}.`);
     } catch (caught) { setRecordError(fail(caught)); } finally { setBusy(false); }
   };

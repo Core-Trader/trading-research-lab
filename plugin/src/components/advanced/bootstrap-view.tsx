@@ -61,7 +61,7 @@ export function BootstrapView({ service, datasetRef, method, seed, pathCount, tr
     setBusy(true);
     try {
       const rendered = await service.renderBootstrapNote(datasetRef, shown.analysis_id, reason);
-      await notes.record(target, rendered.markdown, rendered.record_id);
+      await notes.record(target, rendered.markdown, rendered.record_id, "monte-carlo");
       setRecorded(`Recorded in ${target}.`);
     } catch (caught) { setError(fail(caught)); } finally { setBusy(false); }
   };
