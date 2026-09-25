@@ -239,3 +239,24 @@ live index on a real vault (rename and delete refresh) and the sidebar card.
   record if two different checks were recorded into the same note. Only the
   last one survives there. Re-record the missing one if needed.
 - **Tests:** plugin 168.
+
+## 2026-09-25: corpus D1–D3 (DCA across symbols, and delay)
+
+- **What the owner asked for:** backtests with equity logs added to the
+  corpus.
+- **Three MT5 runs,** under the standing rules (portable FTMO terminal,
+  TRL_ files only, no trading, MT5 not running beforehand):
+  - D1: the DCA logged copy on GBPUSD
+  - D2: the same on USDJPY
+  - D3: the V3 settings with a random execution delay
+  - details and verification are in `data/raw/corpus/CORPUS_MANIFEST.md`
+    (git-ignored)
+- **Tooling note:** file writes from the PowerShell tool to the repository
+  were silently discarded by its sandbox. The corpus copy was redone with
+  Bash, and the inputs were then compared with V3b (142 of 142 equal),
+  proving MT5 used the intended `.set`.
+- **Real-data results for review:**
+  - combined equity, V3b + D1 + D2: equity drawdown 214.29 to 239.23
+    against a realised drawdown of only 0.96, which shows the DCA floating
+    risk that closed-trade figures hide
+  - random delay: net 226.56 against 227.12

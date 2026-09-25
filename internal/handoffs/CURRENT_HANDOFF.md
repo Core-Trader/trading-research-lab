@@ -174,6 +174,8 @@ Research-note access is done (NOTES-1):
 - the sidebar recent-notes card
 - name clash checks
 
+Corpus D1–D3 added 2026-09-25 (DCA logged on GBPUSD and USDJPY, and V3 with random delay; see the manifest). For combined equity use V3b, D1, and D2; for delay compare V3b with D3.
+
 Deferred (CHECK-1): the research checklist; its proposal is kept. Its prerequisite, NOTES-2 (one record block per kind of check), is built and fixes a data-loss bug in all Record buttons.
 
 Gap closed (EXEC-1): What-If per-lot execution costs (all optional) with break-even. 3 workflow gaps remain (Research notes checklist, demo/live statements, rolling walk-forward), plus the deferred C6 import change.
