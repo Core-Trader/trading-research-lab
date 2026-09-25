@@ -89,10 +89,13 @@ tick** in that interval, so no dip is missed.
    named `TRL_equity_<EA>_<symbol>_<timeframe>_<start date>.csv`. Existing
    files are never overwritten.
 3. In TRL, on **Data & import**: **Browse and validate report…**, then under
-   **Companion files** use **Browse and validate equity log (.csv)…**, stating
-   the modelling mode you used. If you ran the test more than once, pick the
-   newest file; files for the same EA, symbol, and start date get `_2`, `_3`
-   suffixes. The report and the log must come from the **same run**, otherwise
+   **Companion files** state the modelling mode you used and press **Find this
+   report's log**. TRL checks every log in the folder above against the report
+   and lists the one that belongs to it, with **Attach**. This matters because
+   the file name cannot tell repeated runs apart: runs of the same EA, symbol,
+   and start date get `_2`, `_3` suffixes. You can also **Browse for the log
+   (.csv)…** if it is saved elsewhere, or **Open logger folder** to see the
+   files. The report and the log must come from the **same run**, otherwise
    TRL refuses the log.
 
 TRL accepts the log only if it provably comes from that report's run: the EA,

@@ -26,6 +26,7 @@ from .display_series import close_event_display_series
 from .performance_metrics import performance_metrics
 from .significance import significance, significance_note
 from .cost_breakdown import cost_breakdown, cost_note
+from .equity_log_scan import default_logger_folder, scan_equity_logs
 from .execution_costs import execution_cost_note, execution_cost_scenario, points_to_money
 from .r_metrics import r_multiple_metrics
 from .portfolio_lab import combine as portfolio_combine, delete_saved_combination, explore as portfolio_explore, list_saved_combinations, save_combination
@@ -79,6 +80,8 @@ class Worker:
                     "analysis.r_multiple_metrics",
                     "analysis.significance",
                     "analysis.cost_breakdown",
+                    "equity.logger_folder",
+                    "equity.scan_logs",
                     "analysis.render_cost_note",
                     "analysis.render_significance_note",
                     "portfolio.combine",
@@ -258,6 +261,13 @@ class Worker:
             if amount is not None and not isinstance(amount, str):
                 raise CoreError("E_REQUEST_INVALID", "params.r_amount must be a decimal string when supplied.")
             return r_multiple_metrics(read_dataset(self.workspace_root, _required_string(params, "dataset_ref")), _required_string(params, "r_source"), amount)
+        if method == "equity.logger_folder":
+            return default_logger_folder()
+        if method == "equity.scan_logs":
+            folder = params.get("folder")
+            if folder is not None and not isinstance(folder, str):
+                raise CoreError("E_REQUEST_INVALID", "params.folder must be a string when supplied.")
+            return scan_equity_logs(self.workspace_root, _required_string(params, "dataset_ref"), folder)
         if method == "analysis.cost_breakdown":
             return cost_breakdown(read_dataset(self.workspace_root, _required_string(params, "dataset_ref")))
         if method == "analysis.render_cost_note":

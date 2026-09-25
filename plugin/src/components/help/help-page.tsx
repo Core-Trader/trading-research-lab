@@ -92,8 +92,8 @@ TrlEquityFinish();`}</pre>
       <h5>3. Run and import</h5>
       <ol>
         <li>Compile (F7), then run a single Strategy Tester test, preferably with "Every tick based on real ticks". Save the report as .html or .xlsx.</li>
-        <li>The log is in <code>%APPDATA%\MetaQuotes\Terminal\Common\Files\TRL\</code>. If you ran the test more than once, take the newest file (<code>_2</code>, <code>_3</code>…).</li>
-        <li>In TRL, go to <strong>Data & import</strong> → Browse and validate report → Companion files → Browse and validate equity log. The report and log must come from the same run; TRL checks the balance after every deal.</li>
+        <li>The log is in <code>%APPDATA%\MetaQuotes\Terminal\Common\Files\TRL\</code>. Repeated runs of the same EA, symbol and start date get <code>_2</code>, <code>_3</code>… so the name alone cannot tell them apart.</li>
+        <li>In TRL, go to <strong>Data & import</strong> → Browse and validate report → Companion files → <strong>Find this report's log</strong>: TRL checks every log in that folder against the report and offers the one that belongs to it. <strong>Browse for the log</strong> and <strong>Open logger folder</strong> are there too. The report and log must come from the same run; TRL checks the balance after every deal.</li>
       </ol>
     </HelpSection>,
     "help.mt5-exports": <HelpSection id="mt5-exports" title="What to export from MT5" summary="Which MT5 file each TRL feature reads">

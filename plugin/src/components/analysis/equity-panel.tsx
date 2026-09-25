@@ -2,13 +2,21 @@ import React, { useEffect, useRef, useState } from "react";
 import { plain, plainSentence } from "../plain-language";
 import type { ResearchService } from "../../application/research-service";
 import { localPathForSelectedFile } from "../../services/local-file-path";
-import type { EquityAvailabilityResult, EquityLogAttachment, EquityMetrics } from "../../types";
+import type { EquityAvailabilityResult, EquityLogAttachment, EquityLogScan, EquityMetrics } from "../../types";
 import { CollapsibleSection } from "../collapsible-section";
 import { DismissButton } from "../dismiss-button";
 import { EquityChart } from "./equity-chart";
 import { money } from "../display-format";
 
 const MODES = ["Every tick based on real ticks", "Every tick", "1 minute OHLC", "Open prices only"];
+
+/** Opens a folder in the system file manager (Obsidian desktop runs on Electron). */
+async function openFolder(folder: string): Promise<string | null> {
+  const electron = (globalThis as { require?: (id: string) => unknown }).require?.("electron") as { shell?: { openPath(path: string): Promise<string> } } | undefined;
+  if (!electron?.shell) return "Opening folders is only available in Obsidian desktop.";
+  const problem = await electron.shell.openPath(folder);
+  return problem || null;
+}
 
 /**
  * Attach a TRL tester equity log to a report (PL-006). Used as an optional
@@ -26,21 +34,40 @@ export function EquityAttach({ service, datasetRef, attached, onAttached }: {
   const [attempt, setAttempt] = useState<EquityLogAttachment | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => { setAttempt(null); setError(null); }, [datasetRef]);
+  const [scan, setScan] = useState<EquityLogScan | null>(null);
+  useEffect(() => { setAttempt(null); setError(null); setScan(null); }, [datasetRef]);
 
+  const attachPath = async (path: string): Promise<void> => {
+    setError(null);
+    setBusy(true);
+    try {
+      if (!path.toLowerCase().endsWith(".csv")) throw new Error("Select the TRL equity log (.csv) written by TRL_EquityLogger.");
+      const result = await service.attachEquityLog(datasetRef, path, mode);
+      setAttempt(result);
+      if (result.status === "LINKED_VERIFIED") { setScan(null); onAttached(); }
+    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); } finally { setBusy(false); }
+  };
   const attach = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = "";
     if (!file) return;
+    await attachPath(localPathForSelectedFile(file));
+  };
+  // The logger names files by EA, symbol, timeframe and start date (repeats get _2, _3), so the
+  // right log is found by content: the Core runs the same check as attaching on every candidate.
+  const findLogs = async (): Promise<void> => {
     setError(null);
     setBusy(true);
+    try { setScan(await service.scanEquityLogs(datasetRef)); } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); } finally { setBusy(false); }
+  };
+  const openLoggerFolder = async (): Promise<void> => {
+    setError(null);
     try {
-      const path = localPathForSelectedFile(file);
-      if (!path.toLowerCase().endsWith(".csv")) throw new Error("Select the TRL equity log (.csv) written by TRL_EquityLogger.");
-      const result = await service.attachEquityLog(datasetRef, path, mode);
-      setAttempt(result);
-      if (result.status === "LINKED_VERIFIED") onAttached();
-    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); } finally { setBusy(false); }
+      const location = await service.equityLoggerFolder();
+      if (!location.folder || !location.exists) throw new Error(`The equity logger folder was not found${location.folder ? ` (${location.folder})` : ""}. It is created by the first logged test.`);
+      const problem = await openFolder(location.folder);
+      if (problem) throw new Error(problem);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
   };
 
   return <div className="trl-companion">
@@ -51,7 +78,12 @@ export function EquityAttach({ service, datasetRef, attached, onAttached }: {
           <label className="trl-m0__field"><span>Modelling mode of that test</span><select value={mode} onChange={(event) => setMode(event.currentTarget.value)}>{MODES.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
         </div>
         <input ref={input} className="trl-m0__file-input" type="file" accept=".csv" onChange={(event) => void attach(event)} />
-        <button type="button" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Checking the log…" : "Browse and validate equity log (.csv)…"}</button>
+        <div className="trl-m0__actions">
+          <button type="button" className="mod-cta" disabled={busy} onClick={() => void findLogs()}>{busy ? "Checking…" : "Find this report's log"}</button>
+          <button type="button" disabled={busy} onClick={() => input.current?.click()}>Browse for the log (.csv)…</button>
+          <button type="button" onClick={() => void openLoggerFolder()}>Open logger folder</button>
+        </div>
+        {scan && <LogScanResult scan={scan} busy={busy} onAttach={(path) => void attachPath(path)} />}
       </>}
     {error && <p className="trl-m0__inline-error" role="alert">{error}<DismissButton onDismiss={() => setError(null)} /></p>}
     {attempt && attempt.status !== "LINKED_VERIFIED" && <ul className="trl-batch__findings"><li>
@@ -108,4 +140,21 @@ export function EquityPanel({ service, datasetRef, availability, metrics, error,
       <ul className="trl-batch__warnings">{metrics.warnings.map((warning) => <li key={warning}>{plainSentence(warning)}</li>)}</ul>
     </>}
   </CollapsibleSection>;
+}
+
+/** Candidates from the logger folder, best first; only a log that belongs to this report can be attached. */
+function LogScanResult({ scan, busy, onAttach }: { scan: EquityLogScan; busy: boolean; onAttach: (path: string) => void }): React.ReactElement {
+  const matches = scan.candidates.filter((item) => item.status === "MATCHES");
+  const others = scan.candidates.filter((item) => item.status !== "MATCHES");
+  return <div className="trl-log-scan" role="status">
+    <p className="trl-m0__note">{scan.matches === 0 ? "No log in the logger folder belongs to this report" : scan.matches === 1 ? "One log belongs to this report" : `${scan.matches} logs belong to this report (newest first)`}: checked {scan.scanned} of {scan.total_csv} file{scan.total_csv === 1 ? "" : "s"} in <code>{scan.folder}</code>.</p>
+    {matches.length > 0 && <ul className="trl-log-scan__list">{matches.map((item) => <li key={item.path}>
+      <span><strong>{item.name}</strong><br /><span className="trl-m0__note">{item.modified.replace("T", " ")} · {item.rows ?? "—"} rows · interval {item.interval ?? "—"} · logger {item.logger_version ?? "—"}</span></span>
+      <button type="button" className="mod-cta" disabled={busy} onClick={() => onAttach(item.path)}>Attach</button>
+    </li>)}</ul>}
+    {others.length > 0 && <details className="trl-audit"><summary>{others.length} other file{others.length === 1 ? "" : "s"} (not this report's test)</summary>
+      <ul className="trl-log-scan__others">{others.map((item) => <li key={item.path}><strong>{item.name}</strong>: {plain(item.status)}{item.reason ? ` — ${plainSentence(item.reason)}` : ""}</li>)}</ul>
+    </details>}
+    {scan.matches === 0 && <p className="trl-m0__note">Run the test again with the logger attached, or browse for a log saved elsewhere.</p>}
+  </div>;
 }

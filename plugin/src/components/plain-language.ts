@@ -42,6 +42,13 @@ export const CODE_TEXT: Record<string, string> = {
   ORDER_PERMUTATION_WITHOUT_REPLACEMENT: "Reordering the actual trades (each used once per path)",
   RESAMPLE_WITH_REPLACEMENT: "Resampling single trades with replacement",
   MOVING_BLOCK_RESAMPLE: "Resampling blocks of consecutive trades with replacement",
+  // Equity log scan
+  MATCHES: "Belongs to this report",
+  OTHER_RUN: "Same test, a different run",
+  OTHER_TEST: "A different test",
+  TOO_LARGE: "Too large to read",
+  UNREADABLE: "Could not be read",
+  NOT_A_TRL_LOG: "Not a TRL equity log",
   // Significance (PROPOSAL_SIGNIFICANCE.md)
   VALID: "The randomness check passed",
   NOT_VALID: "Not valid for this report: wins and losses are not in random order",

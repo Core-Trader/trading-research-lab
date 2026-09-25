@@ -805,3 +805,7 @@ export type ExecutionCostResult = {
   warnings: string[];
 };
 export type ExecutionCostInputs = { extraSpread: string | null; slippage: string | null; perSymbol: Record<string, { spread?: string; slippage?: string }> };
+
+/** equity.scan_logs: candidate logs for one report (same check as attaching). */
+export type EquityLogCandidate = { path: string; name: string; bytes: number; modified: string; status: "MATCHES" | "OTHER_RUN" | "OTHER_TEST" | "TOO_LARGE" | "UNREADABLE" | "NOT_A_TRL_LOG"; reason: string | null; logger_version: string | null; interval: string | null; rows: number | null };
+export type EquityLogScan = { folder: string; scanned: number; total_csv: number; matches: number; candidates: EquityLogCandidate[] };

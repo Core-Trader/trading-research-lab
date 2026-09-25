@@ -1,4 +1,4 @@
-import type { WindowsRequest, WindowsResult, SweepComparison, SweepEvaluation, SymbolSweep, PropChain, PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult, SignificanceConfidence, SignificanceResult, BootstrapMethod, BootstrapResult, EquityCombination, EquityCombinationMissing, CostBreakdown, ExecutionCostInputs, ExecutionCostResult } from "../types";
+import type { WindowsRequest, WindowsResult, SweepComparison, SweepEvaluation, SymbolSweep, PropChain, PropEvaluation, PropPreset, PropRolling, PropProfile, PropTarget, CloseEventDisplaySeries, Constraint, Objective, ParameterEvaluation, ParameterSchema, ParameterStudy, ParetoEvaluation, SingleTestAttachment, ForwardAttachment, DatasetArchiveResult, SetCheckResult, EquityLogAttachment, EquityMetrics, DatasetDeletionPreview, DatasetDeletionResult, SavedCombinationEntry, NeighbourhoodResult, NeighbourhoodRunAttachment, NeighbourhoodSet, NeighbourhoodSetWritten, NeighbourhoodSettings, PerformanceMetrics, PortfolioCombination, PortfolioExploration, RMultipleMetrics, CombinedBalanceResult, CombinedDailyResult, DailyDrawdownResult, DatasetEvidence, EquityAvailabilityResult, FixedCostScenarioResult, IntakeResult, MonteCarloResult, OptimisationGridResult, PairedForwardResult, PortfolioPreflightResult, StatisticsResult, TradeAnalysisResult, SignificanceConfidence, SignificanceResult, BootstrapMethod, BootstrapResult, EquityCombination, EquityCombinationMissing, CostBreakdown, ExecutionCostInputs, ExecutionCostResult, EquityLogScan } from "../types";
 import type { ReportPayload } from "../research-documents";
 
 /** The only worker capability the application layer depends on. */
@@ -92,6 +92,14 @@ export class ResearchService {
 
   pointsToMoney(points: string, pointSize: string, tickSize: string, tickValue: string): Promise<{ money_per_lot: string; formula: string }> {
     return this.worker.request("scenario.points_to_money", { points, point_size: pointSize, tick_size: tickSize, tick_value: tickValue });
+  }
+
+  equityLoggerFolder(): Promise<{ folder: string | null; exists: boolean }> {
+    return this.worker.request("equity.logger_folder", {});
+  }
+
+  scanEquityLogs(datasetRef: string, folder: string | null = null): Promise<EquityLogScan> {
+    return this.worker.request("equity.scan_logs", folder ? { dataset_ref: datasetRef, folder } : { dataset_ref: datasetRef }, LONG_RUNNING_MS);
   }
 
   costBreakdown(datasetRef: string): Promise<CostBreakdown> {

@@ -264,3 +264,25 @@ live index on a real vault (rename and delete refresh) and the sidebar card.
     against a realised drawdown of only 0.96, which shows the DCA floating
     risk that closed-trade figures hide
   - random delay: net 226.56 against 227.12
+
+## 2026-09-25: find this report's equity log (UIX-6)
+
+- **Question from the owner:** are log names consistent with report names?
+  - No. The logger names files by EA, symbol, timeframe, and start date
+    (lines 114–118), with `_2`, `_3` on repeats.
+  - It cannot know the report's name.
+- **Added:** Core `equity_log_scan.py`, which reads the headers first and
+  runs the full `_link` check only on same-context logs; worker
+  `equity.scan_logs` and `equity.logger_folder`; and in the plugin, "Find
+  this report's log", "Browse for the log", and "Open logger folder" (via
+  Electron's `shell.openPath`). The help texts are updated.
+- **Checks:**
+  - 2 Core tests.
+  - On copies of the real corpus logs, each of V3b, D1, D2, and D3 matched
+    exactly its own log. V3b and D3 share the same name stem and were told
+    apart by their balances.
+  - Harness: the scan list, Attach, and the missing-folder message.
+  - Opening the real folder needs Obsidian.
+- **Observation:** the real logger folder was empty as of 12:58 today, after
+  the 06:20 corpus runs. This session did not clear it; the corpus copies
+  are intact.
