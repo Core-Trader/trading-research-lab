@@ -90,6 +90,17 @@ then propose status updates to the owner:
     from the synthetic test data instead
   - move it only after the owner agrees
 
+## 3b. First-run onboarding (draft proposal)
+
+- `internal/docs/PROPOSAL_ONBOARDING.md` (O1–O8) is intended to be built and
+  tested in this session.
+- Present it to the owner and wait for approval before building.
+- If approved, build it after the owner's review notes and before the
+  clean-machine install check, so that check exercises onboarding as its
+  first step (O8).
+- O4 (a synthetic sample report) is recommended to wait for the
+  publishable-fixture decision.
+
 ## 4. MVP-D: release readiness
 
 1. Present the pending decisions R-D1 to R-D4 (licence, how users get

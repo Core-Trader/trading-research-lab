@@ -176,6 +176,8 @@ Research-note access is done (NOTES-1):
 
 Corpus D1–D3 added 2026-09-25 (DCA logged on GBPUSD and USDJPY, and V3 with random delay; see the manifest). For combined equity use V3b, D1, and D2; for delay compare V3b with D3.
 
+Draft (onboarding): `internal/docs/PROPOSAL_ONBOARDING.md` (O1–O8), a first-run welcome view plus an Overview "Getting started" card, to be decided and built in the MVP session (`internal/prompts/MVP_SESSION.md` §3b).
+
 Future (LIVE-1): live drift monitoring is recorded, not scheduled (`internal/docs/PROPOSAL_LIVE_DRIFT.md`, draft L1–L5; roadmap "Future" entry).
 
 Deferred (CHECK-1): the research checklist; its proposal is kept. Its prerequisite, NOTES-2 (one record block per kind of check), is built and fixes a data-loss bug in all Record buttons.
