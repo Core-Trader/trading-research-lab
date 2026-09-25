@@ -1,6 +1,6 @@
 # Proposal: a research checklist in Experiment notes
 
-**Status:** DRAFT 2026-09-25. Awaiting the owner (K1–K6).
+**Status:** DEFERRED 2026-09-25 by the owner ("we will defer this feature for later"). The proposal is kept as drafted; K1–K6 are not decided. Its prerequisite, NOTES-2 (one record block per kind), is built.
 
 This is workflow gap 1 of the 3 that remain. It depends on NOTES-2 (one
 record block per kind of check, fixed 2026-09-25).
