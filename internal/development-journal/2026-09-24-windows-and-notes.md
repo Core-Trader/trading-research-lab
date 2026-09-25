@@ -251,10 +251,14 @@ live index on a real vault (rename and delete refresh) and the sidebar card.
   - D3: the V3 settings with a random execution delay
   - details and verification are in `data/raw/corpus/CORPUS_MANIFEST.md`
     (git-ignored)
-- **Tooling note:** file writes from the PowerShell tool to the repository
-  were silently discarded by its sandbox. The corpus copy was redone with
-  Bash, and the inputs were then compared with V3b (142 of 142 equal),
-  proving MT5 used the intended `.set`.
+- **Tooling slip (corrected):** PowerShell variable names ignore case.
+  - The loop variable `$c` overwrote the corpus path `$C`, so the first copy
+    went to `D1D1`, `D2D2`, and `D3D3` under the repository root.
+  - Those 24 files were byte-identical to the corpus copies and were
+    deleted before any commit.
+  - An earlier note here blamed the PowerShell sandbox; that was wrong.
+  - The corpus copy was made with Bash, and the inputs were compared with
+    V3b (142 of 142 equal).
 - **Real-data results for review:**
   - combined equity, V3b + D1 + D2: equity drawdown 214.29 to 239.23
     against a realised drawdown of only 0.96, which shows the DCA floating
