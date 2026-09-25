@@ -10,6 +10,8 @@ product release.
   operational snapshot.
 - `../prompts/SESSION_HANDOFF.md` is the prompt to paste into a new session or
   on another machine to continue with the same rules.
+- `../prompts/MVP_SESSION.md` narrows that handoff to finishing the MVP
+  (owner review fixes and release readiness).
 
 The current handoff never overrides an approved ADR or authoritative project
 specification.

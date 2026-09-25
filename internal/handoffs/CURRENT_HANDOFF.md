@@ -286,6 +286,7 @@ approved package.
 | Repository | `C:\DEV\Trading_Research_Lab` | Exists; Git `main` tracks `origin/main` (private GitHub `core-trader/trading-research-lab`); push after each commit, never force. |
 | Reusable prompt: attach the equity logger to an EA | `internal\prompts\ATTACH_EQUITY_LOGGER.md` | Exists (2026-09-25). |
 | Reusable prompt: continue in a new session or on another machine | `internal\prompts\SESSION_HANDOFF.md` | Exists (2026-09-25). |
+| Reusable prompt: MVP completion session (MVP-C review fixes, MVP-D release) | `internal\prompts\MVP_SESSION.md` | Exists (2026-09-25); builds on SESSION_HANDOFF.md. |
 | Disposable development vault | `C:\DEV\vaults\TRL-Dev-Vault` | Exists. |
 | Plugin source | `C:\DEV\Trading_Research_Lab\plugin` | Exists. |
 | Research Core | `C:\DEV\Trading_Research_Lab\research-core` | Exists. |
