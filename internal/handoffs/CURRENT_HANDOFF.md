@@ -2,7 +2,7 @@
 project: Trading Research Lab
 status: active
 current_milestone: Milestone 6 — Advanced Research (fixed-cost What-If, Monte Carlo, optimisation, and paired forward evidence accepted; automatic selection is deferred)
-last_updated: 2026-09-24
+last_updated: 2026-09-25
 primary_repo: C:\DEV\Trading_Research_Lab
 dev_vault: C:\DEV\vaults\TRL-Dev-Vault
 python: 3.14.7
@@ -283,6 +283,7 @@ approved package.
 | --- | --- | --- |
 | Repository | `C:\DEV\Trading_Research_Lab` | Exists; Git `main` tracks `origin/main` (private GitHub `core-trader/trading-research-lab`); push after each commit, never force. |
 | Reusable prompt: attach the equity logger to an EA | `internal\prompts\ATTACH_EQUITY_LOGGER.md` | Exists (2026-09-25). |
+| Reusable prompt: continue in a new session or on another machine | `internal\prompts\SESSION_HANDOFF.md` | Exists (2026-09-25). |
 | Disposable development vault | `C:\DEV\vaults\TRL-Dev-Vault` | Exists. |
 | Plugin source | `C:\DEV\Trading_Research_Lab\plugin` | Exists. |
 | Research Core | `C:\DEV\Trading_Research_Lab\research-core` | Exists. |
