@@ -14,22 +14,8 @@ as part of MVP-C usability and the MVP-D clean-machine install check.
   & import, Symbol scan, Analysis, Portfolio, Parameters, Prop-firm check,
   Advanced, Research notes) plus Help. How they connect is explained only on
   the Help page.
-- **The owner's request:** an onboarding sequence similar to Journalit's.
-
-## Reference: Journalit's onboarding (concepts only)
-
-The pinned reference `C:\DEV\TRL_External_References\journalit` (commit
-`098d277`) has two parts:
-- a first-run onboarding view, shown when a stored flag says onboarding was
-  not completed (`src/onboarding/onboardingManager.ts`,
-  `src/components/onboarding/`): welcome, feature tiles, a choice of path, and
-  a first entry
-- a home "Getting started" widget whose checklist items tick themselves off
-  from real actions (`src/components/home/widgets/GettingStartedWidget.tsx`)
-
-It is tied to Journalit's translation system, services, and Pro gating, so TRL
-would **reuse the concepts, not the code**. Any code reuse would be recorded in
-`internal/references/EXTERNAL_CODE_USAGE_REGISTER.md`.
+- **The owner's request:** a first-run onboarding sequence that explains the
+  plugin's features.
 
 ## What TRL would add
 
