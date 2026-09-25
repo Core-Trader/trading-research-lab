@@ -213,6 +213,30 @@ evidence, not roadmap authority.
   the separate product-licence/ownership and publishable-fixture decisions are
   resolved.
 
+### Future: live drift monitoring
+
+- **Classification:** Recorded future work, not scheduled; no milestone package
+  and no owner decisions (`PROPOSAL_LIVE_DRIFT.md`, draft L1–L5; decision
+  LIVE-1).
+- **Status:** Not started.
+- **Primary objective:** Detect whether live or demo results drift from what the
+  backtest led the owner to expect.
+- **Main scope:**
+  - an account-history importer
+  - a same-period deal-by-deal comparison with an MT5 re-run
+  - live-against-bands checks that reuse the bootstrap, significance, cost,
+    and windows engines
+  - a separately designed live-safe equity logger mode
+- **Explicit exclusions:** Broker connections, network access to accounts,
+  trading or execution, alerts, and automatic decisions.
+- **Key deliverables:** To be defined when the proposal is taken up.
+- **Acceptance criteria:** To be defined when the proposal is taken up. At a
+  minimum: immutable raw snapshots with provenance, sourced and labelled drift
+  statements, no verdicts, and user-defined thresholds only.
+- **Dependencies:** The deferred C6 import change (non-trade deal types), the
+  Research workflow gap "Importing demo or live account statements", and the
+  existing M6 engines.
+
 ## Current operating instruction
 
 Milestone 5 is closed. The current milestone is **Milestone 6 — Advanced

@@ -64,6 +64,7 @@
 - name clash checks
 
 N6 amends M4-POL-001: TRL lists notes that carry TRL frontmatter (read through Obsidian's metadata cache) and never reads other notes. | Owner 2026-09-24 |
+| LIVE-1 | Live drift monitoring (comparing live or demo trading with the backtest) recorded as future work, not scheduled; no owner decisions taken. Proposal: [PROPOSAL_LIVE_DRIFT.md](PROPOSAL_LIVE_DRIFT.md) (draft decisions L1–L5). | Owner 2026-09-25 |
 | CHECK-1 | Research checklist in Experiment notes (PROPOSAL_RESEARCH_CHECKLIST.md) deferred by the owner; the proposal is kept unchanged for later. | Owner 2026-09-25 |
 | NOTES-2 | Bug fix: every Record button shared one marked block per Experiment note, so recording one check (for example Costs) replaced another (for example Significance) together with its conclusion, and the confirm text wrongly called it the same analysis. Each kind of check now has its own `TRL:RECORD` block (VAULT_DOCUMENT_CONVENTION.md); re-recording replaces only the same kind, after a confirmation that names it. A legacy `TRL:CHOICE` block keeps its content and is upgraded only by its own kind. | 2026-09-25 |
 | EXEC-1 | Execution costs (PROPOSAL_EXECUTION_COSTS.md X1–X7) built with every parameter optional (owner): extra spread and slippage per lot per deal, per-symbol overrides, break-even per lot shown without inputs, a points-to-money helper (TRL's derivation from MT5's specification definitions), the fixed-per-trade mode kept, delay left to MT5 with sourced guidance. | Owner 2026-09-24 |
